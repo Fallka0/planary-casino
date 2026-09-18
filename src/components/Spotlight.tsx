@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock } from "lucide-react";
 import { formatChips, type Game, gameHost, gameUrl, STARTER_CHIPS } from "@/lib/games";
 import { useAuth } from "./AuthProvider";
 import { Poster, posterField, posterInk } from "./Poster";
@@ -72,7 +72,7 @@ export function Spotlight({ games }: { games: Game[] }) {
             </a>
           ) : loading ? null : user ? (
             <span className="reserved">
-              <Check size={16} strokeWidth={2.4} aria-hidden="true" /> Your chips are waiting
+              <Clock size={16} strokeWidth={2.2} aria-hidden="true" /> Opening soon
             </span>
           ) : (
             <button className="btn btn-cherry btn-lg" onClick={() => signIn("signup")}>

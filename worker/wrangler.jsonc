@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "planary-casino-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-09-01",
+  "d1_databases": [
+    { "binding": "DB", "database_name": "planary-casino", "database_id": "c9a3baf7-95ae-48fe-93c4-9c2cc14eea01", "migrations_dir": "migrations" }
+  ],
+  // Verifies player tokens by asking planary-auth directly, worker to worker.
+  "services": [{ "binding": "AUTH", "service": "planary-auth" }],
+  "vars": {
+    "ALLOWED_ORIGINS": "https://casino.planary.ch,https://21.planary.ch,http://localhost:3000,http://localhost:3001"
+  },
+  "observability": { "enabled": true }
+}

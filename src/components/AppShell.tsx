@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useId, useRef, useState } from "react";
-import { Coins, LayoutGrid, LogIn, LogOut, Search, Spade, Trophy, Users } from "lucide-react";
-import { formatChips, GAMES, STARTER_CHIPS } from "@/lib/games";
-import { initials, SAMPLE_FRIENDS } from "@/lib/sample";
+import { Coins, Gift, LayoutGrid, LogIn, LogOut, Search, Spade, Trophy, Users } from "lucide-react";
+import { describePresence, type FriendsData, type Me, tableUrl, useCasino, useCasinoAction, usePresence } from "@/lib/api";
+import { formatChips, initials } from "@/lib/games";
 import { useAuth } from "./AuthProvider";
 import { ChipIcon } from "./ChipIcon";
 
@@ -25,10 +25,59 @@ function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
+/** Friends who are online right now, with a way to join them at their table. */
+function OnlineFriends() {
+  const { user, loading, signIn } = useAuth();
+  const { data } = useCasino<FriendsData>(user ? "/v1/friends" : null, 20_000);
+  const online = data?.friends.filter((f) => f.presence.online) ?? [];
+
+  return (
+    <section className="side-friends" aria-labelledby="online-title">
+      <div className="side-heading">
+        <h2 id="online-title">Online now</h2>
+        {online.length ? <span className="count-tag">{online.length}</span> : null}
+      </div>
+      {loading ? null : !user ? (
+        <p className="side-empty">
+          <button className="link-btn" onClick={() => signIn("login")}>
+            Sign in
+          </button>{" "}
+          to see which friends are playing.
+        </p>
+      ) : !data ? (
+        <div className="side-skeleton" aria-hidden="true" />
+      ) : online.length === 0 ? (
+        <p className="side-empty">
+          {data.friends.length ? "None of your friends are online." : "No friends yet."}{" "}
+          <Link href="/friends">Find friends</Link>
+        </p>
+      ) : (
+        <ul>
+          {online.map((friend) => (
+            <li key={friend.id} className="friend">
+              <span className="avatar avatar-sm is-online" aria-hidden="true">
+                {initials(friend.name)}
+              </span>
+              <span className="friend-copy">
+                <span className="friend-name">{friend.name}</span>
+                <span className="friend-status">{describePresence(friend.presence)}</span>
+              </span>
+              {friend.presence.table ? (
+                <a className="join-btn" href={tableUrl(friend.presence.table)} aria-label={`Join ${friend.name}'s table`}>
+                  Join
+                </a>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 function Sidebar() {
   const pathname = usePathname();
   const { user, loading, signIn, signOut } = useAuth();
-  const gameName = (id?: string) => GAMES.find((g) => g.id === id)?.name;
 
   return (
     <aside className="sidebar">
@@ -49,31 +98,11 @@ function Sidebar() {
         ))}
       </nav>
 
-      <section className="side-friends" aria-labelledby="online-title">
-        <div className="side-heading">
-          <h2 id="online-title">Online now</h2>
-          <span className="sample-tag">Sample</span>
-        </div>
-        <ul>
-          {SAMPLE_FRIENDS.map((friend) => (
-            <li key={friend.name} className="friend">
-              <span className={`avatar avatar-sm is-${friend.status}`} aria-hidden="true">
-                {initials(friend.name)}
-              </span>
-              <span className="friend-copy">
-                <span className="friend-name">{friend.name}</span>
-                <span className="friend-status">
-                  {friend.status === "away" ? "Away" : friend.game ? `Waiting for ${gameName(friend.game)}` : "In the lobby"}
-                </span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <OnlineFriends />
 
       <div className="side-foot">
         {loading ? null : user ? (
-          <button className="side-action" onClick={() => void signOut()}>
+          <button className="side-action" onClick={signOut}>
             <LogOut size={18} strokeWidth={1.8} aria-hidden="true" />
             Sign out
           </button>
@@ -127,12 +156,11 @@ function SearchBox() {
   );
 }
 
-function AccountButton({ email }: { email: string }) {
+function AccountButton({ name, email }: { name: string; email: string }) {
   const { signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const panelId = useId();
-  const handle = email.split("@")[0];
 
   useEffect(() => {
     if (!open) return;
@@ -152,20 +180,54 @@ function AccountButton({ email }: { email: string }) {
     <div className="account" ref={ref}>
       <button className="account-btn" aria-expanded={open} aria-controls={panelId} onClick={() => setOpen((v) => !v)}>
         <span className="avatar" aria-hidden="true">
-          {handle.slice(0, 2).toUpperCase()}
+          {initials(name)}
         </span>
         <span className="account-copy">
-          <span className="account-name">{handle}</span>
+          <span className="account-name">{name}</span>
           <span className="account-mail">{email}</span>
         </span>
       </button>
       {open ? (
         <div className="account-menu" id={panelId}>
           <a href="https://wishlist.planary.ch">Planary Wishlist</a>
-          <button onClick={() => void signOut()}>Sign out</button>
+          <button onClick={signOut}>Sign out</button>
         </div>
       ) : null}
     </div>
+  );
+}
+
+/** Chip balance, plus the daily bonus when it's waiting to be claimed. */
+function Balance() {
+  const { data: me } = useCasino<Me>("/v1/me", 30_000);
+  const act = useCasinoAction();
+  const [claiming, setClaiming] = useState(false);
+
+  async function claim() {
+    setClaiming(true);
+    try {
+      await act("/v1/chips/bonus");
+    } catch {
+      // The chips page explains; the button simply disappears once claimed.
+    } finally {
+      setClaiming(false);
+    }
+  }
+
+  return (
+    <>
+      {me?.bonus.available ? (
+        <button className="btn btn-cherry bonus-btn" onClick={() => void claim()} disabled={claiming}>
+          <Gift size={16} strokeWidth={2.2} aria-hidden="true" />
+          <span>Daily +{formatChips(me.bonus.amount)}</span>
+        </button>
+      ) : null}
+      <Link href="/chips" className="balance" aria-label={me ? `${formatChips(me.balance)} chips` : "Chips"}>
+        <ChipIcon size={20} />
+        <strong>{me ? formatChips(me.balance) : "…"}</strong>
+        <span className="balance-label">chips</span>
+      </Link>
+    </>
   );
 }
 
@@ -185,12 +247,8 @@ function Topbar() {
           <span className="skeleton" aria-hidden="true" />
         ) : user ? (
           <>
-            <Link href="/chips" className="balance">
-              <ChipIcon size={20} />
-              <strong>{formatChips(STARTER_CHIPS)}</strong>
-              <span className="balance-label">starter chips</span>
-            </Link>
-            <AccountButton email={user.email} />
+            <Balance />
+            <AccountButton name={user.name} email={user.email} />
           </>
         ) : (
           <>
@@ -240,6 +298,7 @@ function AuthNotice() {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  usePresence();
   return (
     <div className="shell">
       <Sidebar />

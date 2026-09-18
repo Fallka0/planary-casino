@@ -22,8 +22,10 @@ One Planary account (the same one used for Planary Wishlist and other Planary ap
 ## Capabilities and Constraints
 - Blackjack is live at 21.planary.ch (separate app: planary-blackjack, multiplayer on PartyKit); the other four games are "coming soon". The lobby lives at casino.planary.ch.
 - Planary Chips are play money: no cash value, cannot be bought, sold or exchanged.
-- Starter balance of 5'000 chips; kept in the browser until the wallet exists (wallet logic comes later).
-- Friends, online status, leaderboard and chip history have no backend yet; any data shown there is sample data and must be labeled as such.
+- Chips live in a server-side wallet per Planary account (planary-casino-api worker + D1): 5'000 starter chips, a daily bonus of 500 (resets at midnight Europe/Zurich), transfers between friends. Game servers move chips through the internal wallet API.
+- Friends: search by display name, requests that the other person accepts. Friends see each other's presence (lobby / at a Blackjack table) with a Join link.
+- Leaderboard: net chips won at the tables in the current week (Monday 00:00 Europe/Zurich), friends or everyone. Bonuses and transfers don't count.
+- No sample or demo data anywhere: empty states instead.
 - Swiss formatting for numbers (1'000).
 
 ## Brand Commitments

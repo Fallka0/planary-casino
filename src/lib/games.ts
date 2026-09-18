@@ -93,5 +93,14 @@ export function formatChips(value: number) {
     .replace(/\B(?=(\d{3})+(?!\d))/g, "'");
 }
 
-// Placeholder until the chip wallet (Postgres) exists: every account starts with this balance.
+/** Every new Planary account starts with this many chips (the wallet lives in planary-casino-api). */
 export const STARTER_CHIPS = 5000;
+
+export function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
