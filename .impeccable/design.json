@@ -1,0 +1,602 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-18T13:53:30.574052+00:00",
+  "title": "Design System: Planary Casino",
+  "extensions": {
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Anodized Ground",
+        "canonical": "#2a0915",
+        "tonalRamp": [
+          "#1f0710",
+          "#2a0915",
+          "#3b0d1f",
+          "#4c1329",
+          "#5e1a34",
+          "#722440",
+          "#8e3656",
+          "#b25a78"
+        ]
+      },
+      "shell": {
+        "role": "neutral",
+        "displayName": "Shell",
+        "canonical": "#3b0d1f",
+        "tonalRamp": [
+          "#1f0710",
+          "#2a0915",
+          "#3b0d1f",
+          "#4c1329",
+          "#5e1a34",
+          "#722440",
+          "#8e3656",
+          "#b25a78"
+        ]
+      },
+      "layer-1": {
+        "role": "neutral",
+        "displayName": "Layer 1",
+        "canonical": "#4c1329",
+        "tonalRamp": [
+          "#1f0710",
+          "#2a0915",
+          "#3b0d1f",
+          "#4c1329",
+          "#5e1a34",
+          "#722440",
+          "#8e3656",
+          "#b25a78"
+        ]
+      },
+      "layer-2": {
+        "role": "neutral",
+        "displayName": "Layer 2",
+        "canonical": "#5e1a34",
+        "tonalRamp": [
+          "#1f0710",
+          "#2a0915",
+          "#3b0d1f",
+          "#4c1329",
+          "#5e1a34",
+          "#722440",
+          "#8e3656",
+          "#b25a78"
+        ]
+      },
+      "layer-3": {
+        "role": "neutral",
+        "displayName": "Layer 3",
+        "canonical": "#722440",
+        "tonalRamp": [
+          "#1f0710",
+          "#2a0915",
+          "#3b0d1f",
+          "#4c1329",
+          "#5e1a34",
+          "#722440",
+          "#8e3656",
+          "#b25a78"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "rgba(255, 214, 224, 0.08)",
+        "tonalRamp": [
+          "#10090a",
+          "#2a2123",
+          "#463d3f",
+          "#655b5c",
+          "#887d7f",
+          "#aca1a3",
+          "#d3c7c9",
+          "#f7ebed"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Hairline Strong",
+        "canonical": "rgba(255, 214, 224, 0.15)",
+        "tonalRamp": [
+          "#10090a",
+          "#2a2123",
+          "#463d3f",
+          "#655b5c",
+          "#887d7f",
+          "#aca1a3",
+          "#d3c7c9",
+          "#f7ebed"
+        ]
+      },
+      "cream-paper": {
+        "role": "neutral",
+        "displayName": "Cream Paper",
+        "canonical": "oklch(95.3% 0.016 73)",
+        "tonalRamp": [
+          "#0f0a05",
+          "#29231c",
+          "#453f37",
+          "#635c54",
+          "#867f76",
+          "#aba39a",
+          "#d1c9bf",
+          "#f5ede3"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Cream Text",
+        "canonical": "oklch(95.3% 0.013 5)",
+        "tonalRamp": [
+          "#10090a",
+          "#2a2123",
+          "#463d3f",
+          "#655b5c",
+          "#887d7f",
+          "#aca1a3",
+          "#d3c7c9",
+          "#f7ebed"
+        ]
+      },
+      "text-2": {
+        "role": "neutral",
+        "displayName": "Text 2",
+        "canonical": "rgba(248, 236, 238, 0.74)",
+        "tonalRamp": [
+          "#10090a",
+          "#2a2123",
+          "#463d3f",
+          "#655b5c",
+          "#887d7f",
+          "#aca1a3",
+          "#d3c7c9",
+          "#f7ebed"
+        ]
+      },
+      "text-3": {
+        "role": "neutral",
+        "displayName": "Text 3",
+        "canonical": "rgba(248, 236, 238, 0.6)",
+        "tonalRamp": [
+          "#10090a",
+          "#2a2123",
+          "#463d3f",
+          "#655b5c",
+          "#887d7f",
+          "#aca1a3",
+          "#d3c7c9",
+          "#f7ebed"
+        ]
+      },
+      "cherry": {
+        "role": "primary",
+        "displayName": "Hot Cherry",
+        "canonical": "oklch(65.0% 0.238 18)",
+        "tonalRamp": [
+          "#1f0003",
+          "#4a0110",
+          "#7b0120",
+          "#b00031",
+          "#ec0946",
+          "#fe707b",
+          "#ffb4b5",
+          "#fee9e9"
+        ]
+      },
+      "cherry-hover": {
+        "role": "primary",
+        "displayName": "Cherry Bloom",
+        "canonical": "#ff4d6d",
+        "tonalRamp": [
+          "#1f0003",
+          "#4a0110",
+          "#7b0120",
+          "#b00031",
+          "#ec0946",
+          "#fe707b",
+          "#ffb4b5",
+          "#fee9e9"
+        ]
+      },
+      "cherry-soft": {
+        "role": "primary",
+        "displayName": "Cherry Wash",
+        "canonical": "rgba(255, 46, 85, 0.14)",
+        "tonalRamp": [
+          "#1f0003",
+          "#4a0110",
+          "#7b0120",
+          "#b00031",
+          "#ec0946",
+          "#fe707b",
+          "#ffb4b5",
+          "#fee9e9"
+        ]
+      },
+      "online": {
+        "role": "neutral",
+        "displayName": "Online Green",
+        "canonical": "oklch(82.3% 0.157 156)",
+        "tonalRamp": [
+          "#001005",
+          "#012d17",
+          "#044d2c",
+          "#0b7042",
+          "#0d985b",
+          "#34c17a",
+          "#64e99f",
+          "#c5ffd9"
+        ]
+      },
+      "away": {
+        "role": "neutral",
+        "displayName": "Away Amber",
+        "canonical": "oklch(82.1% 0.142 79)",
+        "tonalRamp": [
+          "#130900",
+          "#312101",
+          "#553a00",
+          "#7a5606",
+          "#a67609",
+          "#d3991e",
+          "#fbbf51",
+          "#feeccf"
+        ]
+      },
+      "poster-blackjack": {
+        "role": "tertiary",
+        "displayName": "Oxblood Print",
+        "canonical": "oklch(49.1% 0.189 20)",
+        "tonalRamp": [
+          "#1f0002",
+          "#4a010c",
+          "#7c001a",
+          "#af092b",
+          "#da414d",
+          "#ff7174",
+          "#fdb5b3",
+          "#fee9e8"
+        ]
+      },
+      "poster-poker": {
+        "role": "tertiary",
+        "displayName": "Midnight Indigo Print",
+        "canonical": "oklch(24.6% 0.083 283)",
+        "tonalRamp": [
+          "#0a012c",
+          "#201c4a",
+          "#3a396a",
+          "#57578b",
+          "#797ab1",
+          "#9d9ed7",
+          "#c3c5fd",
+          "#ecedfe"
+        ]
+      },
+      "poster-baccarat": {
+        "role": "tertiary",
+        "displayName": "Sand Card Print",
+        "canonical": "oklch(84.9% 0.062 70)",
+        "tonalRamp": [
+          "#150800",
+          "#351e00",
+          "#543917",
+          "#745736",
+          "#987a57",
+          "#be9e7b",
+          "#e5c49f",
+          "#fdebd8"
+        ]
+      },
+      "poster-roulette": {
+        "role": "tertiary",
+        "displayName": "Safety Orange Print",
+        "canonical": "oklch(68.4% 0.208 35)",
+        "tonalRamp": [
+          "#1f0000",
+          "#470b00",
+          "#741b00",
+          "#a52c05",
+          "#e03c00",
+          "#fd7653",
+          "#feb7a3",
+          "#fdeae4"
+        ]
+      },
+      "poster-slots": {
+        "role": "tertiary",
+        "displayName": "Hot Magenta Print",
+        "canonical": "oklch(60.4% 0.231 2)",
+        "tonalRamp": [
+          "#1f0009",
+          "#490020",
+          "#770439",
+          "#ab0655",
+          "#e31b75",
+          "#fe6a9b",
+          "#fdb2c6",
+          "#ffe8ed"
+        ]
+      },
+      "poster-ink-light": {
+        "role": "tertiary",
+        "displayName": "Print Cream",
+        "canonical": "oklch(96.4% 0.014 57)",
+        "tonalRamp": [
+          "#100a06",
+          "#2a221d",
+          "#463e38",
+          "#645c56",
+          "#877e78",
+          "#aca39c",
+          "#d2c8c2",
+          "#f6ece5"
+        ]
+      },
+      "poster-ink-dark": {
+        "role": "tertiary",
+        "displayName": "Print Oxblood",
+        "canonical": "oklch(19.7% 0.059 8)",
+        "tonalRamp": [
+          "#1d0007",
+          "#3b161e",
+          "#5a3239",
+          "#7b5057",
+          "#a07279",
+          "#c6969d",
+          "#eebbc3",
+          "#fee8eb"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Spotlight game title only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Inner page titles."
+      },
+      "headline-section": {
+        "displayName": "Headline Section",
+        "purpose": "Lobby row headings."
+      },
+      "title-panel": {
+        "displayName": "Title Panel",
+        "purpose": "Panel headings."
+      },
+      "title-cover": {
+        "displayName": "Title Cover",
+        "purpose": "Game name on a cover tile, in the cover's ink."
+      },
+      "caption-cover": {
+        "displayName": "Caption Cover",
+        "purpose": "Rules line under the cover title, uppercase, 85% opacity."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "All running copy."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Nav items, names, tags, metadata, links."
+      },
+      "label-action": {
+        "displayName": "Label Action",
+        "purpose": "Button text."
+      },
+      "label-group": {
+        "displayName": "Label Group",
+        "purpose": "Sidebar list group headings only, uppercase, text-3."
+      }
+    },
+    "shadows": [
+      {
+        "name": "action-lift",
+        "value": "0 10px 24px -12px rgba(255, 46, 85, 0.8)",
+        "purpose": "Under the cherry button only."
+      },
+      {
+        "name": "cover-action-lift",
+        "value": "0 12px 28px -14px rgba(0, 0, 0, 0.6)",
+        "purpose": "The spotlight button when it takes the cover's ink."
+      },
+      {
+        "name": "menu-float",
+        "value": "0 24px 48px -16px rgba(0, 0, 0, 0.7)",
+        "purpose": "Account dropdown, the one overlay."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Presses, cover crossfade, tile hover, title rise."
+      },
+      {
+        "name": "state",
+        "value": "0.18s ease",
+        "purpose": "Background and colour changes on controls."
+      },
+      {
+        "name": "press",
+        "value": "scale(0.97) buttons / scale(0.92) round controls, 0.18s ease-out",
+        "purpose": "Tactile press feedback."
+      },
+      {
+        "name": "cover-crossfade",
+        "value": "opacity 0.7s + scale 1.06 to 1 over 1.2s, ease-out",
+        "purpose": "Spotlight cover change; ground colour transitions 0.7s with it."
+      },
+      {
+        "name": "title-rise",
+        "value": "0.6s ease-out, translateY 10px + blur 6px to none",
+        "purpose": "Spotlight title on change."
+      },
+      {
+        "name": "tile-hover",
+        "value": "scale(1.05) over 0.6s ease-out",
+        "purpose": "Open-table cover art on hover only."
+      },
+      {
+        "name": "autoplay",
+        "value": "8000ms",
+        "purpose": "Spotlight interval; paused on hover/focus, off under reduced motion."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "all animation and transition disabled",
+        "purpose": "prefers-reduced-motion: reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide",
+        "value": "1240px"
+      },
+      {
+        "name": "mobile",
+        "value": "900px"
+      },
+      {
+        "name": "narrow",
+        "value": "420px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Cherry Button",
+      "kind": "button",
+      "refersTo": "button-cherry",
+      "description": "The primary action; asymmetric ticket-cut corners.",
+      "html": "<button class=\"ds-btn ds-btn-cherry\">Join</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;padding:0 18px;border:1px solid transparent;border-radius:14px 5px 14px 5px;font-family: var(--font-ui), 'Onest', system-ui, sans-serif;font-weight:600;font-size:0.92rem;white-space:nowrap;cursor:pointer;transition:background-color .18s ease,transform .18s cubic-bezier(0.16,1,0.3,1);} .ds-btn:active{transform:scale(0.97);} .ds-btn:focus-visible{outline:2px solid var(--cherry,#ff2e55);outline-offset:2px;} .ds-btn-cherry{background:var(--cherry,#ff2e55);color:#fff;box-shadow:0 10px 24px -12px rgba(255,46,85,0.8);} .ds-btn-cherry:hover{background:var(--cherry-hover,#ff4d6d);}"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Secondary action on the shell.",
+      "html": "<button class=\"ds-btn-quiet\">Sign in</button>",
+      "css": ".ds-btn-quiet{display:inline-flex;align-items:center;justify-content:center;height:42px;padding:0 18px;border-radius:14px 5px 14px 5px;background:var(--layer-2,#5e1a34);border:1px solid var(--line-2,rgba(255,214,224,0.15));color:var(--text,#f8ecee);font-family: var(--font-ui), 'Onest', system-ui, sans-serif;font-weight:600;font-size:0.92rem;cursor:pointer;transition:background-color .18s ease,transform .18s cubic-bezier(0.16,1,0.3,1);} .ds-btn-quiet:hover{background:var(--layer-3,#722440);} .ds-btn-quiet:active{transform:scale(0.97);} .ds-btn-quiet:focus-visible{outline:2px solid var(--cherry,#ff2e55);outline-offset:2px;}"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "search-field",
+      "description": "Top-bar game search on layer 1.",
+      "html": "<label class=\"ds-search\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/></svg><input type=\"search\" placeholder=\"Search games\"></label>",
+      "css": ".ds-search{display:flex;align-items:center;gap:10px;width:360px;height:44px;padding:0 14px;border-radius:14px;background:var(--layer-1,#4c1329);border:1px solid var(--line,rgba(255,214,224,0.08));color:rgba(248,236,238,0.6);transition:border-color .18s ease;} .ds-search:focus-within{border-color:rgba(255,46,85,0.5);outline:2px solid var(--cherry,#ff2e55);outline-offset:2px;} .ds-search input{flex:1;min-width:0;height:100%;border:0;background:transparent;color:var(--text,#f8ecee);font-family: var(--font-ui), 'Onest', system-ui, sans-serif;font-size:15px;outline:none;} .ds-search input::placeholder{color:rgba(248,236,238,0.6);}"
+    },
+    {
+      "name": "Sidebar Navigation",
+      "kind": "nav",
+      "refersTo": "side-link",
+      "description": "Stepped-layer nav; current page on layer 2 with a cherry hairline and icon.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-side-link\" aria-current=\"page\" href=\"#\"><svg width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" aria-hidden=\"true\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/></svg>Lobby</a><a class=\"ds-side-link\" href=\"#\"><svg width=\"19\" height=\"19\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" aria-hidden=\"true\"><path d=\"M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2\"/><circle cx=\"9\" cy=\"7\" r=\"4\"/></svg>Friends</a></nav>",
+      "css": ".ds-nav{display:grid;gap:4px;width:220px;padding:14px;border-radius:24px;background:var(--shell,#3b0d1f);} .ds-side-link{display:flex;align-items:center;gap:14px;height:46px;padding:0 14px;border-radius:14px;border:1px solid transparent;color:rgba(248,236,238,0.74);font-family: var(--font-ui), 'Onest', system-ui, sans-serif;font-weight:500;text-decoration:none;transition:background-color .18s ease,color .18s ease;} .ds-side-link:hover{background:var(--layer-1,#4c1329);color:var(--text,#f8ecee);} .ds-side-link:focus-visible{outline:2px solid var(--cherry,#ff2e55);outline-offset:2px;} .ds-side-link[aria-current=page]{background:var(--layer-2,#5e1a34);border-color:rgba(255,46,85,0.45);color:var(--text,#f8ecee);} .ds-side-link[aria-current=page] svg{color:var(--cherry,#ff2e55);}"
+    },
+    {
+      "name": "Filter Chips",
+      "kind": "chip",
+      "refersTo": "filter-chip",
+      "description": "Pill filters; pressed takes the cherry.",
+      "html": "<div class=\"ds-filters\"><button class=\"ds-filter\" aria-pressed=\"true\">All</button><button class=\"ds-filter\" aria-pressed=\"false\">Cards</button><button class=\"ds-filter\" aria-pressed=\"false\">Table</button></div>",
+      "css": ".ds-filters{display:flex;gap:8px;} .ds-filter{height:36px;padding:0 16px;border-radius:999px;border:1px solid var(--line-2,rgba(255,214,224,0.15));background:var(--layer-1,#4c1329);color:rgba(248,236,238,0.74);font-family: var(--font-ui), 'Onest', system-ui, sans-serif;font-size:0.88rem;font-weight:500;cursor:pointer;transition:background-color .18s ease,color .18s ease;} .ds-filter:hover{background:var(--layer-2,#5e1a34);color:var(--text,#f8ecee);} .ds-filter:focus-visible{outline:2px solid var(--cherry,#ff2e55);outline-offset:2px;} .ds-filter[aria-pressed=true]{background:var(--cherry,#ff2e55);border-color:var(--cherry,#ff2e55);color:#fff;}"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Shell container with a poster-lettered heading and a sample tag.",
+      "html": "<section class=\"ds-panel\"><div class=\"ds-panel-head\"><h2>This week</h2><span class=\"ds-sample\">Sample</span></div><p class=\"ds-panel-row\"><span class=\"ds-pos\">1</span> Lea Brunner <b>18'450</b></p><p class=\"ds-panel-row\"><span>2</span> Jonas Keller <b>12'900</b></p></section>",
+      "css": ".ds-panel{width:320px;padding:22px;border-radius:24px;background:var(--shell,#3b0d1f);border:1px solid var(--line,rgba(255,214,224,0.08));color:var(--text,#f8ecee);font-family: var(--font-ui), 'Onest', system-ui, sans-serif;} .ds-panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;} .ds-panel-head h2{margin:0;font-family: var(--font-poster), 'Big Shoulders', sans-serif;font-size:1.7rem;font-weight:800;line-height:1;text-transform:uppercase;letter-spacing:0.01em;} .ds-sample{padding:2px 8px;border-radius:999px;background:rgba(255,255,255,0.06);color:rgba(248,236,238,0.6);font-size:0.75rem;font-weight:500;} .ds-panel-row{display:flex;gap:12px;margin:0;padding:12px 0;border-bottom:1px solid var(--line,rgba(255,214,224,0.08));font-variant-numeric:tabular-nums;} .ds-panel-row b{margin-left:auto;} .ds-panel-row span{color:rgba(248,236,238,0.6);font-weight:700;} .ds-panel-row .ds-pos{color:var(--cherry,#ff2e55);}"
+    },
+    {
+      "name": "Cover Tile",
+      "kind": "card",
+      "refersTo": "cover-tile",
+      "description": "3:4 screen-printed cover; feathers into its own field, pill inverts the field/ink pair.",
+      "html": "<a class=\"ds-tile\" href=\"#\" style=\"--field:#b3122e;--ink:#fbf1ea\"><svg class=\"ds-tile-art\" viewBox=\"0 0 600 800\" preserveAspectRatio=\"xMidYMid slice\" aria-hidden=\"true\"><rect width=\"600\" height=\"800\" fill=\"#b3122e\"/><text x=\"620\" y=\"570\" text-anchor=\"end\" font-size=\"560\" font-weight=\"900\" fill=\"#ff5a78\">21</text><text x=\"608\" y=\"556\" text-anchor=\"end\" font-size=\"560\" font-weight=\"900\" fill=\"#6d0a1d\" style=\"mix-blend-mode:multiply\">21</text></svg><span class=\"ds-pill\">Opens first</span><div class=\"ds-tile-copy\"><h3>Blackjack</h3><p>Hit · Stand · Double</p></div></a>",
+      "css": ".ds-tile{position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:flex-end;width:220px;aspect-ratio:3/4;border-radius:18px;overflow:hidden;text-decoration:none;} .ds-tile-art{position:absolute;inset:0;width:100%;height:100%;z-index:-2;transition:transform .6s cubic-bezier(0.16,1,0.3,1);} .ds-tile::after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,transparent 58%,color-mix(in srgb,var(--field) 85%,transparent) 70%,var(--field) 84%);} .ds-tile:hover .ds-tile-art{transform:scale(1.05);} .ds-tile:focus-visible{outline:2px solid #ff2e55;outline-offset:2px;} .ds-pill{position:absolute;top:14px;right:14px;display:inline-flex;align-items:center;height:28px;padding:0 12px;border-radius:999px;background:var(--ink);color:var(--field);font-family: var(--font-ui), 'Onest', system-ui, sans-serif;font-size:0.8rem;font-weight:700;} .ds-tile-copy{display:grid;gap:4px;padding:18px;color:var(--ink);} .ds-tile-copy h3{margin:0;font-family: var(--font-poster), 'Big Shoulders', sans-serif;font-size:2.1rem;font-weight:900;line-height:0.9;text-transform:uppercase;} .ds-tile-copy p{margin:0;font-family: var(--font-poster), 'Big Shoulders', sans-serif;font-size:0.95rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;opacity:0.85;}"
+    },
+    {
+      "name": "Chip Mark",
+      "kind": "custom",
+      "refersTo": "cherry",
+      "description": "Flat two-ink chip; brand mark with a P, unit glyph without.",
+      "html": "<span class=\"ds-chipmark\"><svg viewBox=\"0 0 40 40\" width=\"40\" height=\"40\" aria-hidden=\"true\"><circle cx=\"20\" cy=\"20\" r=\"19\" fill=\"#ff2e55\"/><circle cx=\"20\" cy=\"20\" r=\"15.5\" fill=\"none\" stroke=\"#f6eee4\" stroke-width=\"4\" stroke-dasharray=\"6.1 6.1\"/><circle cx=\"20\" cy=\"20\" r=\"10.5\" fill=\"#f6eee4\"/><text x=\"20\" y=\"26.2\" text-anchor=\"middle\" font-size=\"17\" font-weight=\"900\" fill=\"#ff2e55\">P</text></svg><strong>1'000</strong></span>",
+      "css": ".ds-chipmark{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 14px 0 6px;border-radius:14px;background:var(--layer-1,#4c1329);border:1px solid var(--line,rgba(255,214,224,0.08));color:var(--text,#f8ecee);font-family: var(--font-ui), 'Onest', system-ui, sans-serif;font-variant-numeric:tabular-nums;} .ds-chipmark text{font-family: var(--font-poster), 'Big Shoulders', sans-serif;} .ds-chipmark strong{font-weight:700;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Anodized Launcher",
+    "overview": "Planary Casino is a game launcher, not a casino. The interface is a dark, finished object: a burgundy shell stepped in value like anodized aluminium catching light at different angles, carrying cream type and exactly one hot cherry for actions and state. The chrome is quiet and dense, a dashboard you come back to: sidebar, top bar, panels, lists. All colour, texture and noise are handed to the key art.\n\nThe key art is a set of screen-printed covers authored in code: one flat field, two or three inks, a halftone dot screen, a grain pass, and one plate printed slightly off register. Each cover owns its field colour and its ink colour, and every container that holds a cover (spotlight, tile, pill, button) inherits that pair rather than imposing the shell's palette on it. Condensed poster lettering (Big Shoulders) carries every title and section heading; a geometric sans (Onest) carries everything you read or operate.\n\nThe world explicitly refuses the casino register: no felt green, no gold, no serif luxury, no neon on black. It also never looks rendered: covers are flat and printed, not glossy or 3D.",
+    "keyCharacteristics": [
+      "Burgundy tonal layering instead of shadows: ground, shell, three layers.",
+      "One accent: cherry marks the primary action, the current place and the top rank.",
+      "Screen-printed covers as the only illustration, each with its own field/ink pair.",
+      "Condensed uppercase poster lettering for titles; calm sans for UI.",
+      "Asymmetric-corner action shape shared by every button.",
+      "Honest-state furniture: \"Sample\" tags, \"Opens first\" / \"Coming soon\" pills."
+    ],
+    "rules": [
+      {
+        "name": "The One Cherry Rule",
+        "body": "Cherry is the only accent in the shell. It marks the thing to press, where you are, and who is first. If a second element on a screen wants cherry for decoration, it does not get it.",
+        "section": "colors"
+      },
+      {
+        "name": "The Field Belongs to the Cover Rule",
+        "body": "Poster fields and inks are never used as chrome colours. A container shows a field colour only because it is holding that cover.",
+        "section": "colors"
+      },
+      {
+        "name": "The Step-Up Rule",
+        "body": "Depth and interaction are expressed by stepping one burgundy value up (ground, shell, layer 1, 2, 3), never by adding a shadow or a new hue.",
+        "section": "colors"
+      },
+      {
+        "name": "The Poster Voice Rule",
+        "body": "Anything that names a place, a game or a section is set in Big Shoulders, uppercase, weight 800 or 900. Anything a person reads as a sentence or presses is Onest, sentence case.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Chips Rule",
+        "body": "Every chip count, rank and counter uses `font-variant-numeric: tabular-nums` and Swiss grouping (18'450).",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Shell Rule",
+        "body": "Panels, tiles, sidebar and top bar never cast shadows. If a surface needs to read as higher, it moves up one burgundy layer.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Functional Blur Rule",
+        "body": "`backdrop-filter` is used once: the fixed mobile tab bar (blur 16px over 94% shell), where content scrolls beneath it. No decorative glass anywhere else.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** step up one burgundy layer (ground, shell, layer 1, 2, 3) for every hover, active or nested surface.",
+      "**Do** give every container that holds a cover the cover's field and ink as `--field` and `--ink`, and derive its pill, tags, controls and button from that pair.",
+      "**Do** feather covers into their own field colour; the copy sits on the poster's paper.",
+      "**Do** use the 14/5/14/5 action shape for every button, and only for buttons.",
+      "**Do** set titles, section and panel headings, and cover names in Big Shoulders uppercase 800 to 900.",
+      "**Do** label sample data with the sample tag and unopened tables with \"Opens first\" or \"Coming soon\".",
+      "**Do** use the Chip mark beside every chip amount, with tabular numerals and Swiss grouping."
+    ],
+    "donts": [
+      "**Don't** use felt green, gold, serif display faces or neon on black; the shell is burgundy, the type is cream.",
+      "**Don't** add a second accent to the shell; cherry is the only one.",
+      "**Don't** put a dark scrim or black gradient over a cover.",
+      "**Don't** draw a gradient, glossy or 3D coin; the Chip mark is flat, two inks.",
+      "**Don't** add shadows to panels, tiles, sidebar or top bar.",
+      "**Don't** use `backdrop-filter` except on a fixed bar that content scrolls under.",
+      "**Don't** use poster field colours as UI chrome outside a cover."
+    ]
+  }
+}
