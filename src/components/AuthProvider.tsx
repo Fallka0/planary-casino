@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { buildAuthUrl, supabase } from "@/lib/supabase";
+import { buildAuthUrl } from "@/lib/auth";
+import { absorbSessionFromHash, clearSession, loadSession, verifySession } from "@/lib/session";
 
 export interface CasinoUser {
   id: string;
@@ -20,57 +21,35 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-// planary-auth redirects back with the session in the URL hash (#access_token=…&refresh_token=…).
-async function absorbSessionFromHash() {
-  if (!supabase) return;
-  const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : "";
-  const params = new URLSearchParams(hash);
-  const accessToken = params.get("access_token");
-  const refreshToken = params.get("refresh_token");
-  if (!accessToken || !refreshToken) return;
-
-  const { error } = await supabase.auth.setSession({
-    access_token: accessToken,
-    refresh_token: refreshToken,
-  });
-  window.history.replaceState({}, document.title, `${window.location.pathname}${window.location.search}`);
-  if (error) throw error;
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<CasinoUser | null>(null);
-  const [loading, setLoading] = useState(Boolean(supabase));
+  const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
-    const client = supabase;
-    if (!client) return;
     let active = true;
-
-    void (async () => {
-      try {
-        await absorbSessionFromHash();
-      } catch {
-        // Invalid or expired tokens in the hash: tell the player, then fall back to any stored session.
-        if (active) setAuthError("Sign-in didn't complete. The link may have expired, so please sign in again.");
-      }
-      const { data } = await client.auth.getSession();
-      if (!active) return;
-      const sessionUser = data.session?.user;
-      setUser(sessionUser ? { id: sessionUser.id, email: sessionUser.email ?? "" } : null);
+    const hadToken = window.location.hash.includes("access_token=");
+    const session = absorbSessionFromHash() ?? loadSession();
+    if (!session) {
+      if (hadToken) setAuthError("Sign-in didn't complete. The link may have expired, so please sign in again.");
       setLoading(false);
-    })();
-
-    const {
-      data: { subscription },
-    } = client.auth.onAuthStateChange((_event, session) => {
-      const sessionUser = session?.user;
-      setUser(sessionUser ? { id: sessionUser.id, email: sessionUser.email ?? "" } : null);
+      return;
+    }
+    setUser({ id: session.userId, email: session.email });
+    setLoading(false);
+    void verifySession(session).then((ok) => {
+      if (!active || ok) return;
+      clearSession();
+      setUser(null);
+      if (hadToken) setAuthError("Sign-in didn't complete. The link may have expired, so please sign in again.");
     });
-
+    const timer = window.setTimeout(() => {
+      clearSession();
+      setUser(null);
+    }, Math.max(0, session.expiresAt * 1000 - Date.now() - 60_000));
     return () => {
       active = false;
-      subscription.unsubscribe();
+      window.clearTimeout(timer);
     };
   }, []);
 
@@ -79,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await supabase?.auth.signOut();
+    clearSession();
     setUser(null);
   }, []);
 

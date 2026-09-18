@@ -16,7 +16,7 @@ Planary Casino (casino.planary.ch) is the lobby for a set of play-money games. E
 One Planary account (the same one used for Planary Wishlist and other Planary apps) and one chip balance across every table. It is a game launcher for Planary, explicitly not a gambling site.
 
 ## Operating Context
-- Auth is central: redirect to auth.planary.ch with `returnTo`, session comes back in the URL hash and is set on the Supabase client.
+- Auth is central: redirect to auth.planary.ch with `returnTo`; the access token comes back in the URL hash, is kept in the browser and verified server-side via auth.planary.ch/api/auth/me (the apps hold no Supabase keys). Tokens last about an hour; there is no silent refresh yet.
 - Stack: Next.js (App Router) + TypeScript; later Postgres for wallet/social data; hosting Vercel (+ Firebase per the concept note).
 
 ## Capabilities and Constraints
