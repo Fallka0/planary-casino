@@ -5,7 +5,9 @@ import { type BlackjackRound, bumpStat, checkLive, getStats, type RouletteRound,
 import { notify } from "./notify";
 import { BADGE_COLUMNS, badge, pairKey, presenceOf, social, unreadCounts } from "./social";
 import { nextZurichMidnight, zurichDay, zurichWeekStart } from "./time";
-import { claimBonus, credit, DAILY_BONUS, debit, ensurePlayer, getPlayer, MIN_TRANSFER, transfer } from "./wallet";
+import { admin } from "./admin";
+import { betRefusal, blockedReason, getSettings, isMuted } from "./policy";
+import { claimBonus, credit, debit, ensurePlayer, getPlayer, transfer } from "./wallet";
 
 type Vars = { player: Player };
 const app = new Hono<{ Bindings: Env; Variables: Vars }>();
@@ -34,7 +36,22 @@ app.post("/internal/wallet", async (c) => {
   const { userId, name } = await c.req.json<{ userId: string; name: string }>();
   const player = await ensurePlayer(c.env, userId, cleanName(name));
   // The tables show your picture, border and title, and draw your card back and chips.
-  return c.json({ balance: player.balance, ...badge(player), cardback: player.cardback, chipset: player.chipset });
+  // `blocked` keeps suspended players off the tables; `muted` keeps them out of table chat.
+  return c.json({
+    balance: player.balance,
+    ...badge(player),
+    cardback: player.cardback,
+    chipset: player.chipset,
+    blocked: blockedReason(player),
+    muted: isMuted(player),
+  });
+});
+
+/** Restrictions only, without touching the player's name (chat checks). */
+app.post("/internal/status", async (c) => {
+  const { userId } = await c.req.json<{ userId: string }>();
+  const player = await getPlayer(c.env, userId);
+  return c.json({ balance: player?.balance ?? 0, blocked: player ? blockedReason(player) : null, muted: player ? isMuted(player) : false });
 });
 
 /** A finished round, reported by a game server: updates counters and unlocks achievements. */
@@ -48,6 +65,10 @@ app.post("/internal/round", async (c) => {
 app.post("/internal/debit", async (c) => {
   const { userId, amount, game, ref } = await c.req.json<{ userId: string; amount: number; game: string; ref?: string }>();
   if (!isInt(amount, 1)) return c.json({ error: "bad amount" }, 400);
+  const player = await getPlayer(c.env, userId);
+  if (!player) return c.json({ ok: false, balance: 0, reason: "No wallet for this player." });
+  const reason = await betRefusal(c.env, player, game, amount);
+  if (reason) return c.json({ ok: false, balance: player.balance, reason });
   const balance = await debit(c.env, userId, amount, { kind: "game", game, ref });
   return balance === null ? c.json({ ok: false, balance: (await getPlayer(c.env, userId))?.balance ?? 0 }) : c.json({ ok: true, balance });
 });
@@ -91,12 +112,16 @@ app.use("/v1/*", async (c, next) => {
   const res = await c.env.AUTH.fetch(new Request("https://auth.internal/api/auth/me", { headers: { Authorization: authorization } }));
   if (!res.ok) return c.json({ error: "not authenticated" }, 401);
   const { user } = (await res.json()) as { user: { id: string; name?: string; email?: string } };
-  c.set("player", await ensurePlayer(c.env, user.id, cleanName(user.name || user.email?.split("@")[0])));
+  const player = await ensurePlayer(c.env, user.id, cleanName(user.name || user.email?.split("@")[0]));
+  const blocked = blockedReason(player);
+  if (blocked) return c.json({ error: blocked, code: "blocked" }, 403);
+  c.set("player", player);
   await next();
 });
 
-app.get("/v1/me", (c) => {
+app.get("/v1/me", async (c) => {
   const p = c.get("player");
+  const { dailyBonus } = await getSettings(c.env);
   const available = p.bonus_day !== zurichDay();
   return c.json({
     ...badge(p),
@@ -105,7 +130,8 @@ app.get("/v1/me", (c) => {
     chipset: p.chipset,
     balance: p.balance,
     bonusStreak: p.bonus_streak,
-    bonus: { amount: DAILY_BONUS, available, nextAt: available ? null : nextZurichMidnight() },
+    bonus: { amount: dailyBonus, available, nextAt: available ? null : nextZurichMidnight() },
+    limits: { lossLimit: p.loss_limit, excludedUntil: p.excluded_until },
   });
 });
 
@@ -114,7 +140,7 @@ app.post("/v1/chips/bonus", async (c) => {
   const balance = await claimBonus(c.env, me);
   if (balance === null) return c.json({ error: "Today's bonus is already claimed.", nextAt: nextZurichMidnight() }, 409);
   const unlocked = await checkLive(c.env, me);
-  return c.json({ balance, amount: DAILY_BONUS, nextAt: nextZurichMidnight(), unlocked: unlocked.map((a) => a.id) });
+  return c.json({ balance, amount: (await getSettings(c.env)).dailyBonus, nextAt: nextZurichMidnight(), unlocked: unlocked.map((a) => a.id) });
 });
 
 app.get("/v1/chips/history", async (c) => {
@@ -131,7 +157,8 @@ app.get("/v1/chips/history", async (c) => {
 app.post("/v1/chips/send", async (c) => {
   const me = c.get("player");
   const { userId, amount } = await c.req.json<{ userId: string; amount: number }>();
-  if (!isInt(amount, MIN_TRANSFER)) return c.json({ error: `Send at least ${MIN_TRANSFER} chips.` }, 400);
+  const { minTransfer } = await getSettings(c.env);
+  if (!isInt(amount, minTransfer)) return c.json({ error: `Send at least ${minTransfer} chips.` }, 400);
   const [low, high] = pairKey(me.user_id, userId);
   const friendship = await c.env.DB.prepare("SELECT status FROM friendships WHERE user_low = ? AND user_high = ?")
     .bind(low, high)
@@ -172,7 +199,7 @@ app.get("/v1/players/search", async (c) => {
      ORDER BY p.name_lower LIMIT 12`,
   )
     .bind(me, pattern)
-    .all<Player & { status: string | null; requested_by: string | null }>();
+    .all<Omit<Player, "status"> & { status: string | null; requested_by: string | null }>();
   return c.json({
     players: results.map((r) => ({
       ...badge(r),
@@ -191,7 +218,7 @@ app.get("/v1/friends", async (c) => {
      ORDER BY p.name_lower`,
   )
     .bind(me)
-    .all<Player & { status: string; requested_by: string }>();
+    .all<Omit<Player, "status"> & { status: string; requested_by: string }>();
   const friends = [];
   const incoming = [];
   const outgoing = [];
@@ -285,6 +312,7 @@ app.get("/v1/leaderboard", async (c) => {
 });
 
 app.route("/v1", social);
+app.route("/admin", admin);
 
 // Profile pictures are public images; the version in the URL makes them cache forever.
 app.get("/avatars/:id", async (c) => {

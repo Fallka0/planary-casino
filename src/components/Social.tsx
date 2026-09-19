@@ -13,11 +13,11 @@ interface Unread {
 
 export interface NotificationItem {
   id: number;
-  kind: "friend_request" | "friend_accepted" | "chips_received" | "table_invite" | "achievement";
+  kind: "friend_request" | "friend_accepted" | "chips_received" | "table_invite" | "achievement" | "announcement" | "staff";
   at: number;
   read: boolean;
   actor: import("@/lib/api").PlayerBadge | null;
-  data: { amount?: number; game?: string; table?: string; id?: string; rewards?: string[] } | null;
+  data: { amount?: number; game?: string; table?: string; id?: string; rewards?: string[]; title?: string; body?: string; text?: string } | null;
   achievement: { id: string; name: string; glyph: string; grade: 1 | 2 | 3 | 4 } | null;
 }
 
@@ -41,6 +41,13 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   const { accessToken } = useAuth();
   const [unread, setUnread] = useState<Unread>({ messages: 0, notifications: 0 });
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [blocked, setBlocked] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onBlocked = (e: Event) => setBlocked((e as CustomEvent<string>).detail);
+    window.addEventListener("casino:blocked", onBlocked);
+    return () => window.removeEventListener("casino:blocked", onBlocked);
+  }, []);
   const seen = useRef<number | null>(null);
 
   const checkAchievements = useCallback(async () => {
@@ -95,6 +102,11 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <SocialContext.Provider value={{ unread, refresh }}>
+      {blocked ? (
+        <div className="blocked-bar" role="alert">
+          <strong>Account restricted.</strong> {blocked} If you think this is a mistake, contact support.
+        </div>
+      ) : null}
       {children}
       <div className="toasts" aria-live="polite">
         {toasts.slice(0, 1).map((t) => (

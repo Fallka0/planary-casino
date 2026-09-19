@@ -77,6 +77,16 @@ function Item({ n, now, onDone }: { n: NotificationItem; now: number; onDone: ()
           </a>
         ) : null;
       break;
+    case "announcement":
+      text = (
+        <>
+          <strong>{n.data?.title ?? "News from Planary Casino"}</strong> {n.data?.body}
+        </>
+      );
+      break;
+    case "staff":
+      text = <>{n.data?.text ?? "A message from Planary Casino."}</>;
+      break;
     case "achievement":
       text = (
         <>

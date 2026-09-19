@@ -51,3 +51,9 @@ export function zurichYesterday(ms = Date.now()) {
   const { y, m, d } = parts(ms);
   return new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10);
 }
+
+/** Epoch ms of today's 00:00 in Zurich. */
+export function zurichDayStart(ms = Date.now()) {
+  const { y, m, d, offset } = parts(ms);
+  return Date.UTC(y, m - 1, d) - offset;
+}

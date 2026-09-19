@@ -56,7 +56,14 @@ export interface LedgerEntry {
   counterparty_name: string | null;
 }
 
-export class ApiError extends Error {}
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public code?: string,
+  ) {
+    super(message);
+  }
+}
 
 export function avatarSrc(path: string | null) {
   return path ? CASINO_API + path : null;
@@ -70,7 +77,11 @@ async function call<T>(token: string, path: string, body?: unknown): Promise<T> 
     cache: "no-store",
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new ApiError((data as { error?: string }).error ?? "Something went wrong. Try again.");
+  if (!res.ok) {
+    const { error, code } = data as { error?: string; code?: string };
+    if (code === "blocked") window.dispatchEvent(new CustomEvent("casino:blocked", { detail: error }));
+    throw new ApiError(error ?? "Something went wrong. Try again.", code);
+  }
   return data as T;
 }
 

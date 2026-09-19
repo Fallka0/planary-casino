@@ -6,6 +6,10 @@ export interface Env {
   ALLOWED_ORIGINS: string;
   /** Shared with game servers (secret). Guards /internal/*. */
   INTERNAL_KEY: string;
+  /** Planary account email that becomes Owner of the admin panel when there's no staff yet. */
+  OWNER_EMAIL: string;
+  /** Browser origins allowed to call /admin (the admin app). */
+  ADMIN_ORIGINS: string;
 }
 
 export interface Player {
@@ -26,4 +30,10 @@ export interface Player {
   chipset: string | null;
   showcase: string | null;
   bonus_streak: number;
+  status: "active" | "suspended" | "banned";
+  status_until: number | null;
+  status_reason: string | null;
+  muted_until: number | null;
+  loss_limit: number | null;
+  excluded_until: number | null;
 }

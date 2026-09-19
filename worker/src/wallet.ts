@@ -1,9 +1,7 @@
 import type { Env, Player } from "./env";
+import { getSettings } from "./policy";
 import { zurichDay, zurichYesterday } from "./time";
 
-export const STARTER_CHIPS = 5000;
-export const DAILY_BONUS = 500;
-export const MIN_TRANSFER = 10;
 
 const now = () => Date.now();
 
@@ -14,13 +12,14 @@ export async function getPlayer(env: Env, userId: string) {
 /** Creates the player on first contact (with starter chips) and keeps the display name in sync. */
 export async function ensurePlayer(env: Env, userId: string, name: string): Promise<Player> {
   const t = now();
+  const { starterChips } = await getSettings(env);
   const [inserted] = await env.DB.batch([
     env.DB.prepare(
       "INSERT OR IGNORE INTO players (user_id, name, name_lower, balance, last_seen, created_at) VALUES (?1, ?2, ?3, ?4, 0, ?5)",
-    ).bind(userId, name, name.toLowerCase(), STARTER_CHIPS, t),
+    ).bind(userId, name, name.toLowerCase(), starterChips, t),
     env.DB.prepare("INSERT INTO ledger (user_id, amount, kind, created_at) SELECT ?1, ?2, 'starter', ?3 WHERE changes() = 1").bind(
       userId,
-      STARTER_CHIPS,
+      starterChips,
       t,
     ),
   ]);
@@ -64,16 +63,17 @@ export async function credit(env: Env, userId: string, amount: number, entry: { 
 /** One claim per Zurich calendar day. Returns the new balance, or null if already claimed today. */
 export async function claimBonus(env: Env, userId: string) {
   const today = zurichDay();
+  const { dailyBonus } = await getSettings(env);
   const [update] = await env.DB.batch([
     // The streak grows when yesterday was claimed too, otherwise it starts over.
     env.DB.prepare(
       `UPDATE players SET balance = balance + ?1, bonus_day = ?2,
          bonus_streak = CASE WHEN bonus_day = ?4 THEN bonus_streak + 1 ELSE 1 END
        WHERE user_id = ?3 AND (bonus_day IS NULL OR bonus_day <> ?2)`,
-    ).bind(DAILY_BONUS, today, userId, zurichYesterday()),
+    ).bind(dailyBonus, today, userId, zurichYesterday()),
     env.DB.prepare("INSERT INTO ledger (user_id, amount, kind, created_at) SELECT ?1, ?2, 'bonus', ?3 WHERE changes() = 1").bind(
       userId,
-      DAILY_BONUS,
+      dailyBonus,
       now(),
     ),
   ]);
