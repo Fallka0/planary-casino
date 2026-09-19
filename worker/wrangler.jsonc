@@ -12,7 +12,7 @@
     "ALLOWED_ORIGINS": "https://casino.planary.ch,https://21.planary.ch,https://roulette.planary.ch,http://localhost:3000,http://localhost:3001,http://localhost:3002",
     // The admin panel. The owner email claims the Owner role on first sign-in, while nobody holds it.
     "ADMIN_ORIGINS": "https://admin.planary.ch,http://localhost:3003",
-    "OWNER_EMAIL": "nikitapantelej1@gmail.com"
+    "OWNER_EMAIL": "mykytapantelei@gmail.com"
   },
   // Crowns last week's leaderboard winner (hourly on Mondays, idempotent).
   "triggers": { "crons": ["15 * * * 1"] },
