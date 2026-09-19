@@ -9,7 +9,7 @@
   // Verifies player tokens by asking planary-auth directly, worker to worker.
   "services": [{ "binding": "AUTH", "service": "planary-auth" }],
   "vars": {
-    "ALLOWED_ORIGINS": "https://casino.planary.ch,https://21.planary.ch,http://localhost:3000,http://localhost:3001"
+    "ALLOWED_ORIGINS": "https://casino.planary.ch,https://21.planary.ch,https://roulette.planary.ch,http://localhost:3000,http://localhost:3001,http://localhost:3002"
   },
   "observability": { "enabled": true }
 }

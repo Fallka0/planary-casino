@@ -7,7 +7,7 @@ export const CASINO_API = process.env.NEXT_PUBLIC_CASINO_API || "https://planary
 
 export interface Presence {
   online: boolean;
-  where: "lobby" | "blackjack" | null;
+  where: "lobby" | "blackjack" | "roulette" | null;
   table: string | null;
 }
 export interface Me {
@@ -117,12 +117,17 @@ export function usePresence() {
   }, [accessToken]);
 }
 
-export function tableUrl(table: string) {
-  return `https://21.planary.ch/t/${table}`;
+const GAME_HOSTS = { blackjack: "https://21.planary.ch", roulette: "https://roulette.planary.ch" } as const;
+
+/** Link to the table a friend is at, in whichever game they're playing. */
+export function tableUrl(presence: Presence) {
+  const host = presence.where === "roulette" || presence.where === "blackjack" ? GAME_HOSTS[presence.where] : null;
+  return host && presence.table ? `${host}/t/${presence.table}` : null;
 }
 
 export function describePresence(p: Presence) {
   if (!p.online) return "Offline";
   if (p.where === "blackjack") return p.table ? "At a Blackjack table" : "In Blackjack";
+  if (p.where === "roulette") return p.table ? "At a Roulette table" : "In Roulette";
   return "In the lobby";
 }

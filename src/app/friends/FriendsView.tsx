@@ -147,8 +147,8 @@ export function FriendsView() {
                         <span className="person-name">{f.name}</span>
                         <span className="person-status">{describePresence(f.presence)}</span>
                       </span>
-                      {f.presence.table ? (
-                        <a className="btn btn-sm btn-cherry" href={tableUrl(f.presence.table)}>
+                      {tableUrl(f.presence) ? (
+                        <a className="btn btn-sm btn-cherry" href={tableUrl(f.presence)!}>
                           Join table
                         </a>
                       ) : null}

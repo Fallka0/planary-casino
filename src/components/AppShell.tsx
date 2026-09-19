@@ -62,8 +62,8 @@ function OnlineFriends() {
                 <span className="friend-name">{friend.name}</span>
                 <span className="friend-status">{describePresence(friend.presence)}</span>
               </span>
-              {friend.presence.table ? (
-                <a className="join-btn" href={tableUrl(friend.presence.table)} aria-label={`Join ${friend.name}'s table`}>
+              {tableUrl(friend.presence) ? (
+                <a className="join-btn" href={tableUrl(friend.presence)!} aria-label={`Join ${friend.name}'s table`}>
                   Join
                 </a>
               ) : null}

@@ -9,7 +9,7 @@ const app = new Hono<{ Bindings: Env; Variables: Vars }>();
 
 /** Seen within this window counts as online (clients ping every 30 s). */
 const ONLINE_MS = 75_000;
-const PRESENCE_WHERE = new Set(["lobby", "blackjack"]);
+const PRESENCE_WHERE = new Set(["lobby", "blackjack", "roulette"]);
 
 const pairKey = (a: string, b: string) => (a < b ? [a, b] : [b, a]);
 
