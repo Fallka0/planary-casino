@@ -1,5 +1,5 @@
 import type { Env, Player } from "./env";
-import { zurichDay } from "./time";
+import { zurichDay, zurichYesterday } from "./time";
 
 export const STARTER_CHIPS = 5000;
 export const DAILY_BONUS = 500;
@@ -65,9 +65,12 @@ export async function credit(env: Env, userId: string, amount: number, entry: { 
 export async function claimBonus(env: Env, userId: string) {
   const today = zurichDay();
   const [update] = await env.DB.batch([
+    // The streak grows when yesterday was claimed too, otherwise it starts over.
     env.DB.prepare(
-      "UPDATE players SET balance = balance + ?1, bonus_day = ?2 WHERE user_id = ?3 AND (bonus_day IS NULL OR bonus_day <> ?2)",
-    ).bind(DAILY_BONUS, today, userId),
+      `UPDATE players SET balance = balance + ?1, bonus_day = ?2,
+         bonus_streak = CASE WHEN bonus_day = ?4 THEN bonus_streak + 1 ELSE 1 END
+       WHERE user_id = ?3 AND (bonus_day IS NULL OR bonus_day <> ?2)`,
+    ).bind(DAILY_BONUS, today, userId, zurichYesterday()),
     env.DB.prepare("INSERT INTO ledger (user_id, amount, kind, created_at) SELECT ?1, ?2, 'bonus', ?3 WHERE changes() = 1").bind(
       userId,
       DAILY_BONUS,

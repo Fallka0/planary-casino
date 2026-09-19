@@ -37,6 +37,8 @@ function describe(entry: LedgerEntry) {
       return `To ${entry.counterparty_name ?? "a friend"}`;
     case "game":
       return `${entry.game === "roulette" ? "Roulette" : "Blackjack"} · ${entry.amount < 0 ? "bet" : "payout"}`;
+    case "shop":
+      return "Shop purchase";
   }
 }
 

@@ -45,3 +45,9 @@ export function zurichWeekStart(ms = Date.now()) {
   const { y, m, d, weekday, offset } = parts(ms);
   return Date.UTC(y, m - 1, d - weekday) - offset;
 }
+
+/** The Zurich calendar day before today, YYYY-MM-DD. */
+export function zurichYesterday(ms = Date.now()) {
+  const { y, m, d } = parts(ms);
+  return new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10);
+}

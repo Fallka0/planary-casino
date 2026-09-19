@@ -1,28 +1,22 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Env, Player } from "./env";
+import { type BlackjackRound, bumpStat, checkLive, getStats, type RouletteRound, recordRound, unlock } from "./achievements";
+import { notify } from "./notify";
+import { BADGE_COLUMNS, badge, pairKey, presenceOf, social, unreadCounts } from "./social";
 import { nextZurichMidnight, zurichDay, zurichWeekStart } from "./time";
 import { claimBonus, credit, DAILY_BONUS, debit, ensurePlayer, getPlayer, MIN_TRANSFER, transfer } from "./wallet";
 
 type Vars = { player: Player };
 const app = new Hono<{ Bindings: Env; Variables: Vars }>();
 
-/** Seen within this window counts as online (clients ping every 30 s). */
-const ONLINE_MS = 75_000;
 const PRESENCE_WHERE = new Set(["lobby", "blackjack", "roulette"]);
-
-const pairKey = (a: string, b: string) => (a < b ? [a, b] : [b, a]);
 
 function cleanName(raw: unknown) {
   return String(raw ?? "")
     .replace(/[\u0000-\u001f\u007f<>]/g, "")
     .trim()
     .slice(0, 24) || "Player";
-}
-
-function presenceOf(p: Pick<Player, "last_seen" | "presence_where" | "presence_table">) {
-  const online = Date.now() - p.last_seen < ONLINE_MS;
-  return { online, where: online ? p.presence_where : null, table: online ? p.presence_table : null };
 }
 
 function isInt(value: unknown, min: number): value is number {
@@ -39,7 +33,16 @@ app.use("/internal/*", async (c, next) => {
 app.post("/internal/wallet", async (c) => {
   const { userId, name } = await c.req.json<{ userId: string; name: string }>();
   const player = await ensurePlayer(c.env, userId, cleanName(name));
-  return c.json({ balance: player.balance });
+  // The tables show your picture, border and title, and draw your card back and chips.
+  return c.json({ balance: player.balance, ...badge(player), cardback: player.cardback, chipset: player.chipset });
+});
+
+/** A finished round, reported by a game server: updates counters and unlocks achievements. */
+app.post("/internal/round", async (c) => {
+  const { userId, round, tablemates } = await c.req.json<{ userId: string; round: BlackjackRound | RouletteRound; tablemates?: string[] }>();
+  if (!round || (round.game !== "blackjack" && round.game !== "roulette")) return c.json({ error: "bad round" }, 400);
+  const unlocked = await recordRound(c.env, userId, round, Array.isArray(tablemates) ? tablemates.slice(0, 20) : []);
+  return c.json({ unlocked: unlocked.map((a) => ({ id: a.id, name: a.name })) });
 });
 
 app.post("/internal/debit", async (c) => {
@@ -96,17 +99,22 @@ app.get("/v1/me", (c) => {
   const p = c.get("player");
   const available = p.bonus_day !== zurichDay();
   return c.json({
-    id: p.user_id,
-    name: p.name,
+    ...badge(p),
+    banner: p.banner,
+    cardback: p.cardback,
+    chipset: p.chipset,
     balance: p.balance,
+    bonusStreak: p.bonus_streak,
     bonus: { amount: DAILY_BONUS, available, nextAt: available ? null : nextZurichMidnight() },
   });
 });
 
 app.post("/v1/chips/bonus", async (c) => {
-  const balance = await claimBonus(c.env, c.get("player").user_id);
+  const me = c.get("player").user_id;
+  const balance = await claimBonus(c.env, me);
   if (balance === null) return c.json({ error: "Today's bonus is already claimed.", nextAt: nextZurichMidnight() }, 409);
-  return c.json({ balance, amount: DAILY_BONUS, nextAt: nextZurichMidnight() });
+  const unlocked = await checkLive(c.env, me);
+  return c.json({ balance, amount: DAILY_BONUS, nextAt: nextZurichMidnight(), unlocked: unlocked.map((a) => a.id) });
 });
 
 app.get("/v1/chips/history", async (c) => {
@@ -131,7 +139,11 @@ app.post("/v1/chips/send", async (c) => {
   if (friendship?.status !== "accepted") return c.json({ error: "You can only send chips to friends." }, 403);
   const balance = await transfer(c.env, me.user_id, userId, amount);
   if (balance === null) return c.json({ error: "Not enough chips." }, 409);
-  return c.json({ balance });
+  await Promise.all([bumpStat(c.env, me.user_id, "chips_sent", amount), notify(c.env, userId, "chips_received", me.user_id, { amount })]);
+  const sent = (await getStats(c.env, me.user_id)).chips_sent ?? 0;
+  const unlocked = await unlock(c.env, me.user_id, sent >= 10_000 ? ["generous", "patron"] : ["generous"]);
+  await checkLive(c.env, userId);
+  return c.json({ balance, unlocked: unlocked.map((a) => a.id) });
 });
 
 app.post("/v1/presence", async (c) => {
@@ -141,7 +153,8 @@ app.post("/v1/presence", async (c) => {
   await c.env.DB.prepare("UPDATE players SET last_seen = ?1, presence_where = ?2, presence_table = ?3 WHERE user_id = ?4")
     .bind(Date.now(), where, safeTable, c.get("player").user_id)
     .run();
-  return c.json({ ok: true });
+  // The ping doubles as the unread check for the message and notification badges.
+  return c.json({ ok: true, unread: await unreadCounts(c.env, c.get("player").user_id) });
 });
 
 // ── Friends ───────────────────────────────────────────
@@ -152,18 +165,17 @@ app.get("/v1/players/search", async (c) => {
   if (q.length < 2) return c.json({ players: [] });
   const pattern = `${q.replace(/[\\%_]/g, (ch) => `\\${ch}`)}%`;
   const { results } = await c.env.DB.prepare(
-    `SELECT p.user_id, p.name, f.status, f.requested_by
+    `SELECT ${BADGE_COLUMNS}, f.status, f.requested_by
      FROM players p
      LEFT JOIN friendships f ON (f.user_low = min(p.user_id, ?1) AND f.user_high = max(p.user_id, ?1))
      WHERE p.name_lower LIKE ?2 ESCAPE '\\' AND p.user_id <> ?1
      ORDER BY p.name_lower LIMIT 12`,
   )
     .bind(me, pattern)
-    .all<{ user_id: string; name: string; status: string | null; requested_by: string | null }>();
+    .all<Player & { status: string | null; requested_by: string | null }>();
   return c.json({
     players: results.map((r) => ({
-      id: r.user_id,
-      name: r.name,
+      ...badge(r),
       relation: r.status === "accepted" ? "friend" : r.status === "pending" ? (r.requested_by === me ? "requested" : "incoming") : "none",
     })),
   });
@@ -172,7 +184,7 @@ app.get("/v1/players/search", async (c) => {
 app.get("/v1/friends", async (c) => {
   const me = c.get("player").user_id;
   const { results } = await c.env.DB.prepare(
-    `SELECT f.status, f.requested_by, p.user_id, p.name, p.last_seen, p.presence_where, p.presence_table
+    `SELECT f.status, f.requested_by, ${BADGE_COLUMNS}, p.last_seen, p.presence_where, p.presence_table
      FROM friendships f
      JOIN players p ON p.user_id = CASE WHEN f.user_low = ?1 THEN f.user_high ELSE f.user_low END
      WHERE f.user_low = ?1 OR f.user_high = ?1
@@ -184,7 +196,7 @@ app.get("/v1/friends", async (c) => {
   const incoming = [];
   const outgoing = [];
   for (const r of results) {
-    const person = { id: r.user_id, name: r.name };
+    const person = badge(r);
     if (r.status === "accepted") friends.push({ ...person, presence: presenceOf(r) });
     else if (r.requested_by === me) outgoing.push(person);
     else incoming.push(person);
@@ -207,15 +219,23 @@ app.post("/v1/friends/request", async (c) => {
   if (existing?.status === "pending" && existing.requested_by !== me) {
     // They already asked you: asking back means yes.
     await c.env.DB.prepare("UPDATE friendships SET status = 'accepted' WHERE user_low = ? AND user_high = ?").bind(low, high).run();
+    await befriended(c.env, me, userId);
     return c.json({ relation: "friend" });
   }
-  await c.env.DB.prepare(
+  const inserted = await c.env.DB.prepare(
     "INSERT OR IGNORE INTO friendships (user_low, user_high, status, requested_by, created_at) VALUES (?, ?, 'pending', ?, ?)",
   )
     .bind(low, high, me, Date.now())
     .run();
+  if (inserted.meta.changes) await notify(c.env, userId, "friend_request", me);
   return c.json({ relation: "requested" });
 });
+
+/** `me` accepted `other`: tell them, and check friend-count achievements on both sides. */
+async function befriended(env: Env, me: string, other: string) {
+  await notify(env, other, "friend_accepted", me);
+  await Promise.all([checkLive(env, me), checkLive(env, other)]);
+}
 
 app.post("/v1/friends/accept", async (c) => {
   const me = c.get("player").user_id;
@@ -226,7 +246,9 @@ app.post("/v1/friends/accept", async (c) => {
   )
     .bind(low, high, userId)
     .run();
-  return result.meta.changes ? c.json({ relation: "friend" }) : c.json({ error: "No request from this player." }, 404);
+  if (!result.meta.changes) return c.json({ error: "No request from this player." }, 404);
+  await befriended(c.env, me, userId);
+  return c.json({ relation: "friend" });
 });
 
 /** Declines a request, cancels your own, or removes a friend. */
@@ -251,15 +273,31 @@ app.get("/v1/leaderboard", async (c) => {
            WHERE status = 'accepted' AND (user_low = ?2 OR user_high = ?2)))`
       : "";
   const { results } = await c.env.DB.prepare(
-    `SELECT l.user_id, p.name, SUM(l.amount) AS net, COUNT(*) AS entries
+    `SELECT ${BADGE_COLUMNS}, SUM(l.amount) AS net, COUNT(*) AS entries
      FROM ledger l JOIN players p ON p.user_id = l.user_id
      WHERE l.kind = 'game' AND l.created_at >= ?1 ${friendsFilter}
      GROUP BY l.user_id ORDER BY net DESC, p.name_lower ASC LIMIT 50`,
   )
     .bind(...(scope === "friends" ? [weekStart, me] : [weekStart]))
-    .all<{ user_id: string; name: string; net: number }>();
-  const rows = results.map((r, i) => ({ rank: i + 1, id: r.user_id, name: r.name, net: r.net, isMe: r.user_id === me }));
+    .all<Player & { net: number }>();
+  const rows = results.map((r, i) => ({ rank: i + 1, ...badge(r), net: r.net, isMe: r.user_id === me }));
   return c.json({ scope, weekStart, rows, me: rows.find((r) => r.isMe) ?? null });
+});
+
+app.route("/v1", social);
+
+// Profile pictures are public images; the version in the URL makes them cache forever.
+app.get("/avatars/:id", async (c) => {
+  const row = await c.env.DB.prepare("SELECT data, mime FROM avatars WHERE user_id = ?").bind(c.req.param("id")).first<{ data: ArrayBuffer | number[]; mime: string }>();
+  if (!row) return c.json({ error: "not found" }, 404);
+  const bytes = row.data instanceof ArrayBuffer ? new Uint8Array(row.data) : new Uint8Array(row.data);
+  return new Response(bytes, {
+    headers: {
+      "Content-Type": row.mime,
+      "Cache-Control": c.req.query("v") ? "public, max-age=31536000, immutable" : "public, max-age=300",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
 });
 
 app.get("/health", (c) => c.json({ status: "ok" }));
@@ -269,4 +307,28 @@ app.onError((error, c) => {
   return c.json({ error: "Something went wrong." }, 500);
 });
 
-export default app;
+/** Crowns last week's leaderboard winner. Runs hourly on Mondays; each week is only awarded once. */
+async function crownLastWeek(env: Env) {
+  const thisWeek = zurichWeekStart();
+  const lastWeek = zurichWeekStart(thisWeek - 1);
+  const done = await env.DB.prepare("SELECT 1 FROM weekly_awards WHERE week_start = ?").bind(lastWeek).first();
+  if (done) return;
+  const top = await env.DB.prepare(
+    `SELECT user_id, SUM(amount) AS net FROM ledger WHERE kind = 'game' AND created_at >= ? AND created_at < ?
+     GROUP BY user_id ORDER BY net DESC LIMIT 1`,
+  )
+    .bind(lastWeek, thisWeek)
+    .first<{ user_id: string; net: number }>();
+  const winner = top && top.net > 0 ? top.user_id : null;
+  const claimed = await env.DB.prepare("INSERT OR IGNORE INTO weekly_awards (week_start, user_id, created_at) VALUES (?, ?, ?)")
+    .bind(lastWeek, winner, Date.now())
+    .run();
+  if (claimed.meta.changes && winner) await unlock(env, winner, ["weekly_top"]);
+}
+
+export default {
+  fetch: app.fetch,
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(crownLastWeek(env));
+  },
+} satisfies ExportedHandler<Env>;

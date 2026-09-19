@@ -10,26 +10,33 @@ export interface Presence {
   where: "lobby" | "blackjack" | "roulette" | null;
   table: string | null;
 }
-export interface Me {
+/** How a player shows up anywhere: name, picture, border and title. */
+export interface PlayerBadge {
   id: string;
   name: string;
+  /** Path on the casino API, or null for initials. */
+  avatar: string | null;
+  border: string | null;
+  title: string | null;
+}
+export interface Me extends PlayerBadge {
   balance: number;
+  banner: string | null;
+  cardback: string | null;
+  chipset: string | null;
+  bonusStreak: number;
   bonus: { amount: number; available: boolean; nextAt: number | null };
 }
-export interface Friend {
-  id: string;
-  name: string;
+export interface Friend extends PlayerBadge {
   presence: Presence;
 }
 export interface FriendsData {
   friends: Friend[];
-  incoming: { id: string; name: string }[];
-  outgoing: { id: string; name: string }[];
+  incoming: PlayerBadge[];
+  outgoing: PlayerBadge[];
 }
-export interface BoardRow {
+export interface BoardRow extends PlayerBadge {
   rank: number;
-  id: string;
-  name: string;
   net: number;
   isMe: boolean;
 }
@@ -42,13 +49,18 @@ export interface Board {
 export interface LedgerEntry {
   id: number;
   amount: number;
-  kind: "starter" | "bonus" | "game" | "transfer_in" | "transfer_out";
+  kind: "starter" | "bonus" | "game" | "transfer_in" | "transfer_out" | "shop";
+  ref: string | null;
   game: string | null;
   created_at: number;
   counterparty_name: string | null;
 }
 
 export class ApiError extends Error {}
+
+export function avatarSrc(path: string | null) {
+  return path ? CASINO_API + path : null;
+}
 
 async function call<T>(token: string, path: string, body?: unknown): Promise<T> {
   const res = await fetch(CASINO_API + path, {
@@ -105,16 +117,21 @@ export function useCasinoAction() {
   );
 }
 
-/** Tells friends we're in the casino lobby. */
-export function usePresence() {
-  const { accessToken } = useAuth();
-  useEffect(() => {
-    if (!accessToken) return;
-    const ping = () => call(accessToken, "/v1/presence", { where: "lobby" }).catch(() => {});
-    void ping();
-    const timer = window.setInterval(ping, 30_000);
-    return () => window.clearInterval(timer);
-  }, [accessToken]);
+export async function callCasino<T>(token: string, path: string, body?: unknown) {
+  return call<T>(token, path, body);
+}
+
+/** Sends raw image bytes (already resized) as the profile picture. */
+export async function uploadAvatar(token: string, image: Blob) {
+  const res = await fetch(CASINO_API + "/v1/profile/avatar", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": image.type },
+    body: image,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError((data as { error?: string }).error ?? "Upload failed. Try again.");
+  window.dispatchEvent(new Event("casino:changed"));
+  return data as { avatar: string };
 }
 
 const GAME_HOSTS = { blackjack: "https://21.planary.ch", roulette: "https://roulette.planary.ch" } as const;
@@ -130,4 +147,31 @@ export function describePresence(p: Presence) {
   if (p.where === "blackjack") return p.table ? "At a Blackjack table" : "In Blackjack";
   if (p.where === "roulette") return p.table ? "At a Roulette table" : "In Roulette";
   return "In the lobby";
+}
+
+export interface AchievementEntry {
+  id: string;
+  name: string;
+  description: string;
+  category: "blackjack" | "roulette" | "chips" | "social" | "collector";
+  grade: 1 | 2 | 3 | 4;
+  glyph: string;
+  secret: boolean;
+  /** Share of all players who own it, 0–1. */
+  rarity: number;
+  unlockedAt: number | null;
+  progress: { value: number; target: number } | null;
+}
+
+export interface Profile extends PlayerBadge {
+  bio: string | null;
+  banner: string | null;
+  joinedAt: number;
+  presence: Presence;
+  relation: "self" | "friend" | "requested" | "incoming" | "none";
+  pinned: string[];
+  stats: { blackjackRounds: number; naturals: number; bestStreak: number; rouletteSpins: number; bestRound: number; weekNet: number };
+  achievements: { unlocked: number; total: number };
+  showcase: AchievementEntry[];
+  recent: AchievementEntry[];
 }

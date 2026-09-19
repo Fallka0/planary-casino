@@ -3,18 +3,34 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useId, useRef, useState } from "react";
-import { Coins, Gift, LayoutGrid, LogIn, LogOut, Scale, Search, Spade, Trophy, Users } from "lucide-react";
-import { describePresence, type FriendsData, type Me, tableUrl, useCasino, useCasinoAction, usePresence } from "@/lib/api";
-import { formatChips, initials } from "@/lib/games";
+import { Award, Coins, Gift, LayoutGrid, LogIn, LogOut, MessageCircle, Scale, Search, ShoppingBag, Spade, Trophy, UserRound, Users } from "lucide-react";
+import { describePresence, type FriendsData, type Me, useCasino, useCasinoAction } from "@/lib/api";
+import { formatChips } from "@/lib/games";
 import { useAuth } from "./AuthProvider";
+import { Avatar } from "./Avatar";
 import { ChipIcon } from "./ChipIcon";
+import { FriendButton } from "./FriendMenu";
+import { NotificationBell } from "./NotificationBell";
+import { SocialProvider, useSocial } from "./Social";
 
 const NAV = [
   { href: "/", label: "Lobby", icon: LayoutGrid },
   { href: "/games", label: "Games", icon: Spade },
   { href: "/friends", label: "Friends", icon: Users },
+  { href: "/messages", label: "Messages", icon: MessageCircle },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
+  { href: "/achievements", label: "Achievements", icon: Award },
+  { href: "/shop", label: "Shop", icon: ShoppingBag },
   { href: "/chips", label: "Chips", icon: Coins },
+];
+
+/** Phones get five tabs; the rest sits behind the profile. */
+const TABS = [
+  { href: "/", label: "Lobby", icon: LayoutGrid },
+  { href: "/games", label: "Games", icon: Spade },
+  { href: "/friends", label: "Friends", icon: Users },
+  { href: "/messages", label: "Messages", icon: MessageCircle },
+  { href: "/u/me", label: "Profile", icon: UserRound },
 ];
 
 export function BrandMark({ size = 38 }: { size?: number }) {
@@ -25,17 +41,20 @@ function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
-/** Friends who are online right now, with a way to join them at their table. */
+const SIDE_FRIENDS = 8;
+
+/** Friends, online first. Click one for everything you can do with them. */
 function OnlineFriends() {
   const { user, loading, signIn } = useAuth();
   const { data } = useCasino<FriendsData>(user ? "/v1/friends" : null, 20_000);
   const online = data?.friends.filter((f) => f.presence.online) ?? [];
+  const shown = data?.friends.slice(0, SIDE_FRIENDS) ?? [];
 
   return (
     <section className="side-friends" aria-labelledby="online-title">
       <div className="side-heading">
-        <h2 id="online-title">Online now</h2>
-        {online.length ? <span className="count-tag">{online.length}</span> : null}
+        <h2 id="online-title">Friends</h2>
+        {online.length ? <span className="count-tag">{online.length} online</span> : null}
       </div>
       {loading ? null : !user ? (
         <p className="side-empty">
@@ -46,29 +65,30 @@ function OnlineFriends() {
         </p>
       ) : !data ? (
         <div className="side-skeleton" aria-hidden="true" />
-      ) : online.length === 0 ? (
+      ) : data.friends.length === 0 ? (
         <p className="side-empty">
-          {data.friends.length ? "None of your friends are online." : "No friends yet."}{" "}
-          <Link href="/friends">Find friends</Link>
+          No friends yet. <Link href="/friends">Find friends</Link>
         </p>
       ) : (
         <ul>
-          {online.map((friend) => (
-            <li key={friend.id} className="friend">
-              <span className="avatar avatar-sm is-online" aria-hidden="true">
-                {initials(friend.name)}
-              </span>
-              <span className="friend-copy">
-                <span className="friend-name">{friend.name}</span>
-                <span className="friend-status">{describePresence(friend.presence)}</span>
-              </span>
-              {tableUrl(friend.presence) ? (
-                <a className="join-btn" href={tableUrl(friend.presence)!} aria-label={`Join ${friend.name}'s table`}>
-                  Join
-                </a>
-              ) : null}
+          {shown.map((friend) => (
+            <li key={friend.id}>
+              <FriendButton friend={friend} className={`friend friend-btn${friend.presence.online ? "" : " is-offline"}`}>
+                <Avatar player={friend} size={34} status={friend.presence.online ? "online" : null} />
+                <span className="friend-copy">
+                  <span className="friend-name">{friend.name}</span>
+                  <span className="friend-status">{describePresence(friend.presence)}</span>
+                </span>
+              </FriendButton>
             </li>
           ))}
+          {data.friends.length > SIDE_FRIENDS ? (
+            <li>
+              <Link href="/friends" className="side-more">
+                All {data.friends.length} friends
+              </Link>
+            </li>
+          ) : null}
         </ul>
       )}
     </section>
@@ -94,6 +114,7 @@ function Sidebar() {
           <Link key={href} href={href} className="side-link" aria-current={isActive(pathname, href) ? "page" : undefined}>
             <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
             {label}
+            {href === "/messages" ? <UnreadTag /> : null}
           </Link>
         ))}
       </nav>
@@ -160,8 +181,18 @@ function SearchBox() {
   );
 }
 
+function UnreadTag() {
+  const { unread } = useSocial();
+  return unread.messages ? (
+    <span className="count-tag side-count" aria-label={`${unread.messages} unread`}>
+      {unread.messages > 9 ? "9+" : unread.messages}
+    </span>
+  ) : null;
+}
+
 function AccountButton({ name, email }: { name: string; email: string }) {
   const { signOut } = useAuth();
+  const { data: me } = useCasino<Me>("/v1/me");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const panelId = useId();
@@ -183,16 +214,19 @@ function AccountButton({ name, email }: { name: string; email: string }) {
   return (
     <div className="account" ref={ref}>
       <button className="account-btn" aria-expanded={open} aria-controls={panelId} onClick={() => setOpen((v) => !v)}>
-        <span className="avatar" aria-hidden="true">
-          {initials(name)}
-        </span>
+        <Avatar player={me ?? { name, avatar: null, border: null }} size={36} />
         <span className="account-copy">
           <span className="account-name">{name}</span>
-          <span className="account-mail">{email}</span>
+          <span className="account-mail">{me?.title ?? email}</span>
         </span>
       </button>
       {open ? (
-        <div className="account-menu" id={panelId}>
+        <div className="account-menu" id={panelId} onClick={() => setOpen(false)}>
+          <Link href="/u/me">Your profile</Link>
+          <Link href="/achievements">Achievements</Link>
+          <Link href="/shop">Shop</Link>
+          <Link href="/leaderboard">Leaderboard</Link>
+          <Link href="/chips">Chips</Link>
           <a href="https://wishlist.planary.ch">Planary Wishlist</a>
           <button onClick={signOut}>Sign out</button>
         </div>
@@ -252,6 +286,7 @@ function Topbar() {
         ) : user ? (
           <>
             <Balance />
+            <NotificationBell />
             <AccountButton name={user.name} email={user.email} />
           </>
         ) : (
@@ -273,10 +308,11 @@ function TabBar() {
   const pathname = usePathname();
   return (
     <nav className="tabbar" aria-label="Main">
-      {NAV.map(({ href, label, icon: Icon }) => (
+      {TABS.map(({ href, label, icon: Icon }) => (
         <Link key={href} href={href} className="tab" aria-current={isActive(pathname, href) ? "page" : undefined}>
           <Icon size={20} strokeWidth={1.8} aria-hidden="true" />
           <span>{label}</span>
+          {href === "/messages" ? <UnreadTag /> : null}
         </Link>
       ))}
     </nav>
@@ -302,7 +338,14 @@ function AuthNotice() {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  usePresence();
+  return (
+    <SocialProvider>
+      <Shell>{children}</Shell>
+    </SocialProvider>
+  );
+}
+
+function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="shell">
       <Sidebar />

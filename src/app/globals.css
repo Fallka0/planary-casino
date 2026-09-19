@@ -673,7 +673,8 @@ ul, ol { padding: 0; list-style: none; }
 .balance-big { font-family: var(--font-poster); font-size: 4rem; font-weight: 900; line-height: 0.9; font-variant-numeric: tabular-nums; }
 .card-balance .card-text { margin-top: -8px; }
 
-.send-form { display: grid; grid-template-columns: 1fr 120px auto; align-items: end; gap: 10px; }
+.send-form { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; align-items: end; gap: 10px; }
+.send-form .field select, .send-form .field input { width: 100%; min-width: 0; }
 .field { display: grid; gap: 6px; font-size: 0.85rem; font-weight: 600; }
 .field select,
 .field input,
@@ -735,22 +736,6 @@ ul, ol { padding: 0; list-style: none; }
 
 .rules { max-width: 1080px; }
 .rules .card { scroll-margin-top: 24px; }
-.rules-jump { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.rules-jump a {
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid var(--line-2);
-  background: var(--layer-1);
-  color: var(--text-2);
-  font-size: 0.86rem;
-  font-weight: 500;
-  transition: background-color 0.18s ease, color 0.18s ease;
-}
-.rules-jump a:hover { background: var(--layer-2); color: var(--text); }
-
 .rules-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; }
 .rules-head h2 { font-size: 2.4rem; }
 .stats { display: flex; gap: 10px; }

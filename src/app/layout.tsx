@@ -3,6 +3,7 @@ import { Big_Shoulders, Onest } from "next/font/google";
 import { AppShell } from "@/components/AppShell";
 import { AuthProvider } from "@/components/AuthProvider";
 import "./globals.css";
+import "./social.css";
 
 const ui = Onest({ variable: "--font-ui", subsets: ["latin"] });
 const poster = Big_Shoulders({ variable: "--font-poster", weight: ["700", "800", "900"], subsets: ["latin"] });

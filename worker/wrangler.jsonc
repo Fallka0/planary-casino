@@ -11,5 +11,7 @@
   "vars": {
     "ALLOWED_ORIGINS": "https://casino.planary.ch,https://21.planary.ch,https://roulette.planary.ch,http://localhost:3000,http://localhost:3001,http://localhost:3002"
   },
+  // Crowns last week's leaderboard winner (hourly on Mondays, idempotent).
+  "triggers": { "crons": ["15 * * * 1"] },
   "observability": { "enabled": true }
 }

@@ -6,12 +6,16 @@ import { Check, Search, UserPlus, X } from "lucide-react";
 import { useAuth } from "@/components/AuthProvider";
 import { SignInPrompt } from "@/components/SignInPrompt";
 import { ApiError, describePresence, type FriendsData, tableUrl, useCasino, useCasinoAction } from "@/lib/api";
-import { initials } from "@/lib/games";
+import { Avatar } from "@/components/Avatar";
+import { FriendButton } from "@/components/FriendMenu";
 
 type Relation = "none" | "requested" | "incoming" | "friend";
 interface Found {
   id: string;
   name: string;
+  avatar: string | null;
+  border: string | null;
+  title: string | null;
   relation: Relation;
 }
 
@@ -63,10 +67,8 @@ function PlayerSearch() {
         <ul className="people">
           {results.map((p) => (
             <li key={p.id} className="person">
-              <span className="avatar" aria-hidden="true">
-                {initials(p.name)}
-              </span>
-              <span className="person-name">{p.name}</span>
+              <Avatar player={p} size={38} />
+              <Link href={`/u/${p.id}`} className="person-name">{p.name}</Link>
               {p.relation === "none" ? (
                 <button className="btn btn-sm btn-cherry" onClick={() => void run("/v1/friends/request", p.id)}>
                   <UserPlus size={15} strokeWidth={2.2} aria-hidden="true" /> Add
@@ -92,7 +94,6 @@ export function FriendsView() {
   const { user, loading } = useAuth();
   const { data } = useCasino<FriendsData>(user ? "/v1/friends" : null, 20_000);
   const act = useCasinoAction();
-  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
 
   const run = (path: string, userId: string) => act(path, { userId }).catch(() => {});
 
@@ -114,10 +115,8 @@ export function FriendsView() {
                 <ul className="people">
                   {data.incoming.map((p) => (
                     <li key={p.id} className="person">
-                      <span className="avatar" aria-hidden="true">
-                        {initials(p.name)}
-                      </span>
-                      <span className="person-name">{p.name}</span>
+                      <Avatar player={p} size={38} />
+                      <Link href={`/u/${p.id}`} className="person-name">{p.name}</Link>
                       <button className="btn btn-sm btn-cherry" onClick={() => void run("/v1/friends/accept", p.id)}>
                         <Check size={15} strokeWidth={2.4} aria-hidden="true" /> Accept
                       </button>
@@ -140,36 +139,21 @@ export function FriendsView() {
                 <ul className="people">
                   {data.friends.map((f) => (
                     <li key={f.id} className="person">
-                      <span className={`avatar${f.presence.online ? " is-online" : ""}`} aria-hidden="true">
-                        {initials(f.name)}
-                      </span>
-                      <span className="person-copy">
-                        <span className="person-name">{f.name}</span>
-                        <span className="person-status">{describePresence(f.presence)}</span>
-                      </span>
+                      <FriendButton friend={f} className="person-main">
+                        <Avatar player={f} size={42} status={f.presence.online ? "online" : null} />
+                        <span className="person-copy">
+                          <span className="person-name">{f.name}</span>
+                          <span className="person-status">{f.title ? `${f.title} · ` : ""}{describePresence(f.presence)}</span>
+                        </span>
+                      </FriendButton>
                       {tableUrl(f.presence) ? (
                         <a className="btn btn-sm btn-cherry" href={tableUrl(f.presence)!}>
                           Join table
                         </a>
                       ) : null}
-                      <Link className="btn btn-sm btn-quiet" href={`/chips?to=${f.id}`}>
-                        Send chips
+                      <Link className="btn btn-sm btn-quiet" href={`/messages?with=${f.id}`}>
+                        Message
                       </Link>
-                      {confirmRemove === f.id ? (
-                        <button
-                          className="btn btn-sm btn-quiet danger"
-                          onClick={() => {
-                            setConfirmRemove(null);
-                            void run("/v1/friends/remove", f.id);
-                          }}
-                        >
-                          Remove?
-                        </button>
-                      ) : (
-                        <button className="icon-btn" onClick={() => setConfirmRemove(f.id)} aria-label={`Remove ${f.name}`}>
-                          <X size={16} strokeWidth={2.2} aria-hidden="true" />
-                        </button>
-                      )}
                     </li>
                   ))}
                 </ul>
@@ -182,10 +166,8 @@ export function FriendsView() {
                 <ul className="people">
                   {data.outgoing.map((p) => (
                     <li key={p.id} className="person">
-                      <span className="avatar" aria-hidden="true">
-                        {initials(p.name)}
-                      </span>
-                      <span className="person-name">{p.name}</span>
+                      <Avatar player={p} size={38} />
+                      <Link href={`/u/${p.id}`} className="person-name">{p.name}</Link>
                       <button className="btn btn-sm btn-quiet" onClick={() => void run("/v1/friends/remove", p.id)}>
                         Cancel
                       </button>

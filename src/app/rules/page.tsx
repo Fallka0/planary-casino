@@ -44,12 +44,6 @@ export default function RulesPage() {
           Every table uses the rules, payouts and odds of a real casino. Nothing is tilted, and nothing changes depending on who you are or how you&apos;ve
           been playing. This page says exactly how each game works.
         </p>
-        <nav className="rules-jump" aria-label="On this page">
-          <a href="#dealing">How outcomes are decided</a>
-          <a href="#blackjack">Blackjack</a>
-          <a href="#roulette">Roulette</a>
-          <a href="#play-money">Play money</a>
-        </nav>
       </div>
 
       <section className="card" id="dealing" aria-labelledby="dealing-title">

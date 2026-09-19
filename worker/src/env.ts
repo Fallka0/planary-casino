@@ -17,4 +17,13 @@ export interface Player {
   presence_table: string | null;
   last_seen: number;
   created_at: number;
+  bio: string | null;
+  avatar_version: number;
+  border: string | null;
+  banner: string | null;
+  title: string | null;
+  cardback: string | null;
+  chipset: string | null;
+  showcase: string | null;
+  bonus_streak: number;
 }

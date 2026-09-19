@@ -25,6 +25,37 @@ colors:
   poster-slots: "#cc1259"
   poster-ink-light: "#fbf1ea"
   poster-ink-dark: "#2a0710"
+  ink: "#22060e"
+  cherry-fill: "#d9173c"
+  error: "#ff8da1"
+  white: "#fff"
+  black: "#000"
+  plate-oxblood: "#6d0a1d"
+  plate-oxblood-deep: "#7e0c22"
+  plate-pink: "#ff5a78"
+  holo-cream: "#fff3c4"
+  holo-cyan: "#8ee6ff"
+  holo-violet: "#c58bff"
+  holo-magenta: "#ff2e8a"
+  gold-1: "#fbe7a6"
+  gold-2: "#e2a93b"
+  gold-3: "#b8761c"
+  gold-4: "#f7d77e"
+  gold-bronze: "#b45309"
+  felt-light: "#1a7a52"
+  felt-deep: "#0b4a30"
+  felt-cream: "#efe3c4"
+  lattice-navy: "#1d2a5c"
+  night-violet: "#3b0f5c"
+  night-deep: "#0e0620"
+  deco-black: "#0c0906"
+  deco-umber: "#16100a"
+  deco-deep: "#050302"
+  tier-common: "#d9cfc4"
+  tier-uncommon: "#c9e7b5"
+  tier-rare: "#7cc4ff"
+  tier-epic: "#d59bff"
+  tier-legendary: "#f7c65c"
 typography:
   display:
     fontFamily: "Big Shoulders, var(--font-poster), sans-serif"
@@ -201,7 +232,18 @@ Poster fields and inks.
 - **Cream Text** (`text`), **Text 2** (`text-2`), **Text 3** (`text-3`): primary copy, secondary copy and links, metadata and placeholders.
 - **Online Green** (`online`) and **Away Amber** (`away`): presence dots on avatars only; green also marks positive ledger amounts, cherry-hover marks negative ones.
 
+### Cosmetic inks
+The shop and achievements print in their own inks, and only on the things a player owns: avatar borders, profile banners, card backs, chip sets and achievement medals.
+- **Holo foil** (`plate-pink`, `holo-cream`, `holo-cyan`, `holo-violet`): the legendary tier. A slow-moving foil gradient on borders, banners, card backs, the grade-4 medal's star and the legendary item outline.
+- **Gold leaf** (`gold-1` to `gold-4`, `gold-bronze`): the epic tier and grade-3 medals; the Champion border.
+- **Table prints** (`felt-light`, `felt-deep`, `felt-cream`, `lattice-navy`, `night-violet`, `night-deep`, `deco-black`, `deco-umber`, `deco-deep`, `holo-magenta`): banner and card-back fields.
+- **Plates** (`plate-oxblood`, `plate-oxblood-deep`): the off-register second plate behind medal glyphs and the Oxblood banner halftone.
+- **Tier labels** (`tier-common` to `tier-legendary`): item tier and achievement rarity text only.
+- **Error** (`error`): form errors and destructive menu items.
+
 ### Named Rules
+**The Cosmetic Belongs to the Player Rule.** Cosmetic inks appear only on an item, a medal or a rarity label. They never colour navigation, buttons or panels.
+
 **The One Cherry Rule.** Cherry is the only accent in the shell. It marks the thing to press, where you are, and who is first. If a second element on a screen wants cherry for decoration, it does not get it.
 
 **The Field Belongs to the Cover Rule.** Poster fields and inks are never used as chrome colours. A container shows a field colour only because it is holding that cover.
