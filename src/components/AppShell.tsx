@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useId, useRef, useState } from "react";
-import { Coins, Gift, LayoutGrid, LogIn, LogOut, Search, Spade, Trophy, Users } from "lucide-react";
+import { Coins, Gift, LayoutGrid, LogIn, LogOut, Scale, Search, Spade, Trophy, Users } from "lucide-react";
 import { describePresence, type FriendsData, type Me, tableUrl, useCasino, useCasinoAction, usePresence } from "@/lib/api";
 import { formatChips, initials } from "@/lib/games";
 import { useAuth } from "./AuthProvider";
@@ -101,6 +101,10 @@ function Sidebar() {
       <OnlineFriends />
 
       <div className="side-foot">
+        <Link href="/rules" className="side-link" aria-current={isActive(pathname, "/rules") ? "page" : undefined}>
+          <Scale size={18} strokeWidth={1.8} aria-hidden="true" />
+          Fair play
+        </Link>
         {loading ? null : user ? (
           <button className="side-action" onClick={signOut}>
             <LogOut size={18} strokeWidth={1.8} aria-hidden="true" />
@@ -308,7 +312,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main className="content">{children}</main>
         <footer className="legal">
           Play money only. Planary Chips have no cash value and cannot be bought, sold or exchanged.{" "}
-          <a href="https://planary.ch">planary.ch</a>
+          <Link href="/rules">Fair play &amp; odds</Link> · <a href="https://planary.ch">planary.ch</a>
         </footer>
       </div>
       <TabBar />

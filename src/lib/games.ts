@@ -30,7 +30,7 @@ export const GAMES: Game[] = [
     tags: ["Cards", "Vs. dealer"],
     caption: "Hit · Stand · Double",
     status: "live",
-    rules: ["Dealer stands on soft 17", "Blackjack pays 3:2", "Double on any two cards"],
+    rules: ["Dealer stands on soft 17", "Blackjack pays 3:2", "Insurance pays 2:1"],
   },
   {
     id: "poker",
