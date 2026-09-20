@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Coins, DoorOpen, MessageCircle, Send, UserRound, UserX } from "lucide-react";
 import { ApiError, describePresence, type Friend, tableUrl, useCasinoAction } from "@/lib/api";
 import { Avatar } from "./Avatar";
@@ -16,7 +17,9 @@ function privateTableId() {
 
 /**
  * Everything you can do with a friend, from wherever their name shows up.
- * Positioned against the viewport so a scrolling sidebar can't clip it.
+ * Rendered into the body and positioned against the viewport: the sidebar is
+ * sticky, and a sticky element traps its descendants in its own stacking
+ * context, which would let the page behind it paint over the menu.
  */
 export function FriendMenu({ friend, anchor, onClose }: { friend: Friend; anchor: HTMLElement; onClose: () => void }) {
   const act = useCasinoAction();
@@ -90,7 +93,7 @@ export function FriendMenu({ friend, anchor, onClose }: { friend: Friend; anchor
     onClose();
   }
 
-  return (
+  return createPortal(
     <div
       ref={ref}
       className="friend-menu"
@@ -140,7 +143,8 @@ export function FriendMenu({ friend, anchor, onClose }: { friend: Friend; anchor
         )}
       </div>
       {status ? <p className="form-error friend-menu-error">{status}</p> : null}
-    </div>
+    </div>,
+    document.body,
   );
 }
 
