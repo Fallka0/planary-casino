@@ -778,6 +778,8 @@ ul, ol { padding: 0; list-style: none; }
 .rules-table td:first-child { color: var(--text); }
 .rules-table td:nth-child(n + 2), .rules-table th:nth-child(n + 2) { white-space: nowrap; }
 
+.rules-lede { max-width: 72ch; color: var(--text-2); }
+.rules-lede a { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
 .rules-note { color: var(--text-3); font-size: 0.84rem; }
 .rules-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 

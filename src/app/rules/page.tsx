@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 const BLACKJACK_URL = "https://21.planary.ch";
 const ROULETTE_URL = "https://roulette.planary.ch";
+const DEVIL_URL = "https://devil.planary.ch";
 
 export const metadata: Metadata = {
   title: "Fair play · Planary Casino",
@@ -182,6 +183,66 @@ export default function RulesPage() {
           </a>
           <a className="btn btn-quiet" href={`${ROULETTE_URL}/?tutorial=1`}>
             How to play
+          </a>
+        </div>
+      </section>
+
+      <section className="card" id="devil" aria-labelledby="devil-title">
+        <div className="rules-head">
+          <h2 id="devil-title">Devil&apos;s Wheel</h2>
+          <div className="stats">
+            <Stat value="0" label="Chips wagered" />
+            <Stat value="Solo" label="Against nobody" />
+          </div>
+        </div>
+        <p className="rules-lede">
+          The one game in the house where the wheel is not honest — and the only one where that is the point. Devil&apos;s
+          Wheel is a single-player score game. You may buy your way into a wheel with three zeroes on it, weld the low
+          numbers shut, or paint a pocket so it pays triple.
+        </p>
+        <div className="rules-cols">
+          <div>
+            <h3>Why it does not break the rest of this page</h3>
+            <ul className="rules-list compact">
+              <li>
+                No Planary Chips go in and none come out. Nothing is wagered, so there is no return-to-player figure to
+                state: the game pays points, not chips.
+              </li>
+              <li>
+                You start every run on a true European wheel — 37 pockets, 2.70% house edge — exactly the wheel that runs
+                at <a href={ROULETTE_URL}>Roulette</a>. Anything other than that, you paid for and chose.
+              </li>
+              <li>
+                The payout table never changes. A straight-up bet pays 35 to 1 for the whole run, however many pockets
+                you have added or taken out from under it.
+              </li>
+              <li>
+                Because of that, the game shows you the real chance of every bet on the wheel as it stands, and what the
+                board is worth on an average spin. You are never guessing at odds you built yourself.
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3>How a run is decided</h3>
+            <ul className="rules-list compact">
+              <li>
+                Each run has a seed, drawn from the browser&apos;s cryptographic generator. Everything after it — every
+                pocket the ball finds, every item the shop stocks — comes out of one deterministic stream.
+              </li>
+              <li>
+                The seed is shown when a run ends, and a run can be replayed on it. Two players on the same seed who play
+                the same way see the same night.
+              </li>
+              <li>
+                The ball is committed to its pocket the moment you send it. The wheel animation shows a decision that has
+                already been made; it cannot be changed by anything you do while it turns.
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div className="rules-actions">
+          <a className="btn btn-cherry" href={DEVIL_URL}>
+            Play Devil&apos;s Wheel
           </a>
         </div>
       </section>

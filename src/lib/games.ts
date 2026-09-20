@@ -1,4 +1,4 @@
-export type GameId = "blackjack" | "poker" | "baccarat" | "roulette" | "slots";
+export type GameId = "blackjack" | "poker" | "baccarat" | "roulette" | "slots" | "devil";
 
 export type GameStatus = "live" | "soon";
 
@@ -64,6 +64,19 @@ export const GAMES: Game[] = [
     tags: ["Table", "Multiplayer"],
     caption: "Rien ne va plus",
     status: "live",
+  },
+  {
+    id: "devil",
+    name: "Devil's Wheel",
+    tagline: "A roguelike on an honest wheel — and eight antes to ruin it.",
+    blurb:
+      "Now open. Place your chips, send the ball, then start cutting pockets out of the rim. Solo, and nothing is wagered.",
+    subdomain: "devil",
+    players: "1 player",
+    tags: ["Solo", "Roguelike", "No wager"],
+    caption: "Break the wheel",
+    status: "live",
+    rules: ["Real European payouts", "The wheel is yours to bend", "No chips in, no chips out"],
   },
   {
     id: "slots",
