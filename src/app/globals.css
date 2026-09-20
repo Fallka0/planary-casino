@@ -938,3 +938,7 @@ ul, ol { padding: 0; list-style: none; }
   font-weight: 700;
   rotate: none;
 }
+
+/* A player checking their own round, from their chip history. */
+.round-check { color: var(--cherry); text-decoration: underline; text-underline-offset: 2px; }
+.round-check:hover { color: var(--text); }

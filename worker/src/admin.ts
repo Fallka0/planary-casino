@@ -1,6 +1,7 @@
 // Operator API for admin.planary.ch. Staff only; every change lands in the audit log.
 
 import { Hono } from "hono";
+import { roundById, searchRounds } from "./archive";
 import { cors } from "hono/cors";
 import { achievementsOf, getStats } from "./achievements";
 import { CATALOG, ITEMS } from "./catalog";
@@ -722,4 +723,41 @@ admin.get("/audit", async (c) => {
     entries: results.slice(0, 100).map((r) => ({ ...r, details: r.details ? JSON.parse(r.details) : null })),
     more: results.length > 100,
   });
+});
+
+// ── Game rounds ──────────────────────────────────────
+//
+// What the ledger could never answer: not how much moved, but what happened.
+// Every licensed operator has to be able to reconstruct any round on request,
+// and a support case almost always starts here rather than with a balance.
+
+admin.get("/rounds", async (c) => {
+  const staff = c.get("staff");
+  if (!can(staff, "view")) return c.json(denied(), 403);
+  const page = Math.max(0, Number.parseInt(c.req.query("page") ?? "0", 10) || 0);
+  const num = (name: string) => {
+    const value = Number.parseInt(c.req.query(name) ?? "", 10);
+    return Number.isFinite(value) ? value : undefined;
+  };
+  return c.json(
+    await searchRounds(
+      c.env,
+      {
+        game: c.req.query("game") || undefined,
+        player: c.req.query("player") || undefined,
+        table: c.req.query("table") || undefined,
+        since: num("since"),
+        until: num("until"),
+      },
+      page,
+    ),
+  );
+});
+
+admin.get("/rounds/:id", async (c) => {
+  const staff = c.get("staff");
+  if (!can(staff, "view")) return c.json(denied(), 403);
+  const round = await roundById(c.env, c.req.param("id"));
+  if (!round) return c.json({ error: "Round not found." }, 404);
+  return c.json(round);
 });

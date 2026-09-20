@@ -227,6 +227,40 @@ export async function roundById(env: Env, id: string) {
   };
 }
 
+/**
+ * The operator's view: every round, filtered. This is what a support case or a
+ * regulator's question actually starts from — "show me what happened at that
+ * table on that evening" — so the filters are the ones such a question uses.
+ */
+export async function searchRounds(
+  env: Env,
+  filters: { game?: string; player?: string; table?: string; since?: number; until?: number },
+  page = 0,
+  size = 25,
+) {
+  const where: string[] = [];
+  const binds: (string | number)[] = [];
+  const bind = (value: string | number) => {
+    binds.push(value);
+    return `?${binds.length}`;
+  };
+
+  if (filters.player) where.push(`EXISTS (SELECT 1 FROM round_players rp WHERE rp.round_id = r.id AND rp.user_id = ${bind(filters.player)})`);
+  if (filters.game) where.push(`r.game = ${bind(filters.game)}`);
+  if (filters.table) where.push(`r.table_id = ${bind(filters.table)}`);
+  if (filters.since) where.push(`r.started_at >= ${bind(filters.since)}`);
+  if (filters.until) where.push(`r.started_at < ${bind(filters.until)}`);
+
+  const clause = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
+  const limit = bind(size + 1);
+  const offset = bind(page * size);
+  const rows = await env.DB.prepare(`${SELECT} ${clause} ORDER BY r.started_at DESC LIMIT ${limit} OFFSET ${offset}`)
+    .bind(...binds)
+    .all<RoundRow>();
+  const list = rows.results ?? [];
+  return { rounds: list.slice(0, size).map(shape), more: list.length > size, page };
+}
+
 /** Every round dealt out of one shoe, so a single reveal proves them all. */
 export async function roundsForCommitment(env: Env, commitmentId: string) {
   const rows = await env.DB.prepare(`${SELECT} WHERE r.commitment_id = ?1 ORDER BY r.started_at`).bind(commitmentId).all<RoundRow>();

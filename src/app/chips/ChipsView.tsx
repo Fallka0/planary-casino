@@ -159,6 +159,74 @@ function SendCard({ me }: { me: Me }) {
   );
 }
 
+/** A round as the archive hands it back. */
+interface PlayedRound {
+  id: string;
+  game: string;
+  outcome: string;
+  startedAt: number;
+  staked: number;
+  returned: number;
+  proof: { serverSeed: string | null; kind: string };
+}
+
+const GAME_NAME: Record<string, string> = { blackjack: "Blackjack", roulette: "Roulette" };
+
+/**
+ * What happened at the table, next to what happened to the chips.
+ *
+ * The ledger above says a player lost 200; this says which pocket the ball
+ * fell into, and links to the page that proves it was not chosen after they bet.
+ */
+function RoundsCard() {
+  const { data } = useCasino<{ rounds: PlayedRound[]; more: boolean }>("/v1/rounds");
+  if (!data) return <div className="panel-skeleton" aria-hidden="true" />;
+  if (data.rounds.length === 0) {
+    return (
+      <section className="card" aria-labelledby="rounds-title">
+        <h2 id="rounds-title">Rounds you played</h2>
+        <p className="card-text">Nothing yet. Every hand and spin is recorded here once you play one.</p>
+      </section>
+    );
+  }
+  return (
+    <section className="card" aria-labelledby="rounds-title">
+      <h2 id="rounds-title">Rounds you played</h2>
+      <ul className="ledger">
+        {data.rounds.map((round) => {
+          const net = round.returned - round.staked;
+          return (
+            <li key={round.id}>
+              <span className="ledger-what">
+                <span>
+                  {GAME_NAME[round.game] ?? round.game} · {round.outcome}
+                </span>
+                <time>
+                  {when(round.startedAt)}
+                  {round.proof.serverSeed ? (
+                    <>
+                      {" · "}
+                      <a className="round-check" href={`/verify?round=${round.id}`}>
+                        check it
+                      </a>
+                    </>
+                  ) : (
+                    " · sealed until the shoe ends"
+                  )}
+                </time>
+              </span>
+              <span className={`ledger-amount${net < 0 ? " is-minus" : ""}`}>
+                {net >= 0 ? "+" : "−"}
+                {formatChips(Math.abs(net))}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 export function ChipsView() {
   const { user, loading } = useAuth();
   const { data: me } = useCasino<Me>(user ? "/v1/me" : null);
@@ -208,6 +276,8 @@ export function ChipsView() {
               </ul>
             )}
           </section>
+
+          <RoundsCard />
         </>
       )}
     </section>
