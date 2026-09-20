@@ -6,6 +6,7 @@ import { notify } from "./notify";
 import { BADGE_COLUMNS, badge, pairKey, presenceOf, social, unreadCounts } from "./social";
 import { nextZurichMidnight, zurichDay, zurichWeekStart } from "./time";
 import { admin } from "./admin";
+import { openCommitment, revealCommitment, roundById, roundsForPlayer, saveRound, sealClientSeed, type RoundRecord } from "./archive";
 import { betRefusal, blockedReason, getSettings, isMuted } from "./policy";
 import { claimBonus, credit, debit, ensurePlayer, getPlayer, transfer } from "./wallet";
 
@@ -60,6 +61,43 @@ app.post("/internal/round", async (c) => {
   if (!round || (round.game !== "blackjack" && round.game !== "roulette")) return c.json({ error: "bad round" }, 400);
   const unlocked = await recordRound(c.env, userId, round, Array.isArray(tablemates) ? tablemates.slice(0, 20) : []);
   return c.json({ unlocked: unlocked.map((a) => ({ id: a.id, name: a.name })) });
+});
+
+/**
+ * A table promising an outcome it does not yet know. It sends only the hash;
+ * the seed stays at the table until the round or the shoe is finished.
+ */
+app.post("/internal/commitments", async (c) => {
+  const body = await c.req.json<Parameters<typeof openCommitment>[1]>();
+  if (!body?.hash || !body.game || !body.tableId) return c.json({ error: "bad commitment" }, 400);
+  return c.json({ id: await openCommitment(c.env, body) });
+});
+
+/** The contributed seeds, written down when betting closes. */
+app.post("/internal/commitments/:id/seal", async (c) => {
+  const { clientSeed } = await c.req.json<{ clientSeed: string }>();
+  return c.json({ sealed: await sealClientSeed(c.env, c.req.param("id"), String(clientSeed ?? "")) });
+});
+
+/** The reveal. The database permits this exactly once per commitment. */
+app.post("/internal/commitments/:id/reveal", async (c) => {
+  const { serverSeed } = await c.req.json<{ serverSeed: string }>();
+  if (!serverSeed) return c.json({ error: "no seed" }, 400);
+  const opened = await revealCommitment(c.env, c.req.param("id"), serverSeed);
+  return c.json({ opened });
+});
+
+/** One finished round, written down for good. */
+app.post("/internal/archive", async (c) => {
+  const record = await c.req.json<RoundRecord>();
+  if (!record?.game || !record.tableId || !Array.isArray(record.players)) return c.json({ error: "bad round" }, 400);
+  try {
+    return c.json({ id: await saveRound(c.env, record) });
+  } catch (error) {
+    // A table must never stall because the archive is unhappy; it is logged and the round stands.
+    console.error("archive failed", error);
+    return c.json({ error: "not archived" }, 500);
+  }
 });
 
 app.post("/internal/debit", async (c) => {
@@ -117,6 +155,22 @@ app.use("/v1/*", async (c, next) => {
   if (blocked) return c.json({ error: blocked, code: "blocked" }, 403);
   c.set("player", player);
   await next();
+});
+
+/** Your own rounds, newest first. */
+app.get("/v1/rounds", async (c) => {
+  const page = Math.max(0, Number.parseInt(c.req.query("page") ?? "0", 10) || 0);
+  return c.json(await roundsForPlayer(c.env, c.get("player").user_id, page));
+});
+
+/**
+ * One round in full. Readable by any signed-in player, because a proof nobody
+ * else can look at is not much of a proof.
+ */
+app.get("/v1/rounds/:id", async (c) => {
+  const round = await roundById(c.env, c.req.param("id"));
+  if (!round) return c.json({ error: "no such round" }, 404);
+  return c.json(round);
 });
 
 app.get("/v1/me", async (c) => {
