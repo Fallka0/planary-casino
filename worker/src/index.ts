@@ -6,7 +6,7 @@ import { notify } from "./notify";
 import { BADGE_COLUMNS, badge, pairKey, presenceOf, social, unreadCounts } from "./social";
 import { nextZurichMidnight, zurichDay, zurichWeekStart } from "./time";
 import { admin } from "./admin";
-import { openCommitment, revealCommitment, roundById, roundsForPlayer, saveRound, sealClientSeed, type RoundRecord } from "./archive";
+import { pruneRounds, openCommitment, revealCommitment, roundById, roundsForPlayer, saveRound, sealClientSeed, type RoundRecord } from "./archive";
 import { betRefusal, blockedReason, getSettings, isMuted } from "./policy";
 import { claimBonus, credit, debit, ensurePlayer, getPlayer, transfer } from "./wallet";
 
@@ -14,6 +14,22 @@ type Vars = { player: Player };
 const app = new Hono<{ Bindings: Env; Variables: Vars }>();
 
 const PRESENCE_WHERE = new Set(["lobby", "blackjack", "roulette"]);
+
+/**
+ * How long a game round is kept. A regulated operator would set this to five
+ * years; Planary keeps a year, which covers support, disputes and statistics
+ * without storing play money forever. Whoever runs this decides — it is one
+ * number, and the archive is built so raising it costs nothing but disk.
+ */
+const ROUND_RETENTION_DAYS = 365;
+
+/** The weekly sweep. Deletes in bounded batches so a long-neglected database still finishes. */
+async function sweepRounds(env: Env) {
+  for (let batch = 0; batch < 40; batch++) {
+    const removed = await pruneRounds(env, ROUND_RETENTION_DAYS);
+    if (removed === 0) return;
+  }
+}
 
 function cleanName(raw: unknown) {
   return String(raw ?? "")
@@ -412,5 +428,6 @@ export default {
   fetch: app.fetch,
   async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(crownLastWeek(env));
+    ctx.waitUntil(sweepRounds(env));
   },
 } satisfies ExportedHandler<Env>;
