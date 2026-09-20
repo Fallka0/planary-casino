@@ -70,6 +70,25 @@ check("the same seed shuffles the same way", once.join() === again.join());
 check("a different nonce does not", once.join() !== other.join());
 check("nothing is lost or duplicated", [...once].sort((a, b) => a - b).join() === deck.join());
 
+console.log("\nA six-deck shoe");
+// Blackjack commits to a whole shoe before its first card, so the reconstruction
+// has to be exact: 312 cards in the same order, and the cut card in the same
+// place. The cut card is drawn from its own stream so it cannot be read off
+// the shuffle, but it must still be reproducible from the same seed.
+const SHOE = Array.from({ length: 312 }, (_, i) => i);
+const shoeSeed = "1a2b3c4d".repeat(8);
+const dealt = await fair.shuffle(SHOE, shoeSeed, "alice|bob", 3);
+const rebuilt = await fair.shuffle(SHOE, shoeSeed, "alice|bob", 3);
+const cut = 60 + (await fair.open(shoeSeed, "alice|bob:cut", 3).below(21));
+const cutAgain = 60 + (await fair.open(shoeSeed, "alice|bob:cut", 3).below(21));
+check("the shoe rebuilds card for card", dealt.join() === rebuilt.join());
+check("all 312 cards are present exactly once", new Set(dealt).size === 312);
+check(`the cut card lands at ${cut}, inside 60–80`, cut >= 60 && cut <= 80);
+check("the cut card rebuilds too", cut === cutAgain);
+const otherShoe = await fair.shuffle(SHOE, shoeSeed, "alice|bob", 4);
+check("the next shoe is a different order", dealt.join() !== otherShoe.join());
+check("the cut card is not readable off the shuffle", cut !== dealt[0] % 21 + 60);
+
 console.log("\nVerification");
 const proof = { hash, serverSeed: seed, clientSeed: "alice|bob", nonce: 7 };
 const outcome = await fair.roll(seed, proof.clientSeed, 7, 37);
