@@ -23,7 +23,8 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-const here = () => `${window.location.origin}${window.location.pathname}`;
+// Keep the query (e.g. /games?q=roulette) so signing in lands back on the same view.
+const here = () => `${window.location.origin}${window.location.pathname}${window.location.search}`;
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<CasinoUser | null>(null);
