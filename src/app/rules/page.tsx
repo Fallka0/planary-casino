@@ -63,8 +63,14 @@ export default function RulesPage() {
             get the same shoe and the same wheel.
           </li>
           <li>
-            <strong>Nothing leaks early.</strong> The dealer&apos;s face-down card never leaves the server until it&apos;s turned over. The roulette number
-            is drawn only after bets close.
+            <strong>Nothing leaks early, and nothing is chosen late.</strong> The dealer&apos;s face-down card never leaves the server until it&apos;s turned
+            over. The roulette number follows from a seed the table commits to <em>before</em> betting opens, together with the seeds players add while it is
+            open — so it cannot be picked after seeing your bets, and it cannot be known in advance either.
+          </li>
+          <li>
+            <strong>You can check any spin yourself.</strong> The table shows the hash of its seed before you bet and publishes the seed once the ball lands.{" "}
+            <a href="/verify">Put the two into the verifier</a> and it works the number out again in your browser, with the same code the table runs. You do not
+            have to take our word for it.
           </li>
           <li>
             <strong>Checked by simulation.</strong> Before a game opens, we play millions of rounds against its rules and compare the result with the known
@@ -183,6 +189,9 @@ export default function RulesPage() {
           </a>
           <a className="btn btn-quiet" href={`${ROULETTE_URL}/?tutorial=1`}>
             How to play
+          </a>
+          <a className="btn btn-quiet" href="/verify">
+            Check a spin
           </a>
         </div>
       </section>

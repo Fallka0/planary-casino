@@ -883,3 +883,58 @@ ul, ol { padding: 0; list-style: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ── The verifier ──────────────────────────────
+   A page whose whole point is that it does the sum in front of you, so the
+   working is shown rather than hidden behind a green tick. */
+
+.verify { max-width: 840px; }
+.verify-form { display: grid; gap: 14px; }
+.verify-round { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 0.9rem; }
+.field-hint { color: var(--text-3); font-size: 0.78rem; font-weight: 400; }
+.mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 0.85rem; word-break: break-all; }
+.spin { animation: turn 1s linear infinite; }
+@keyframes turn { to { transform: rotate(360deg); } }
+
+.verdict {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 16px 5px 16px 5px;
+  font-size: 0.93rem;
+  line-height: 1.5;
+}
+.verdict.is-ok { background: rgba(62, 240, 196, 0.1); border: 1px solid rgba(62, 240, 196, 0.4); color: #bff5e6; }
+.verdict.is-bad { background: rgba(255, 46, 85, 0.1); border: 1px solid rgba(255, 46, 85, 0.4); color: #ffc8d2; }
+.verdict svg { flex: none; margin-top: 1px; }
+.verdict strong { font-weight: 700; }
+
+.verify-work { display: grid; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+.verify-work div { display: grid; gap: 3px; }
+.verify-work dt { color: var(--text-3); font-size: 0.78rem; }
+.verify-work dd { margin: 0; color: var(--text-2); }
+.verify-work dd.is-ok { color: #6ee7c4; }
+.verify-work dd.is-bad { color: #ff8da1; }
+
+.verify-how h2 { font-size: 1.15rem; margin-bottom: 12px; }
+/* The four steps are a sequence, so they are numbered rather than bulleted. */
+.verify-how .rules-list { counter-reset: step; gap: 14px; }
+.verify-how .rules-list li { padding-left: 32px; }
+.verify-how .rules-list li::before {
+  counter-increment: step;
+  content: counter(step);
+  left: 0;
+  top: 0.12em;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px 2px 7px 2px;
+  background: var(--cherry-fill);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  rotate: none;
+}

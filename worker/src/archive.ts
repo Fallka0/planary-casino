@@ -207,7 +207,7 @@ export async function roundById(env: Env, id: string) {
   if (!row) return null;
   const players = await env.DB.prepare(
     `SELECT rp.user_id, rp.seat, rp.staked, rp.returned, rp.detail, p.name
-     FROM round_players rp LEFT JOIN players p ON p.id = rp.user_id
+     FROM round_players rp LEFT JOIN players p ON p.user_id = rp.user_id
      WHERE rp.round_id = ?1 ORDER BY rp.seat`,
   )
     .bind(id)
