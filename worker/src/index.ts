@@ -13,7 +13,7 @@ import { claimBonus, credit, debit, ensurePlayer, getPlayer, transfer } from "./
 type Vars = { player: Player };
 const app = new Hono<{ Bindings: Env; Variables: Vars }>();
 
-const PRESENCE_WHERE = new Set(["lobby", "blackjack", "roulette"]);
+const PRESENCE_WHERE = new Set(["lobby", "blackjack", "roulette", "nerve"]);
 
 /**
  * How long a game round is kept. A regulated operator would set this to five

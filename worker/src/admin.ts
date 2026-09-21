@@ -21,9 +21,9 @@ const ROLES: Record<Role, Permission[]> = {
   owner: ["view", "note", "moderate", "restrict", "chips", "games", "economy", "announce", "audit", "staff"],
 };
 
-const GAMES = ["blackjack", "roulette"] as const;
+const GAMES = ["blackjack", "roulette", "nerve"] as const;
 /** Long-run return to player of each game under its house rules (blackjack with basic strategy). */
-const THEORETICAL_RTP: Record<string, number> = { blackjack: 0.995, roulette: 36 / 37 };
+const THEORETICAL_RTP: Record<string, number> = { blackjack: 0.995, roulette: 36 / 37, nerve: 0.99 };
 const ONLINE_MS = 75_000;
 const DAY = 86_400_000;
 

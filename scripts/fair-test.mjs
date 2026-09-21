@@ -26,12 +26,13 @@ const here = dirname(fileURLToPath(import.meta.url));
  */
 const staging = mkdtempSync(join(tmpdir(), "planary-fair-"));
 mkdirSync(staging, { recursive: true });
-for (const name of ["fair.ts", "deck.ts"]) {
+for (const name of ["fair.ts", "deck.ts", "nerve.ts"]) {
   const source = readFileSync(join(here, "..", "shared", name), "utf8");
   writeFileSync(join(staging, name), source.replace(/(from "\.\/[A-Za-z]+)"/g, '$1.ts"'));
 }
 const fair = await import(`file://${join(staging, "fair.ts")}`);
 const cards = await import(`file://${join(staging, "deck.ts")}`);
+const nerve = await import(`file://${join(staging, "nerve.ts")}`);
 const VECTORS = join(here, "..", "shared", "fair.vectors.json");
 
 let failures = 0;
@@ -120,6 +121,23 @@ check("a hand dealt off the shoe verifies", cards.checkCards(realShoe, 10, realS
 check("one wrong card is caught", !cards.checkCards(realShoe, 10, [...realShoe.slice(10, 15), "Aspade"]).ok);
 check("the right cards at the wrong position are caught", !cards.checkCards(realShoe, 11, realShoe.slice(10, 16)).ok);
 
+console.log("\nWhere a climb stops");
+// The one property Nerve rests on: the chance of reaching x is (1 - edge) / x,
+// so every cash-out target returns the same 99% and no target is cleverer than
+// another. Measured, not asserted.
+const CLIMBS = 40_000;
+const stops = [];
+for (let i = 0; i < CLIMBS; i++) stops.push(await nerve.crashPoint(shoeSeed, "climbs", i));
+let flat = 0;
+for (const target of [1.5, 2, 5, 10]) {
+  const reached = stops.filter((c) => c >= target).length / CLIMBS;
+  flat = Math.max(flat, Math.abs(reached * target - (1 - nerve.EDGE)));
+}
+check(`every target returns 99%, within ${(flat * 100).toFixed(2)} points over ${CLIMBS.toLocaleString("en")} climbs`, flat < 0.03);
+check("a climb never goes below 1.00×", stops.every((c) => c >= 1));
+check("the same seed stops in the same place", (await nerve.crashPoint(shoeSeed, "climbs", 7)) === stops[7]);
+check("2.00× takes about 3.6 seconds", Math.abs(nerve.msToReach(2) - 3605) < 40);
+
 console.log("\nVerification");
 const proof = { hash, serverSeed: seed, clientSeed: "alice|bob", nonce: 7 };
 const outcome = await fair.roll(seed, proof.clientSeed, 7, 37);
@@ -147,6 +165,7 @@ const frozen = {
   rolls: produced,
   shoeFirstTen: shoe.slice(0, 10),
   cardsFirstTen: (await cards.shuffledShoe("0123456789abcdef".repeat(4), "", 0)).slice(0, 10),
+  climbsFirstFive: await Promise.all([0, 1, 2, 3, 4].map((n) => nerve.crashPoint("0123456789abcdef".repeat(4), "", n))),
 };
 
 let stored;
@@ -160,6 +179,7 @@ try {
 check("rolls match the frozen vectors", JSON.stringify(stored.rolls) === JSON.stringify(frozen.rolls));
 check("the shoe shuffles to the frozen order", JSON.stringify(stored.shoeFirstTen) === JSON.stringify(frozen.shoeFirstTen));
 check("the cards deal in the frozen order", JSON.stringify(stored.cardsFirstTen ?? frozen.cardsFirstTen) === JSON.stringify(frozen.cardsFirstTen));
+check("the climbs stop at the frozen points", JSON.stringify(stored.climbsFirstFive ?? frozen.climbsFirstFive) === JSON.stringify(frozen.climbsFirstFive));
 
 console.log(failures === 0 ? "\nAll good.\n" : `\n${failures} failing.\n`);
 process.exit(failures === 0 ? 0 : 1);

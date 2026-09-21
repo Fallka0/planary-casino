@@ -244,6 +244,38 @@ function Devil({ id }: { id: string }) {
   );
 }
 
+
+/** The line going up, and the moment it does not. One ink, one gesture. */
+function Nerve({ id }: { id: string }) {
+  const climb = "M40 720 C200 700 330 620 420 470 C500 340 540 200 566 96";
+  return (
+    <>
+      <rect width="600" height="800" fill="#0e3a36" />
+      <rect width="600" height="800" fill={`url(#${id}-dots)`} mask={`url(#${id}-fadeMask)`} />
+      {/* The ground it climbs away from. */}
+      <path d={`${climb} L566 800 L40 800 Z`} fill="#ffc83d" opacity="0.14" />
+      <path d={climb} fill="none" stroke="#ffc83d" strokeWidth="18" strokeLinecap="round" />
+      {/* Where somebody got out, and where somebody did not. */}
+      <circle cx="420" cy="470" r="20" fill="#f2ece0" stroke="#0e3a36" strokeWidth="6" />
+      <circle cx="566" cy="96" r="26" fill="#ff2e55" stroke="#f2ece0" strokeWidth="7" />
+      <g transform="translate(300 300)">
+        <text
+          x="0"
+          y="0"
+          textAnchor="middle"
+          fontSize="150"
+          fontWeight="900"
+          fontFamily="var(--font-poster)"
+          fill="#f2ece0"
+          opacity="0.9"
+        >
+          2.41
+        </text>
+      </g>
+    </>
+  );
+}
+
 const ART: Record<GameId, { draw: (p: { id: string }) => React.JSX.Element; dot: string; field: string; ink: string }> = {
   blackjack: { draw: Blackjack, dot: "#7e0c22", field: "#b3122e", ink: "#fbf1ea" },
   poker: { draw: Poker, dot: "#2d2766", field: "#1d1846", ink: "#fbf1ea" },
@@ -251,6 +283,7 @@ const ART: Record<GameId, { draw: (p: { id: string }) => React.JSX.Element; dot:
   roulette: { draw: Roulette, dot: "#e0421a", field: "#ff5b2e", ink: "#2a0710" },
   slots: { draw: Slots, dot: "#a90e4a", field: "#cc1259", ink: "#fbf1ea" },
   devil: { draw: Devil, dot: "#4a1220", field: "#1e090f", ink: "#efe3d2" },
+  nerve: { draw: Nerve, dot: "#0a2d2a", field: "#0e3a36", ink: "#f2ece0" },
 };
 
 /** The poster's flat field colour, so containers can extend the art edge to edge. */

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 const BLACKJACK_URL = "https://21.planary.ch";
 const ROULETTE_URL = "https://roulette.planary.ch";
 const DEVIL_URL = "https://devil.planary.ch";
+const NERVE_URL = "https://nerve.planary.ch";
 
 export const metadata: Metadata = {
   title: "Fair play · Planary Casino",
@@ -192,6 +193,64 @@ export default function RulesPage() {
           </a>
           <a className="btn btn-quiet" href="/verify">
             Check a spin
+          </a>
+        </div>
+      </section>
+
+      <section className="card" id="nerve" aria-labelledby="nerve-title">
+        <div className="rules-head">
+          <h2 id="nerve-title">Nerve</h2>
+          <div className="stats">
+            <Stat value="99.0%" label="Return to player" />
+            <Stat value="1.00%" label="House edge" />
+          </div>
+        </div>
+        <p className="rules-lede">
+          A number climbs from 1.00×. You decide when to take it. If the climb stops first, the stake is gone. One climb for the
+          whole table, and everyone can see who got out where.
+        </p>
+        <div className="rules-cols">
+          <div>
+            <h3>House rules</h3>
+            <ul className="rules-list compact">
+              <li>
+                The chance of a climb reaching <b>x</b> is exactly 0.99 ÷ <b>x</b>. Reaching 2× happens about half the time,
+                reaching 10× about a tenth as often.
+              </li>
+              <li>
+                Because of that, <strong>every target returns the same 99%</strong>. Getting out at 1.1× and holding for 50×
+                carry the identical house edge; only the shape of the ride changes. There is no clever number and no bad one.
+              </li>
+              <li>About one climb in fifty never starts at all — it stops at 1.00×. That is where the edge lives.</li>
+              <li>
+                A standing order is settled by the table at the exact multiplier you asked for, so a slow connection cannot cost
+                you a cash-out. A finger on the button is judged by when the table heard it.
+              </li>
+              <li>Stakes from 10 to 5&apos;000 chips per climb.</li>
+            </ul>
+          </div>
+          <div>
+            <h3>How the stopping point is decided</h3>
+            <ul className="rules-list compact">
+              <li>
+                Before betting opens, the table draws a seed and publishes only its hash. Where the climb stops is already fixed
+                and cannot be moved without changing a hash you have seen.
+              </li>
+              <li>Players may add their own seeds while betting is open. The list is published when it closes.</li>
+              <li>
+                When the climb stops, the seed is published. <a href="/verify">Put it into the verifier</a> and it works the
+                stopping point out again in your browser.
+              </li>
+              <li>Every climb is a fresh seed. Nothing about one climb tells you anything about the next.</li>
+            </ul>
+          </div>
+        </div>
+        <div className="rules-actions">
+          <a className="btn btn-cherry" href={NERVE_URL}>
+            Play Nerve
+          </a>
+          <a className="btn btn-quiet" href="/verify">
+            Check a climb
           </a>
         </div>
       </section>

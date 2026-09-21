@@ -7,6 +7,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { CASINO_API } from "@/lib/api";
 import { commit, opens, roll } from "../../../shared/fair";
 import { checkCards, prettyCard, shuffledShoe } from "../../../shared/deck";
+import { crashPoint } from "../../../shared/nerve";
 
 /**
  * Check a spin or a hand for yourself.
@@ -18,7 +19,7 @@ import { checkCards, prettyCard, shuffledShoe } from "../../../shared/deck";
  * screenshot, by somebody without an account.
  */
 
-type Mode = "roulette" | "blackjack";
+type Mode = "roulette" | "blackjack" | "nerve";
 
 interface Fields {
   serverSeed: string;
@@ -31,9 +32,11 @@ interface Fields {
   /** Blackjack: where in the shoe the hand started, and the cards it pulled. */
   from: string;
   drawn: string;
+  /** Nerve: where the climb stopped. */
+  stopped: string;
 }
 
-const EMPTY: Fields = { serverSeed: "", hash: "", clientSeed: "", nonce: "", pockets: "37", claimed: "", from: "", drawn: "" };
+const EMPTY: Fields = { serverSeed: "", hash: "", clientSeed: "", nonce: "", pockets: "37", claimed: "", from: "", drawn: "", stopped: "" };
 
 const COMMON: { key: keyof Fields; label: string; hint: string; mono?: boolean }[] = [
   { key: "serverSeed", label: "Server seed", hint: "Published by the table afterwards.", mono: true },
@@ -51,6 +54,10 @@ const EXTRA: Record<Mode, { key: keyof Fields; label: string; hint: string; mono
     { key: "nonce", label: "Shoe number", hint: "Counts shoes at that table." },
     { key: "from", label: "Position in the shoe", hint: "Which card of the shuffle this hand started on." },
     { key: "drawn", label: "Cards dealt, in order", hint: "As recorded: Aspade 10heart Kclub …", mono: true },
+  ],
+  nerve: [
+    { key: "nonce", label: "Climb number", hint: "Counts climbs at that table." },
+    { key: "stopped", label: "Where it stopped", hint: "The multiplier the table finished on, e.g. 2.41." },
   ],
 };
 
@@ -102,7 +109,7 @@ function Verifier() {
           log: { from?: number; drawn?: string[] } | null;
           proof: { hash: string; clientSeed: string; nonce: number; serverSeed: string | null };
         };
-        const game: Mode = round.game === "blackjack" ? "blackjack" : "roulette";
+        const game: Mode = round.game === "blackjack" ? "blackjack" : round.game === "nerve" ? "nerve" : "roulette";
         setMode(game);
         setFields({
           ...EMPTY,
@@ -111,6 +118,7 @@ function Verifier() {
           clientSeed: round.proof.clientSeed,
           nonce: String(round.proof.nonce),
           claimed: game === "roulette" ? String(Number.parseInt(round.outcome, 10)) : "",
+          stopped: game === "nerve" ? String(Number.parseFloat(round.outcome)) : "",
           from: round.log?.from !== undefined ? String(round.log.from) : "",
           drawn: (round.log?.drawn ?? []).join(" "),
         });
@@ -170,6 +178,24 @@ function Verifier() {
       return;
     }
 
+    if (mode === "nerve") {
+      const stopped = Number.parseFloat(fields.stopped);
+      if (!Number.isInteger(nonce) || !Number.isFinite(stopped)) {
+        setVerdict({ ok: false, text: <><strong>Something is missing.</strong> A climb needs its number and where it stopped.</> });
+        return;
+      }
+      const again = await crashPoint(fields.serverSeed, fields.clientSeed, nonce);
+      const same = Math.abs(again - stopped) < 1e-9;
+      rows.push(["Where this seed stops the climb", `${again.toFixed(2)}×`, same]);
+      setWork(rows);
+      setVerdict(
+        same
+          ? { ok: true, text: <><strong>It checks out.</strong> The seed matches the hash shown before betting opened, and it stops the climb at exactly <b className="num">{again.toFixed(2)}×</b> — where you saw it stop.</> }
+          : { ok: false, text: <><strong>That does not add up.</strong> These seeds stop the climb at {again.toFixed(2)}×, not where you entered. Check the climb number.</> },
+      );
+      return;
+    }
+
     const from = Number.parseInt(fields.from, 10);
     const drawn = fields.drawn.trim().split(/[\s,]+/).filter(Boolean);
     if (!Number.isInteger(nonce) || !Number.isInteger(from) || drawn.length === 0) {
@@ -223,6 +249,7 @@ function Verifier() {
             [
               ["roulette", "A roulette spin"],
               ["blackjack", "A blackjack hand"],
+              ["nerve", "A climb"],
             ] as [Mode, string][]
           ).map(([id, label]) => (
             <button
@@ -306,8 +333,12 @@ function Verifier() {
             is finished, because publishing it sooner would show you the rest of the cards.
           </li>
           <li>
+            <strong>Nerve</strong> works the stopping point out of the seed before a chip is down. The chance of a climb reaching
+            x is 0.99 ÷ x, which is why every cash-out target carries the same 1% edge.
+          </li>
+          <li>
             <strong>Afterwards</strong> the seed is published. Hash it: it matches what you were shown. Run it again: it gives the
-            number you were paid on, or the exact cards you were dealt.
+            number you were paid on, the exact cards you were dealt, or the point the climb stopped.
           </li>
         </ol>
         <p className="rules-note">
