@@ -23,12 +23,35 @@ const PRESENCE_WHERE = new Set(["lobby", "blackjack", "roulette"]);
  */
 const ROUND_RETENTION_DAYS = 365;
 
-/** The weekly sweep. Deletes in bounded batches so a long-neglected database still finishes. */
+/**
+ * The weekly sweep, deleting in bounded batches so a long-neglected database
+ * still finishes.
+ *
+ * It writes itself into the audit log. Deleting game records is the one thing
+ * an operator does that a regulator would most want accounted for, and "the
+ * system did it automatically" is only an answer if the system says so, with
+ * a date and a count, in the same place every other consequential action is
+ * recorded.
+ */
 async function sweepRounds(env: Env) {
+  const startedAt = Date.now();
+  let removed = 0;
   for (let batch = 0; batch < 40; batch++) {
-    const removed = await pruneRounds(env, ROUND_RETENTION_DAYS);
-    if (removed === 0) return;
+    const gone = await pruneRounds(env, ROUND_RETENTION_DAYS);
+    removed += gone;
+    if (gone === 0) break;
   }
+  if (removed === 0) return;
+  await env.DB.prepare("INSERT INTO audit_log (staff_id, staff_name, action, target_id, details, created_at) VALUES (?, ?, ?, ?, ?, ?)")
+    .bind(
+      "system",
+      "Retention sweep",
+      "rounds.pruned",
+      null,
+      JSON.stringify({ removed, keepDays: ROUND_RETENTION_DAYS, olderThan: new Date(startedAt - ROUND_RETENTION_DAYS * 86_400_000).toISOString() }),
+      Date.now(),
+    )
+    .run();
 }
 
 function cleanName(raw: unknown) {

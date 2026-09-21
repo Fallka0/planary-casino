@@ -12,6 +12,7 @@ for project in planary-roulette planary-blackjack planary-devil; do
   [ -d "$target" ] || { echo "skip $project (not here)"; continue; }
   mkdir -p "$target/shared" "$target/scripts"
   cp "$here/shared/fair.ts" "$target/shared/fair.ts"
+  cp "$here/shared/deck.ts" "$target/shared/deck.ts"
   cp "$here/shared/fair.vectors.json" "$target/shared/fair.vectors.json"
   cp "$here/scripts/fair-test.mjs" "$target/scripts/fair-test.mjs"
   echo "synced → $project"

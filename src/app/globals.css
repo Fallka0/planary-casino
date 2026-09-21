@@ -889,6 +889,20 @@ ul, ol { padding: 0; list-style: none; }
    working is shown rather than hidden behind a green tick. */
 
 .verify { max-width: 840px; }
+.verify-modes { display: flex; gap: 6px; margin-bottom: 18px; padding: 4px; border-radius: 999px; background: var(--layer-1); width: fit-content; max-width: 100%; }
+.verify-mode {
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 0.88rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.verify-mode:hover { color: var(--text); }
+.verify-mode.is-on { background: var(--cherry-fill); color: #fff; }
 .verify-form { display: grid; gap: 14px; }
 .verify-round { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 0.9rem; }
 .field-hint { color: var(--text-3); font-size: 0.78rem; font-weight: 400; }
