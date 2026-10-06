@@ -288,6 +288,7 @@
 .notif-copy { display: grid; gap: 2px; min-width: 0; font-size: 0.9rem; }
 .notif-copy time { color: var(--text-3); font-size: 0.78rem; }
 .notif-actions { display: flex; gap: 6px; margin-top: 6px; }
+.notif-error { margin-top: 4px; font-size: 0.82rem; }
 
 .toasts { position: fixed; right: 20px; bottom: 20px; z-index: 90; pointer-events: none; }
 .unlock-toast {

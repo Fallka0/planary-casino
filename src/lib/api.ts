@@ -60,6 +60,8 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public code?: string,
+    /** The HTTP status, where there was a response: 404 means the thing is already gone. */
+    public status?: number,
   ) {
     super(message);
   }
@@ -80,7 +82,7 @@ async function call<T>(token: string, path: string, body?: unknown): Promise<T> 
   if (!res.ok) {
     const { error, code } = data as { error?: string; code?: string };
     if (code === "blocked") window.dispatchEvent(new CustomEvent("casino:blocked", { detail: error }));
-    throw new ApiError(error ?? "Something went wrong. Try again.", code);
+    throw new ApiError(error ?? "Something went wrong. Try again.", code, res.status);
   }
   return data as T;
 }

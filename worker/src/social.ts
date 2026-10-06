@@ -322,12 +322,12 @@ social.post("/messages/:id", async (c) => {
 social.get("/notifications", async (c) => {
   const me = c.get("player").user_id;
   const { results } = await c.env.DB.prepare(
-    `SELECT n.id, n.kind, n.data, n.created_at, n.read_at, ${BADGE_COLUMNS}
+    `SELECT n.id, n.kind, n.data, n.created_at, n.read_at, n.resolved_at, ${BADGE_COLUMNS}
      FROM notifications n LEFT JOIN players p ON p.user_id = n.actor_id
      WHERE n.user_id = ? ORDER BY n.id DESC LIMIT 40`,
   )
     .bind(me)
-    .all<Player & { id: number; kind: string; data: string | null; created_at: number; read_at: number | null }>();
+    .all<Player & { id: number; kind: string; data: string | null; created_at: number; read_at: number | null; resolved_at: number | null }>();
   return c.json({
     notifications: results.map((n) => {
       const data = n.data ? JSON.parse(n.data) : null;
@@ -337,6 +337,8 @@ social.get("/notifications", async (c) => {
         kind: n.kind,
         at: n.created_at,
         read: n.read_at !== null,
+        // Answered already: the panel keeps the line, drops the buttons.
+        resolved: n.resolved_at !== null,
         actor: n.user_id ? badge(n) : null,
         data,
         achievement: achievement ? { id: achievement.id, name: achievement.name, glyph: achievement.glyph, grade: achievement.grade } : null,

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { Bell, Check, X } from "lucide-react";
-import { useCasino, useCasinoAction } from "@/lib/api";
+import { ApiError, useCasino, useCasinoAction } from "@/lib/api";
 import { formatChips } from "@/lib/games";
 import { AchievementBadge } from "./AchievementBadge";
 import { Avatar } from "./Avatar";
@@ -27,8 +27,29 @@ export function timeAgo(ms: number, now: number) {
 
 function Item({ n, now, onDone }: { n: NotificationItem; now: number; onDone: () => void }) {
   const act = useCasinoAction();
+  // An answer settles the prompt here and now: the reload behind `act` arrives a
+  // round trip later, and until then the buttons would invite a second click
+  // that only 404s.
+  const [answered, setAnswered] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
   const who = n.actor?.name ?? "Someone";
   const game = n.data?.game === "roulette" || n.data?.game === "blackjack" ? GAME[n.data.game] : null;
+
+  async function answer(path: string) {
+    setBusy(true);
+    setFailed(null);
+    try {
+      await act(path, { userId: n.actor!.id });
+      setAnswered(true);
+    } catch (e) {
+      // Already answered elsewhere: the prompt is spent either way.
+      if (e instanceof ApiError && e.status === 404) setAnswered(true);
+      else setFailed(e instanceof ApiError ? e.message : "Didn't work. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   let text: React.ReactNode;
   let actions: React.ReactNode = null;
@@ -39,16 +60,17 @@ function Item({ n, now, onDone }: { n: NotificationItem; now: number; onDone: ()
           <strong>{who}</strong> wants to be friends.
         </>
       );
-      actions = (
-        <>
-          <button className="btn btn-sm btn-cherry" onClick={() => void act("/v1/friends/accept", { userId: n.actor!.id }).catch(() => {})}>
-            <Check size={14} strokeWidth={2.6} aria-hidden="true" /> Accept
-          </button>
-          <button className="icon-btn" onClick={() => void act("/v1/friends/remove", { userId: n.actor!.id }).catch(() => {})} aria-label={`Decline ${who}`}>
-            <X size={15} strokeWidth={2.2} aria-hidden="true" />
-          </button>
-        </>
-      );
+      actions =
+        n.resolved || answered || !n.actor ? null : (
+          <>
+            <button className="btn btn-sm btn-cherry" onClick={() => void answer("/v1/friends/accept")} disabled={busy}>
+              <Check size={14} strokeWidth={2.6} aria-hidden="true" /> Accept
+            </button>
+            <button className="icon-btn" onClick={() => void answer("/v1/friends/remove")} disabled={busy} aria-label={`Decline ${who}`}>
+              <X size={15} strokeWidth={2.2} aria-hidden="true" />
+            </button>
+          </>
+        );
       break;
     case "friend_accepted":
       text = (
@@ -110,6 +132,7 @@ function Item({ n, now, onDone }: { n: NotificationItem; now: number; onDone: ()
         <p>{text}</p>
         <time>{timeAgo(n.at, now)}</time>
         {actions ? <div className="notif-actions">{actions}</div> : null}
+        {failed ? <p className="form-error notif-error">{failed}</p> : null}
       </div>
     </li>
   );

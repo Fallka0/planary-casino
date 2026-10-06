@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Env, Player } from "./env";
 import { type BlackjackRound, bumpStat, checkLive, getStats, type RouletteRound, recordRound, unlock } from "./achievements";
-import { notify } from "./notify";
+import { notify, resolveFriendRequests } from "./notify";
 import { BADGE_COLUMNS, badge, pairKey, presenceOf, social, unreadCounts } from "./social";
 import { nextZurichMidnight, zurichDay, zurichWeekStart } from "./time";
 import { admin } from "./admin";
@@ -366,7 +366,13 @@ app.post("/v1/friends/accept", async (c) => {
   )
     .bind(low, high, userId)
     .run();
-  if (!result.meta.changes) return c.json({ error: "No request from this player." }, 404);
+  if (!result.meta.changes) {
+    // Nothing pending: the request was already answered, here or on another
+    // device. Make sure its buttons are gone before saying so.
+    await resolveFriendRequests(c.env, me, userId);
+    return c.json({ error: "No request from this player." }, 404);
+  }
+  await resolveFriendRequests(c.env, me, userId);
   await befriended(c.env, me, userId);
   return c.json({ relation: "friend" });
 });
@@ -377,6 +383,7 @@ app.post("/v1/friends/remove", async (c) => {
   const { userId } = await c.req.json<{ userId: string }>();
   const [low, high] = pairKey(me, userId);
   await c.env.DB.prepare("DELETE FROM friendships WHERE user_low = ? AND user_high = ?").bind(low, high).run();
+  await resolveFriendRequests(c.env, me, userId);
   return c.json({ relation: "none" });
 });
 

@@ -16,6 +16,8 @@ export interface NotificationItem {
   kind: "friend_request" | "friend_accepted" | "chips_received" | "table_invite" | "achievement" | "announcement" | "staff";
   at: number;
   read: boolean;
+  /** An answered prompt (a friend request accepted or declined) keeps its line but loses its buttons. */
+  resolved: boolean;
   actor: import("@/lib/api").PlayerBadge | null;
   data: { amount?: number; game?: string; table?: string; id?: string; rewards?: string[]; title?: string; body?: string; text?: string } | null;
   achievement: { id: string; name: string; glyph: string; grade: 1 | 2 | 3 | 4 } | null;

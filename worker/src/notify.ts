@@ -7,3 +7,19 @@ export async function notify(env: Env, userId: string, kind: NotificationKind, a
     .bind(userId, kind, actorId, data === null ? null : JSON.stringify(data), Date.now())
     .run();
 }
+
+/**
+ * A friend request has been answered: retire the prompt in both players'
+ * panels. Either side can end a pending request — the sender cancels, the
+ * recipient accepts or declines — so the actor can sit on either end of the
+ * pair.
+ */
+export async function resolveFriendRequests(env: Env, a: string, b: string) {
+  await env.DB.prepare(
+    `UPDATE notifications SET resolved_at = ?1
+     WHERE kind = 'friend_request' AND resolved_at IS NULL
+       AND ((user_id = ?2 AND actor_id = ?3) OR (user_id = ?3 AND actor_id = ?2))`,
+  )
+    .bind(Date.now(), a, b)
+    .run();
+}
