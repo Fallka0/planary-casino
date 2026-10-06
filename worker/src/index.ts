@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Env, Player } from "./env";
-import { type BlackjackRound, bumpStat, checkLive, getStats, type RouletteRound, recordRound, unlock } from "./achievements";
+import { type BlackjackRound, bumpStat, checkLive, getStats, type RouletteRound, recordRound, unlock, recordGrimoire } from "./achievements";
 import { notify, resolveFriendRequests } from "./notify";
 import { BADGE_COLUMNS, badge, pairKey, presenceOf, social, unreadCounts } from "./social";
 import { nextZurichMidnight, zurichDay, zurichWeekStart } from "./time";
@@ -13,7 +13,7 @@ import { claimBonus, credit, debit, ensurePlayer, getPlayer, transfer } from "./
 type Vars = { player: Player };
 const app = new Hono<{ Bindings: Env; Variables: Vars }>();
 
-const PRESENCE_WHERE = new Set(["lobby", "blackjack", "roulette", "slots"]);
+const PRESENCE_WHERE = new Set(["lobby", "blackjack", "roulette", "slots", "grimoire"]);
 
 /**
  * How long a game round is kept. A regulated operator would set this to five
@@ -264,6 +264,29 @@ app.post("/v1/chips/send", async (c) => {
   const unlocked = await unlock(c.env, me.user_id, sent >= 10_000 ? ["generous", "patron"] : ["generous"]);
   await checkLive(c.env, userId);
   return c.json({ balance, unlocked: unlocked.map((a) => a.id) });
+});
+
+/**
+ * A finished Grimoire run.
+ *
+ * Grimoire stakes nothing, so this moves no chips: it unlocks badges and the
+ * cosmetics hung off them. The claim comes from the browser and is taken at
+ * its word, which is affordable precisely because nothing here is worth money
+ * — the seed and the binding are kept so a later version can replay the run
+ * and check it without having to ask players to send anything new.
+ */
+app.post("/v1/grimoire/run", async (c) => {
+  const player = c.get("player");
+  const body = await c.req.json<{ deck?: string; seed?: string; chapter?: number; won?: boolean; sigils?: string[] }>().catch(() => null);
+  if (!body?.deck || typeof body.chapter !== "number") return c.json({ error: "bad run" }, 400);
+  const unlocked = await recordGrimoire(c.env, player.user_id, {
+    deck: String(body.deck).slice(0, 24),
+    seed: String(body.seed ?? "").slice(0, 32),
+    chapter: Math.max(0, Math.min(99, Math.floor(body.chapter))),
+    won: Boolean(body.won),
+    sigils: Array.isArray(body.sigils) ? body.sigils.slice(0, 12).map((id) => String(id).slice(0, 32)) : [],
+  });
+  return c.json({ unlocked: unlocked.map((a) => ({ id: a.id, name: a.name })) });
 });
 
 app.post("/v1/presence", async (c) => {

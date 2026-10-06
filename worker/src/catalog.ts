@@ -43,6 +43,7 @@ export const CATALOG: Item[] = [
   { id: "banner-deco", kind: "banner", name: "Gold deco", tier: "epic", price: 9000, blurb: "Fans and rays from a grand hall." },
   { id: "banner-holo", kind: "banner", name: "Holo foil", tier: "legendary", price: 25000, blurb: "A banner that won't sit still." },
   { id: "banner-21", kind: "banner", name: "Twenty-one", tier: "epic", price: null, blurb: "For ten naturals.", reward: "natural_10" },
+  { id: "banner-grimoire", kind: "banner", name: "Grimoire", tier: "legendary", price: null, blurb: "For all six bindings.", reward: "grim_every" },
 
   // Titles, shown under your name
   { id: "title-regular", kind: "title", name: "Regular", tier: "common", price: 300, blurb: "They know your usual." },
@@ -56,12 +57,14 @@ export const CATALOG: Item[] = [
   { id: "title-high-roller", kind: "title", name: "High Roller", tier: "legendary", price: null, blurb: "For a 10'000-chip round.", reward: "big_win_10k" },
   { id: "title-whale", kind: "title", name: "Whale", tier: "legendary", price: null, blurb: "For holding 100'000 chips.", reward: "balance_100k" },
   { id: "title-champion", kind: "title", name: "Champion", tier: "legendary", price: null, blurb: "For a week at number one.", reward: "weekly_top" },
+  { id: "title-bookbinder", kind: "title", name: "Bookbinder", tier: "rare", price: null, blurb: "For finishing the book.", reward: "grim_plain" },
 
   // Blackjack card backs (the dealer's face-down card and the shuffle, on your screen)
   { id: "cardback-navy", kind: "cardback", name: "Navy lattice", tier: "common", price: 1000, blurb: "A classic club deck." },
   { id: "cardback-felt", kind: "cardback", name: "Baize", tier: "rare", price: 1500, blurb: "Green like the old tables." },
   { id: "cardback-deco", kind: "cardback", name: "Deco gold", tier: "epic", price: 4000, blurb: "Black and gold, very grand." },
   { id: "cardback-holo", kind: "cardback", name: "Holo", tier: "legendary", price: 15000, blurb: "Foil that follows your eye." },
+  { id: "cardback-sigil", kind: "cardback", name: "Sigil", tier: "legendary", price: null, blurb: "For the leaden book, closed.", reward: "grim_leaden" },
 
   // Chip sets (your bets, as everyone at the table sees them)
   { id: "chips-mono", kind: "chipset", name: "Monochrome", tier: "common", price: 800, blurb: "Cream and ink, nothing else." },

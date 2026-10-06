@@ -2,7 +2,7 @@ import { ITEMS } from "./catalog";
 import type { Env } from "./env";
 import { notify } from "./notify";
 
-export type Category = "blackjack" | "roulette" | "chips" | "social" | "collector";
+export type Category = "blackjack" | "roulette" | "grimoire" | "chips" | "social" | "collector";
 /** Visual weight of the badge; rarity (how many players own it) is computed live. */
 export type Grade = 1 | 2 | 3 | 4;
 
@@ -42,6 +42,19 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: "spins_100", name: "Wheel Watcher", description: "Bet on 100 spins.", category: "roulette", grade: 2, glyph: "100", progress: { stat: "roulette_spins", target: 100 } },
   { id: "zero_hero", name: "Zero Hero", description: "Hit zero straight up. Unlocks the Zero Hero title.", category: "roulette", grade: 3, glyph: "0" },
   { id: "deja_vu", name: "Déjà Vu", description: "Hit the same single number on two spins in a row.", category: "roulette", grade: 4, glyph: "↺", secret: true },
+
+  // Grimoire. Nothing is staked there, so these are the whole reward — which
+  // is why every one of them is a thing you did rather than a thing you were
+  // dealt, and why the hardest binding is the one that pays a card back.
+  { id: "grim_open", name: "First Page", description: "Break your first seal in Grimoire.", category: "grimoire", grade: 1, glyph: "@book" },
+  { id: "grim_warden", name: "Warden's Due", description: "Break a warden's seal.", category: "grimoire", grade: 2, glyph: "@lock" },
+  { id: "grim_plain", name: "Bookbinder", description: "Finish the book with The Plain Binding. Unlocks the Bookbinder title.", category: "grimoire", grade: 2, glyph: "I" },
+  { id: "grim_ashen", name: "Ashen", description: "Finish the book with The Ashen Binding.", category: "grimoire", grade: 2, glyph: "II" },
+  { id: "grim_gilded", name: "Gilded", description: "Finish the book with The Gilded Binding.", category: "grimoire", grade: 3, glyph: "III" },
+  { id: "grim_hollow", name: "Hollow", description: "Finish the book with The Hollow Binding, which holds no face cards.", category: "grimoire", grade: 3, glyph: "IV" },
+  { id: "grim_crimson", name: "Crimson", description: "Finish the book with The Crimson Binding.", category: "grimoire", grade: 3, glyph: "V" },
+  { id: "grim_leaden", name: "Leaden", description: "Finish the book with The Leaden Binding: one hand a seal, one slot in the book. Unlocks the Sigil card back.", category: "grimoire", grade: 4, glyph: "VI" },
+  { id: "grim_every", name: "Every Binding", description: "Finish the book with all six bindings. Unlocks the Grimoire banner.", category: "grimoire", grade: 4, glyph: "VI/VI" },
 
   // Chips
   { id: "big_win_1k", name: "Four Figures", description: "Win 1'000 chips or more in a single round.", category: "chips", grade: 2, glyph: "1'000" },
@@ -129,6 +142,55 @@ export async function unlock(env: Env, userId: string, ids: string[]): Promise<A
     await notify(env, userId, "achievement", null, { id, rewards: rewards.map((r) => r.id) });
   }
   return fresh;
+}
+
+/** The six bindings, in the order they unlock. Mirrors shared decks in planary-grimoire. */
+const BINDINGS = ["plain", "ashen", "gilded", "hollow", "crimson", "leaden"] as const;
+const BINDING_BADGE: Record<string, string> = {
+  plain: "grim_plain",
+  ashen: "grim_ashen",
+  gilded: "grim_gilded",
+  hollow: "grim_hollow",
+  crimson: "grim_crimson",
+  leaden: "grim_leaden",
+};
+
+export interface GrimoireRun {
+  deck: string;
+  seed: string;
+  chapter: number;
+  won: boolean;
+  sigils?: string[];
+}
+
+/**
+ * A finished Grimoire run.
+ *
+ * Nothing is staked in Grimoire, so this moves no chips and the claim is taken
+ * at the browser's word — a forged one buys a title nobody can tell you did
+ * not earn, and that is the whole exposure. The seed and the binding are kept
+ * so the run could be replayed and checked later; the engine is deterministic
+ * from the seed, so the proof is possible, it is simply not demanded.
+ */
+export async function recordGrimoire(env: Env, userId: string, run: GrimoireRun): Promise<Achievement[]> {
+  const ids: string[] = [];
+  if (run.chapter >= 1) ids.push("grim_open");
+  if (run.chapter >= 1 && (run.won || run.chapter > 1)) ids.push("grim_warden");
+
+  const stats = await getStats(env, userId);
+  const writes = [];
+  if (run.won && BINDING_BADGE[run.deck]) {
+    ids.push(BINDING_BADGE[run.deck]);
+    writes.push(setStat(env, userId, `grimoire_${run.deck}`, 1));
+    // All six, counting the one just finished.
+    const done = BINDINGS.filter((id) => (id === run.deck ? true : (stats[`grimoire_${id}`] ?? 0) > 0));
+    if (done.length === BINDINGS.length) ids.push("grim_every");
+  }
+  const best = Math.max(stats.grimoire_best ?? 0, run.chapter);
+  writes.push(setStat(env, userId, "grimoire_best", best));
+  if (writes.length) await env.DB.batch(writes);
+
+  return unlock(env, userId, ids);
 }
 
 /** Checks the achievements that depend on live counts (friends, items, balance, bonus streak). */

@@ -1,4 +1,4 @@
-export type GameId = "blackjack" | "poker" | "baccarat" | "roulette" | "slots";
+export type GameId = "blackjack" | "poker" | "baccarat" | "roulette" | "slots" | "grimoire";
 
 export type GameStatus = "live" | "soon";
 
@@ -64,6 +64,19 @@ export const GAMES: Game[] = [
     tags: ["Table", "Multiplayer"],
     caption: "Rien ne va plus",
     status: "live",
+  },
+  {
+    id: "grimoire",
+    name: "Grimoire",
+    tagline: "A poker run in eight chapters.",
+    blurb:
+      "Now open. Play a hand, score points times mult, break the seal — then spend the ink on sigils and write them into the book. Solo, and nothing is wagered.",
+    subdomain: "grimoire",
+    players: "1 player",
+    tags: ["Solo", "Roguelike", "No wager"],
+    caption: "Break the seal",
+    status: "live",
+    rules: ["Eight chapters, three seals each", "Sigils fire left to right", "No chips in, no chips out"],
   },
   {
     id: "slots",

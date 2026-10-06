@@ -210,12 +210,49 @@ function Slots({ id }: { id: string }) {
 
 
 
+/** The book, open, with a sigil inked on the right-hand leaf. */
+function Grimoire({ id }: { id: string }) {
+  return (
+    <>
+      <rect width="600" height="800" fill="#23308f" />
+      <rect width="600" height="800" fill={`url(#${id}-dots)`} mask={`url(#${id}-fadeMask)`} />
+      {/* The quota set enormous in two plates, as it is on the table itself. */}
+      <text x="612" y="300" textAnchor="end" fontSize="300" fontWeight="900" fontFamily="var(--font-poster)" fill="#ff5a78" opacity="0.32" letterSpacing="-12">
+        220
+      </text>
+      <text x="600" y="288" textAnchor="end" fontSize="300" fontWeight="900" fontFamily="var(--font-poster)" fill="#1b2675" letterSpacing="-12">
+        220
+      </text>
+      {/* Two leaves of cream paper, the spine between them. */}
+      <g transform="translate(118 330) rotate(-6)">
+        <rect width="200" height="280" rx="10" fill="#efe6d8" />
+        <rect x="20" y="30" width="150" height="10" rx="5" fill="#23308f" opacity="0.28" />
+        <rect x="20" y="56" width="120" height="10" rx="5" fill="#23308f" opacity="0.2" />
+        <rect x="20" y="82" width="140" height="10" rx="5" fill="#23308f" opacity="0.2" />
+      </g>
+      <g transform="translate(300 318) rotate(5)">
+        <rect width="210" height="292" rx="10" fill="#f6eee4" />
+        {/* The sigil: a ring, a ring, and a mark. */}
+        <circle cx="105" cy="120" r="62" fill="none" stroke="#23308f" strokeWidth="12" />
+        <circle cx="105" cy="120" r="34" fill="none" stroke="#ff5a78" strokeWidth="12" />
+        <circle cx="105" cy="120" r="12" fill="#23308f" />
+        <rect x="34" y="214" width="142" height="12" rx="6" fill="#23308f" opacity="0.3" />
+        <rect x="34" y="240" width="104" height="12" rx="6" fill="#23308f" opacity="0.22" />
+      </g>
+      <text x="40" y="722" fontSize="128" fontWeight="900" fontFamily="var(--font-poster)" fill="#fbf1ea" letterSpacing="-4">
+        VIII
+      </text>
+    </>
+  );
+}
+
 const ART: Record<GameId, { draw: (p: { id: string }) => React.JSX.Element; dot: string; field: string; ink: string }> = {
   blackjack: { draw: Blackjack, dot: "#7e0c22", field: "#b3122e", ink: "#fbf1ea" },
   poker: { draw: Poker, dot: "#2d2766", field: "#1d1846", ink: "#fbf1ea" },
   baccarat: { draw: Baccarat, dot: "#d4a97c", field: "#e8c7a2", ink: "#2a0710" },
   roulette: { draw: Roulette, dot: "#e0421a", field: "#ff5b2e", ink: "#2a0710" },
   slots: { draw: Slots, dot: "#a90e4a", field: "#cc1259", ink: "#fbf1ea" },
+  grimoire: { draw: Grimoire, dot: "#18226a", field: "#23308f", ink: "#fbf1ea" },
 };
 
 /** The poster's flat field colour, so containers can extend the art edge to edge. */
