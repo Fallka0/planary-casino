@@ -94,13 +94,15 @@ export const GAMES: Game[] = [
   {
     id: "slots",
     name: "Slots",
-    tagline: "Three reels, one lever, endless spins.",
-    blurb: "Classic three-reel slots. Pull the lever, line up the sevens and keep your streak alive.",
+    tagline: "Three machines with their reel strips published.",
+    blurb:
+      "Now open. A classic three-reeler, a nine-window grid and a five-reel night machine — each with its reel strips in the open and its return printed on the cabinet.",
     subdomain: "slots",
     players: "1 player",
     tags: ["Solo", "Quick"],
     caption: "Pull the lever",
-    status: "soon",
+    status: "live",
+    rules: ["Every strip is published", "96% back, checked against every window", "Each spin committed before the lever moves"],
   },
 ];
 

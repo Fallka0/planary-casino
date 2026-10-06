@@ -8,6 +8,7 @@ import { CASINO_API } from "@/lib/api";
 import { commit, opens, roll } from "../../../shared/fair";
 import { checkCards, prettyCard, shuffledShoe } from "../../../shared/deck";
 import { crashPoint } from "../../../shared/nerve";
+import { describe as describeSpin, machineById, MACHINES, payOut, stopsFor, windowAt } from "../../../shared/slots";
 
 /**
  * Check a spin or a hand for yourself.
@@ -19,7 +20,7 @@ import { crashPoint } from "../../../shared/nerve";
  * screenshot, by somebody without an account.
  */
 
-type Mode = "roulette" | "blackjack" | "nerve";
+type Mode = "roulette" | "blackjack" | "nerve" | "slots";
 
 interface Fields {
   serverSeed: string;
@@ -34,9 +35,12 @@ interface Fields {
   drawn: string;
   /** Nerve: where the climb stopped. */
   stopped: string;
+  /** Slots: which machine, and where its reels came to rest. */
+  machine: string;
+  stops: string;
 }
 
-const EMPTY: Fields = { serverSeed: "", hash: "", clientSeed: "", nonce: "", pockets: "37", claimed: "", from: "", drawn: "", stopped: "" };
+const EMPTY: Fields = { serverSeed: "", hash: "", clientSeed: "", nonce: "", pockets: "37", claimed: "", from: "", drawn: "", stopped: "", machine: "cherry", stops: "" };
 
 const COMMON: { key: keyof Fields; label: string; hint: string; mono?: boolean }[] = [
   { key: "serverSeed", label: "Server seed", hint: "Published by the table afterwards.", mono: true },
@@ -58,6 +62,11 @@ const EXTRA: Record<Mode, { key: keyof Fields; label: string; hint: string; mono
   nerve: [
     { key: "nonce", label: "Climb number", hint: "Counts climbs at that table." },
     { key: "stopped", label: "Where it stopped", hint: "The multiplier the table finished on, e.g. 2.41." },
+  ],
+  slots: [
+    { key: "nonce", label: "Spin number", hint: "Counts your spins on that machine." },
+    { key: "machine", label: "Machine", hint: `One of: ${MACHINES.map((m) => m.id).join(", ")}.`, mono: true },
+    { key: "stops", label: "Where the reels stopped", hint: "One number per reel, as recorded: 7 14 2", mono: true },
   ],
 };
 
@@ -106,21 +115,26 @@ function Verifier() {
         const round = (await res.json()) as {
           game: string;
           outcome: string;
-          log: { from?: number; drawn?: string[] } | null;
+          log: { from?: number; drawn?: string[]; machine?: string; spin?: number; stops?: number[] } | null;
           proof: { hash: string; clientSeed: string; nonce: number; serverSeed: string | null };
         };
-        const game: Mode = round.game === "blackjack" ? "blackjack" : round.game === "nerve" ? "nerve" : "roulette";
+        const game: Mode =
+          round.game === "blackjack" ? "blackjack" : round.game === "nerve" ? "nerve" : round.game === "slots" ? "slots" : "roulette";
         setMode(game);
         setFields({
           ...EMPTY,
           serverSeed: round.proof.serverSeed ?? "",
           hash: round.proof.hash,
           clientSeed: round.proof.clientSeed,
-          nonce: String(round.proof.nonce),
+          // A slots round records its own spin number in the log: one commitment
+          // per spin means the two agree, and the log is what a player copies.
+          nonce: String(round.log?.spin ?? round.proof.nonce),
           claimed: game === "roulette" ? String(Number.parseInt(round.outcome, 10)) : "",
           stopped: game === "nerve" ? String(Number.parseFloat(round.outcome)) : "",
           from: round.log?.from !== undefined ? String(round.log.from) : "",
           drawn: (round.log?.drawn ?? []).join(" "),
+          machine: round.log?.machine ?? "cherry",
+          stops: (round.log?.stops ?? []).join(" "),
         });
         setVerdict(null);
         setWork(null);
@@ -196,6 +210,50 @@ function Verifier() {
       return;
     }
 
+    if (mode === "slots") {
+      const cabinet = machineById(fields.machine.trim().toLowerCase());
+      const claimed = fields.stops.trim().split(/[\s,]+/).filter(Boolean).map(Number);
+      if (!cabinet) {
+        setVerdict({ ok: false, text: <><strong>Which machine?</strong> It has to be one of {MACHINES.map((m) => m.id).join(", ")} — each one has its own reels.</> });
+        return;
+      }
+      if (!Number.isInteger(nonce) || claimed.length !== cabinet.reels.length || claimed.some((stop) => !Number.isInteger(stop))) {
+        setVerdict({ ok: false, text: <><strong>Something is missing.</strong> A spin needs its number and one stop for each of the {cabinet.reels.length} reels.</> });
+        return;
+      }
+      const stops = await stopsFor(cabinet, fields.serverSeed, fields.clientSeed, nonce);
+      const same = stops.join(" ") === claimed.join(" ");
+      // What those stops put on screen, so the check ends in symbols a person
+      // can compare with what they saw, not only in reel positions.
+      const screen = windowAt(cabinet, stops);
+      const paid = payOut(cabinet, screen, 1);
+      rows.push([`Where this seed stops ${cabinet.name}'s reels`, stops.join(" "), same]);
+      rows.push(["What that puts on screen", screen.map((reel) => reel.join("/")).join("  ")]);
+      rows.push(["And what it pays", describeSpin(cabinet, paid)]);
+      setWork(rows);
+      setVerdict(
+        same
+          ? {
+              ok: true,
+              text: (
+                <>
+                  <strong>It checks out.</strong> The seed matches the hash the machine showed before the lever moved, and it stops the reels
+                  at <b className="num">{stops.join(" ")}</b> —{" "}
+                  {paid.returned > 0 ? (
+                    <>
+                      which pays <b>{describeSpin(cabinet, paid).toLowerCase()}</b>, the spin you were paid on.
+                    </>
+                  ) : (
+                    <>the spin you saw, and it pays nothing.</>
+                  )}
+                </>
+              ),
+            }
+          : { ok: false, text: <><strong>That does not add up.</strong> These seeds stop the reels at {stops.join(" ")}, not where you entered. Check the spin number and that this is the right machine.</> },
+      );
+      return;
+    }
+
     const from = Number.parseInt(fields.from, 10);
     const drawn = fields.drawn.trim().split(/[\s,]+/).filter(Boolean);
     if (!Number.isInteger(nonce) || !Number.isInteger(from) || drawn.length === 0) {
@@ -250,6 +308,7 @@ function Verifier() {
               ["roulette", "A roulette spin"],
               ["blackjack", "A blackjack hand"],
               ["nerve", "A climb"],
+              ["slots", "A slot spin"],
             ] as [Mode, string][]
           ).map(([id, label]) => (
             <button
@@ -335,6 +394,11 @@ function Verifier() {
           <li>
             <strong>Nerve</strong> works the stopping point out of the seed before a chip is down. The chance of a climb reaching
             x is 0.99 ÷ x, which is why every cash-out target carries the same 1% edge.
+          </li>
+          <li>
+            <strong>Slots</strong> draws one stop per reel from the same seed and reads the symbols off published strips — every
+            stop of every reel is written down in the open, so what a combination is worth and how often it lands are both things
+            you can work out rather than things we tell you. Each spin is its own commitment, opened as the reels stop.
           </li>
           <li>
             <strong>Afterwards</strong> the seed is published. Hash it: it matches what you were shown. Run it again: it gives the
