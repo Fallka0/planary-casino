@@ -15,11 +15,16 @@ export async function notify(env: Env, userId: string, kind: NotificationKind, a
  * pair.
  */
 export async function resolveFriendRequests(env: Env, a: string, b: string) {
-  await env.DB.prepare(
-    `UPDATE notifications SET resolved_at = ?1
-     WHERE kind = 'friend_request' AND resolved_at IS NULL
-       AND ((user_id = ?2 AND actor_id = ?3) OR (user_id = ?3 AND actor_id = ?2))`,
-  )
-    .bind(Date.now(), a, b)
-    .run();
+  try {
+    await env.DB.prepare(
+      `UPDATE notifications SET resolved_at = ?1
+       WHERE kind = 'friend_request' AND resolved_at IS NULL
+         AND ((user_id = ?2 AND actor_id = ?3) OR (user_id = ?3 AND actor_id = ?2))`,
+    )
+      .bind(Date.now(), a, b)
+      .run();
+  } catch (error) {
+    // Tidying the panel must never stop a friendship being accepted.
+    console.error("friend request not marked answered — run the migrations", error);
+  }
 }

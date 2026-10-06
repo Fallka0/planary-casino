@@ -319,18 +319,35 @@ social.post("/messages/:id", async (c) => {
 
 // ── Notifications ────────────────────────────────────
 
+type NotificationRow = Player & { id: number; kind: string; data: string | null; created_at: number; read_at: number | null; resolved_at: number | null };
+
 social.get("/notifications", async (c) => {
   const me = c.get("player").user_id;
-  const { results } = await c.env.DB.prepare(
-    `SELECT n.id, n.kind, n.data, n.created_at, n.read_at, n.resolved_at, ${BADGE_COLUMNS}
-     FROM notifications n LEFT JOIN players p ON p.user_id = n.actor_id
-     WHERE n.user_id = ? ORDER BY n.id DESC LIMIT 40`,
-  )
-    .bind(me)
-    .all<Player & { id: number; kind: string; data: string | null; created_at: number; read_at: number | null; resolved_at: number | null }>();
+  const query = (resolved: boolean) =>
+    c.env.DB.prepare(
+      `SELECT n.id, n.kind, n.data, n.created_at, n.read_at, ${resolved ? "n.resolved_at" : "NULL AS resolved_at"}, ${BADGE_COLUMNS}
+       FROM notifications n LEFT JOIN players p ON p.user_id = n.actor_id
+       WHERE n.user_id = ? ORDER BY n.id DESC LIMIT 40`,
+    )
+      .bind(me)
+      .all<NotificationRow>();
+  let results: NotificationRow[];
+  try {
+    results = (await query(true)).results;
+  } catch (error) {
+    // A worker deployed ahead of its migration: the panel still opens, with
+    // every friend request's buttons showing, rather than not at all.
+    console.error("notifications: resolved_at missing — run the migrations", error);
+    results = (await query(false)).results;
+  }
   return c.json({
     notifications: results.map((n) => {
-      const data = n.data ? JSON.parse(n.data) : null;
+      let data = null;
+      try {
+        data = n.data ? JSON.parse(n.data) : null;
+      } catch {
+        // One unreadable row must not take the whole panel down with it.
+      }
       const achievement = n.kind === "achievement" && data?.id ? ACHIEVEMENT_MAP.get(data.id) : null;
       return {
         id: n.id,

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
-import { Bell, Check, X } from "lucide-react";
+import { Bell, Check, ChevronRight, RotateCw, X } from "lucide-react";
 import { ApiError, useCasino, useCasinoAction } from "@/lib/api";
 import { formatChips } from "@/lib/games";
 import { AchievementBadge } from "./AchievementBadge";
@@ -25,26 +25,42 @@ export function timeAgo(ms: number, now: number) {
   return d < 7 ? `${d} d` : new Date(ms).toLocaleDateString("de-CH", { day: "numeric", month: "short" });
 }
 
-function Item({ n, now, onDone }: { n: NotificationItem; now: number; onDone: () => void }) {
+/** Where a notification takes you when you click it, if anywhere. */
+function destination(n: NotificationItem): string | null {
+  switch (n.kind) {
+    case "friend_request":
+    case "friend_accepted":
+      return n.actor ? `/u/${n.actor.id}` : null;
+    case "chips_received":
+      return "/chips";
+    case "achievement":
+      return "/achievements";
+    default:
+      return null;
+  }
+}
+
+function Item({ n, now, fresh, onDone }: { n: NotificationItem; now: number; fresh: boolean; onDone: () => void }) {
   const act = useCasinoAction();
   // An answer settles the prompt here and now: the reload behind `act` arrives a
   // round trip later, and until then the buttons would invite a second click
   // that only 404s.
-  const [answered, setAnswered] = useState(false);
+  const [answered, setAnswered] = useState<"accepted" | "declined" | null>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
   const who = n.actor?.name ?? "Someone";
   const game = n.data?.game === "roulette" || n.data?.game === "blackjack" ? GAME[n.data.game] : null;
+  const href = destination(n);
 
-  async function answer(path: string) {
+  async function answer(path: string, outcome: "accepted" | "declined") {
     setBusy(true);
     setFailed(null);
     try {
       await act(path, { userId: n.actor!.id });
-      setAnswered(true);
+      setAnswered(outcome);
     } catch (e) {
       // Already answered elsewhere: the prompt is spent either way.
-      if (e instanceof ApiError && e.status === 404) setAnswered(true);
+      if (e instanceof ApiError && e.status === 404) setAnswered(outcome);
       else setFailed(e instanceof ApiError ? e.message : "Didn't work. Try again.");
     } finally {
       setBusy(false);
@@ -60,17 +76,20 @@ function Item({ n, now, onDone }: { n: NotificationItem; now: number; onDone: ()
           <strong>{who}</strong> wants to be friends.
         </>
       );
-      actions =
-        n.resolved || answered || !n.actor ? null : (
+      if (answered) {
+        actions = <span className="notif-done">{answered === "accepted" ? "You're friends now." : "Declined."}</span>;
+      } else if (!n.resolved && n.actor) {
+        actions = (
           <>
-            <button className="btn btn-sm btn-cherry" onClick={() => void answer("/v1/friends/accept")} disabled={busy}>
+            <button className="btn btn-sm btn-cherry" onClick={() => void answer("/v1/friends/accept", "accepted")} disabled={busy}>
               <Check size={14} strokeWidth={2.6} aria-hidden="true" /> Accept
             </button>
-            <button className="icon-btn" onClick={() => void answer("/v1/friends/remove")} disabled={busy} aria-label={`Decline ${who}`}>
-              <X size={15} strokeWidth={2.2} aria-hidden="true" />
+            <button className="btn btn-sm btn-quiet" onClick={() => void answer("/v1/friends/remove", "declined")} disabled={busy} aria-label={`Decline ${who}`}>
+              <X size={14} strokeWidth={2.4} aria-hidden="true" /> Decline
             </button>
           </>
         );
+      }
       break;
     case "friend_accepted":
       text = (
@@ -82,7 +101,7 @@ function Item({ n, now, onDone }: { n: NotificationItem; now: number; onDone: ()
     case "chips_received":
       text = (
         <>
-          <strong>{who}</strong> sent you {formatChips(n.data?.amount ?? 0)} chips.
+          <strong>{who}</strong> sent you <strong>{formatChips(n.data?.amount ?? 0)}</strong> chips.
         </>
       );
       break;
@@ -95,9 +114,11 @@ function Item({ n, now, onDone }: { n: NotificationItem; now: number; onDone: ()
       actions =
         game && n.data?.table && now - n.at < 3 * 3600_000 ? (
           <a className="btn btn-sm btn-cherry" href={`${game.host}/t/${n.data.table}`}>
-            Join
+            Join table
           </a>
-        ) : null;
+        ) : (
+          <span className="notif-done">This invite has expired.</span>
+        );
       break;
     case "announcement":
       text = (
@@ -117,23 +138,48 @@ function Item({ n, now, onDone }: { n: NotificationItem; now: number; onDone: ()
         </>
       );
       break;
+    default:
+      // A kind this page doesn't know yet still says something.
+      text = <>Something happened on your account.</>;
   }
 
+  const icon =
+    n.kind === "achievement" && n.achievement ? (
+      <AchievementBadge grade={n.achievement.grade} glyph={n.achievement.glyph} size={40} />
+    ) : n.actor ? (
+      <Avatar player={n.actor} size={40} />
+    ) : (
+      <span className="notif-house" aria-hidden="true">
+        <Bell size={18} strokeWidth={2} />
+      </span>
+    );
+
+  const body = (
+    <>
+      <span className="notif-icon">{icon}</span>
+      <span className="notif-copy">
+        <span className="notif-text">{text}</span>
+        <time dateTime={new Date(n.at).toISOString()}>{timeAgo(n.at, now)}</time>
+      </span>
+      {href ? <ChevronRight size={16} className="notif-go" aria-hidden="true" /> : null}
+    </>
+  );
+
   return (
-    <li className={`notif${n.read ? "" : " is-new"}`}>
-      {n.kind === "achievement" && n.achievement ? (
-        <AchievementBadge grade={n.achievement.grade} glyph={n.achievement.glyph} size={40} />
-      ) : n.actor ? (
-        <Link href={`/u/${n.actor.id}`} onClick={onDone} className="notif-avatar">
-          <Avatar player={n.actor} size={40} />
+    <li className={`notif${fresh ? " is-new" : ""}`}>
+      {href ? (
+        <Link href={href} onClick={onDone} className="notif-main">
+          {body}
         </Link>
+      ) : (
+        <div className="notif-main">{body}</div>
+      )}
+      {actions || failed ? (
+        <div className="notif-actions">
+          {actions}
+          {failed ? <p className="form-error notif-error">{failed}</p> : null}
+        </div>
       ) : null}
-      <div className="notif-copy">
-        <p>{text}</p>
-        <time>{timeAgo(n.at, now)}</time>
-        {actions ? <div className="notif-actions">{actions}</div> : null}
-        {failed ? <p className="form-error notif-error">{failed}</p> : null}
-      </div>
     </li>
   );
 }
@@ -144,26 +190,30 @@ export function NotificationBell() {
   const [now, setNow] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const panelId = useId();
-  const { data, reload } = useCasino<{ notifications: NotificationItem[] }>(open ? "/v1/notifications" : null);
+  // Kept fresh while open, so a request that arrives meanwhile shows up.
+  const { data, error, reload } = useCasino<{ notifications: NotificationItem[] }>(open ? "/v1/notifications" : null, 20_000);
   const act = useCasinoAction();
 
   useEffect(() => {
     if (!open) return;
-    reload();
     const away = (event: MouseEvent) => !ref.current?.contains(event.target as Node) && setOpen(false);
     const esc = (event: KeyboardEvent) => event.key === "Escape" && setOpen(false);
     document.addEventListener("mousedown", away);
     document.addEventListener("keydown", esc);
-    // Opening the panel counts as reading it.
-    const timer = window.setTimeout(() => void act("/v1/notifications/read", {}).then(refresh, () => {}), 1500);
     return () => {
-      window.clearTimeout(timer);
       document.removeEventListener("mousedown", away);
       document.removeEventListener("keydown", esc);
+      // Read on the way out, not on the way in: what was new stays marked
+      // for as long as the panel is open to look at it.
+      void act("/v1/notifications/read", {}).then(refresh, () => {});
     };
-  }, [open, reload, act, refresh]);
+  }, [open, act, refresh]);
 
   const count = unread.notifications;
+  const list = data?.notifications ?? null;
+  const fresh = list?.filter((n) => !n.read) ?? [];
+  const earlier = list?.filter((n) => n.read) ?? [];
+
   return (
     <div className="bell" ref={ref}>
       <button
@@ -183,17 +233,51 @@ export function NotificationBell() {
         <div className="bell-panel" id={panelId} role="dialog" aria-label="Notifications">
           <div className="bell-head">
             <h2>Notifications</h2>
+            {fresh.length ? <span className="bell-count">{fresh.length} new</span> : null}
           </div>
-          {!data ? (
-            <div className="panel-skeleton" aria-hidden="true" />
-          ) : data.notifications.length === 0 ? (
-            <p className="bell-empty">Nothing yet. Friend requests, invites and new achievements show up here.</p>
+          {list === null ? (
+            error ? (
+              <div className="bell-state">
+                <p>Your notifications couldn&apos;t be loaded.</p>
+                <button className="btn btn-sm btn-quiet" onClick={reload}>
+                  <RotateCw size={14} aria-hidden="true" /> Try again
+                </button>
+              </div>
+            ) : (
+              <div className="bell-loading" aria-label="Loading">
+                <span />
+                <span />
+                <span />
+              </div>
+            )
+          ) : list.length === 0 ? (
+            <div className="bell-state">
+              <Bell size={22} strokeWidth={1.6} aria-hidden="true" />
+              <p>Nothing yet. Friend requests, invites, chips from friends and new achievements show up here.</p>
+            </div>
           ) : (
-            <ul className="notif-list">
-              {data.notifications.map((n) => (
-                <Item key={n.id} n={n} now={now} onDone={() => setOpen(false)} />
-              ))}
-            </ul>
+            <>
+              {fresh.length ? (
+                <>
+                  <p className="bell-group">New</p>
+                  <ul className="notif-list">
+                    {fresh.map((n) => (
+                      <Item key={n.id} n={n} now={now} fresh onDone={() => setOpen(false)} />
+                    ))}
+                  </ul>
+                </>
+              ) : null}
+              {earlier.length ? (
+                <>
+                  {fresh.length ? <p className="bell-group">Earlier</p> : null}
+                  <ul className="notif-list">
+                    {earlier.map((n) => (
+                      <Item key={n.id} n={n} now={now} fresh={false} onDone={() => setOpen(false)} />
+                    ))}
+                  </ul>
+                </>
+              ) : null}
+            </>
           )}
         </div>
       ) : null}
