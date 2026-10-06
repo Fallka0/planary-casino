@@ -20,7 +20,7 @@ One Planary account (the same one used for Planary Wishlist and other Planary ap
 - Stack: Next.js (App Router) + TypeScript; later Postgres for wallet/social data; hosting Vercel (+ Firebase per the concept note).
 
 ## Capabilities and Constraints
-- Blackjack is live at 21.planary.ch (separate app: planary-blackjack, multiplayer on PartyKit); the other four games are "coming soon". The lobby lives at casino.planary.ch.
+- Live: Blackjack at 21.planary.ch (planary-blackjack, multiplayer on PartyKit), Roulette at roulette.planary.ch (planary-roulette), and Slots at slots.planary.ch (planary-slots, single player, three machines on a Durable Object per player). Poker and Baccarat are "coming soon". The lobby lives at casino.planary.ch.
 - Planary Chips are play money: no cash value, cannot be bought, sold or exchanged.
 - Chips live in a server-side wallet per Planary account (planary-casino-api worker + D1): 5'000 starter chips, a daily bonus of 500 (resets at midnight Europe/Zurich), transfers between friends. Game servers move chips through the internal wallet API.
 - Friends: search by display name, requests that the other person accepts. Friends see each other's presence (lobby / at a Blackjack table) with a Join link.

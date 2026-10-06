@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { MACHINES } from "../../../shared/slots";
+
 const BLACKJACK_URL = "https://21.planary.ch";
 const ROULETTE_URL = "https://roulette.planary.ch";
-const DEVIL_URL = "https://devil.planary.ch";
-const NERVE_URL = "https://nerve.planary.ch";
+const SLOTS_URL = "https://slots.planary.ch";
 
 export const metadata: Metadata = {
   title: "Fair play · Planary Casino",
@@ -197,120 +198,70 @@ export default function RulesPage() {
         </div>
       </section>
 
-      <section className="card" id="nerve" aria-labelledby="nerve-title">
+      <section className="card" id="slots" aria-labelledby="slots-title">
         <div className="rules-head">
-          <h2 id="nerve-title">Nerve</h2>
+          <h2 id="slots-title">Slots</h2>
           <div className="stats">
-            <Stat value="99.0%" label="Return to player" />
-            <Stat value="1.00%" label="House edge" />
+            <Stat value="96.0%" label="Return to player" />
+            <Stat value="4.00%" label="House edge" />
           </div>
         </div>
         <p className="rules-lede">
-          A number climbs from 1.00×. You decide when to take it. If the climb stops first, the stake is gone. One climb for the
-          whole table, and everyone can see who got out where.
+          A slot machine is normally the one game in a casino where you cannot see the odds: you are shown the symbols and
+          never how many of each are on the reel, so there is no way to work out what a combination is worth or how often
+          it lands. All three machines here publish their reel strips instead.
         </p>
         <div className="rules-cols">
           <div>
             <h3>House rules</h3>
             <ul className="rules-list compact">
               <li>
-                The chance of a climb reaching <b>x</b> is exactly 0.99 ÷ <b>x</b>. Reaching 2× happens about half the time,
-                reaching 10× about a tenth as often.
+                Three machines: Cherry Press (three reels, one line), Nine Window (three by three, five lines) and Night
+                Press (five reels, twenty lines, with free spins).
               </li>
               <li>
-                Because of that, <strong>every target returns the same 99%</strong>. Getting out at 1.1× and holding for 50×
-                carry the identical house edge; only the shape of the ride changes. There is no clever number and no bad one.
+                A line pays for the run of identical symbols starting at the leftmost reel. Each symbol has its own pay
+                per run length, which is why a single cherry can pay on a classic machine.
               </li>
-              <li>About one climb in fifty never starts at all — it stops at 1.00×. That is where the edge lives.</li>
-              <li>
-                A standing order is settled by the table at the exact multiplier you asked for, so a slow connection cannot cost
-                you a cash-out. A finger on the button is judged by when the table heard it.
-              </li>
-              <li>Stakes from 10 to 5&apos;000 chips per climb.</li>
+              <li>Stakes are per line, so a five-line machine costs five times the line stake each spin.</li>
+              <li>A free spin stakes nothing, is played at the stake that won it, and cannot win further free spins.</li>
+              <li>Every reel strip is published in the open, and each machine prints its own return on the cabinet.</li>
             </ul>
           </div>
           <div>
-            <h3>How the stopping point is decided</h3>
-            <ul className="rules-list compact">
-              <li>
-                Before betting opens, the table draws a seed and publishes only its hash. Where the climb stops is already fixed
-                and cannot be moved without changing a hash you have seen.
-              </li>
-              <li>Players may add their own seeds while betting is open. The list is published when it closes.</li>
-              <li>
-                When the climb stops, the seed is published. <a href="/verify">Put it into the verifier</a> and it works the
-                stopping point out again in your browser.
-              </li>
-              <li>Every climb is a fresh seed. Nothing about one climb tells you anything about the next.</li>
-            </ul>
+            <h3>What each machine returns</h3>
+            <table className="rules-table">
+              <thead>
+                <tr>
+                  <th scope="col">Machine</th>
+                  <th scope="col">Lines</th>
+                  <th scope="col">Returns</th>
+                  <th scope="col">Pays on</th>
+                </tr>
+              </thead>
+              <tbody>
+                {MACHINES.map((machine) => (
+                  <tr key={machine.id}>
+                    <td>{machine.name}</td>
+                    <td>{machine.lines.length}</td>
+                    <td>{(machine.rtp * 100).toFixed(2)}%</td>
+                    <td>{(machine.hitRate * 100).toFixed(1)}% of spins</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="rules-note">
+              These are not estimates. Each one is worked out from the published strips and checked against every window
+              the machine can show — 24.3 million of them on Night Press.
+            </p>
           </div>
         </div>
         <div className="rules-actions">
-          <a className="btn btn-cherry" href={NERVE_URL}>
-            Play Nerve
+          <a className="btn btn-cherry" href={SLOTS_URL}>
+            Play Slots
           </a>
           <a className="btn btn-quiet" href="/verify">
-            Check a climb
-          </a>
-        </div>
-      </section>
-
-      <section className="card" id="devil" aria-labelledby="devil-title">
-        <div className="rules-head">
-          <h2 id="devil-title">Devil&apos;s Wheel</h2>
-          <div className="stats">
-            <Stat value="0" label="Chips wagered" />
-            <Stat value="Solo" label="Against nobody" />
-          </div>
-        </div>
-        <p className="rules-lede">
-          The one game in the house where the wheel is not honest — and the only one where that is the point. Devil&apos;s
-          Wheel is a single-player score game. You may buy your way into a wheel with three zeroes on it, weld the low
-          numbers shut, or paint a pocket so it pays triple.
-        </p>
-        <div className="rules-cols">
-          <div>
-            <h3>Why it does not break the rest of this page</h3>
-            <ul className="rules-list compact">
-              <li>
-                No Planary Chips go in and none come out. Nothing is wagered, so there is no return-to-player figure to
-                state: the game pays points, not chips.
-              </li>
-              <li>
-                You start every run on a true European wheel — 37 pockets, 2.70% house edge — exactly the wheel that runs
-                at <a href={ROULETTE_URL}>Roulette</a>. Anything other than that, you paid for and chose.
-              </li>
-              <li>
-                The payout table never changes. A straight-up bet pays 35 to 1 for the whole run, however many pockets
-                you have added or taken out from under it.
-              </li>
-              <li>
-                Because of that, the game shows you the real chance of every bet on the wheel as it stands, and what the
-                board is worth on an average spin. You are never guessing at odds you built yourself.
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h3>How a run is decided</h3>
-            <ul className="rules-list compact">
-              <li>
-                Each run has a seed, drawn from the browser&apos;s cryptographic generator. Everything after it — every
-                pocket the ball finds, every item the shop stocks — comes out of one deterministic stream.
-              </li>
-              <li>
-                The seed is shown when a run ends, and a run can be replayed on it. Two players on the same seed who play
-                the same way see the same night.
-              </li>
-              <li>
-                The ball is committed to its pocket the moment you send it. The wheel animation shows a decision that has
-                already been made; it cannot be changed by anything you do while it turns.
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div className="rules-actions">
-          <a className="btn btn-cherry" href={DEVIL_URL}>
-            Play Devil&apos;s Wheel
+            Check a spin
           </a>
         </div>
       </section>

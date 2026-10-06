@@ -1,4 +1,4 @@
-export type GameId = "blackjack" | "poker" | "baccarat" | "roulette" | "slots" | "devil" | "nerve";
+export type GameId = "blackjack" | "poker" | "baccarat" | "roulette" | "slots";
 
 export type GameStatus = "live" | "soon";
 
@@ -64,32 +64,6 @@ export const GAMES: Game[] = [
     tags: ["Table", "Multiplayer"],
     caption: "Rien ne va plus",
     status: "live",
-  },
-  {
-    id: "nerve",
-    name: "Nerve",
-    tagline: "A number climbs. Get out before it stops.",
-    blurb:
-      "Now open. One climb for the whole table: the number rises, you decide when to take it, and everyone watches everyone else lose their nerve.",
-    subdomain: "nerve",
-    players: "Any number",
-    tags: ["Table", "Multiplayer", "Quick"],
-    caption: "Don't be greedy",
-    status: "live",
-    rules: ["1% house edge, the same at every target", "Committed before you bet", "Standing orders settle exactly"],
-  },
-  {
-    id: "devil",
-    name: "Devil's Wheel",
-    tagline: "A roguelike on an honest wheel — and eight antes to ruin it.",
-    blurb:
-      "Now open. Place your chips, send the ball, then start cutting pockets out of the rim. Solo, and nothing is wagered.",
-    subdomain: "devil",
-    players: "1 player",
-    tags: ["Solo", "Roguelike", "No wager"],
-    caption: "Break the wheel",
-    status: "live",
-    rules: ["Real European payouts", "The wheel is yours to bend", "No chips in, no chips out"],
   },
   {
     id: "slots",

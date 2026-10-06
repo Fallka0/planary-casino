@@ -7,13 +7,12 @@
 # vectors, which is what actually catches a drift.
 set -e
 here=$(cd "$(dirname "$0")/.." && pwd)
-for project in planary-roulette planary-blackjack planary-devil planary-nerve planary-slots; do
+for project in planary-roulette planary-blackjack planary-slots; do
   target="$here/../$project"
   [ -d "$target" ] || { echo "skip $project (not here)"; continue; }
   mkdir -p "$target/shared" "$target/scripts"
   cp "$here/shared/fair.ts" "$target/shared/fair.ts"
   cp "$here/shared/deck.ts" "$target/shared/deck.ts"
-  cp "$here/shared/nerve.ts" "$target/shared/nerve.ts"
   cp "$here/shared/slots.ts" "$target/shared/slots.ts"
   cp "$here/shared/fair.vectors.json" "$target/shared/fair.vectors.json"
   cp "$here/scripts/fair-test.mjs" "$target/scripts/fair-test.mjs"

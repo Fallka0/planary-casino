@@ -209,72 +209,6 @@ function Slots({ id }: { id: string }) {
 }
 
 
-/** The Roulette cover after somebody got at it: pockets welded out, two leafed in gold. */
-function Devil({ id }: { id: string }) {
-  const pockets = 26;
-  const R = 330;
-  // Which pockets have been cut out of the rim, and which were gilded.
-  const gone = new Set([3, 4, 11, 18, 19, 25]);
-  const gold = new Set([7, 15]);
-  return (
-    <>
-      <rect width="600" height="800" fill="#1e090f" />
-      <rect width="600" height="800" fill={`url(#${id}-dots)`} mask={`url(#${id}-fadeMask)`} />
-      <g transform="translate(560 470)">
-        <circle r={R + 26} fill="#efe3d2" transform="translate(-13 -13)" />
-        <circle r={R + 26} fill="#150507" />
-        {Array.from({ length: pockets }, (_, i) => {
-          if (gone.has(i)) return null;
-          const a0 = (i / pockets) * Math.PI * 2;
-          const a1 = ((i + 1) / pockets) * Math.PI * 2;
-          const d = `M0 0L${(Math.cos(a0) * R).toFixed(1)} ${(Math.sin(a0) * R).toFixed(1)}A${R} ${R} 0 0 1 ${(Math.cos(a1) * R).toFixed(1)} ${(Math.sin(a1) * R).toFixed(1)}z`;
-          return <path key={i} d={d} fill={gold.has(i) ? "#ffc83d" : i % 2 ? "#b3122e" : "#150507"} stroke="#efe3d2" strokeWidth="3" />;
-        })}
-        <circle r={R * 0.58} fill="#ff5b2e" />
-        <circle r={R * 0.58} fill={`url(#${id}-dots)`} />
-        <circle r={R * 0.2} fill="#150507" />
-        <path d="M0 -62 L17 -18 L62 -18 L26 10 L40 54 L0 28 L-40 54 L-26 10 L-62 -18 L-17 -18 Z" fill="#ffc83d" />
-      </g>
-      {/* The ball, still falling, trailing what it burnt through. */}
-      <circle cx="286" cy="226" r="23" fill="#efe3d2" />
-      <path d="M286 226 C250 150 240 96 252 36" stroke="#ff5b2e" strokeWidth="9" strokeLinecap="round" fill="none" opacity="0.85" />
-      <circle cx="262" cy="118" r="8" fill="#ff5b2e" />
-      <circle cx="250" cy="62" r="5" fill="#ffc83d" />
-    </>
-  );
-}
-
-
-/** The line going up, and the moment it does not. One ink, one gesture. */
-function Nerve({ id }: { id: string }) {
-  const climb = "M40 720 C200 700 330 620 420 470 C500 340 540 200 566 96";
-  return (
-    <>
-      <rect width="600" height="800" fill="#0e3a36" />
-      <rect width="600" height="800" fill={`url(#${id}-dots)`} mask={`url(#${id}-fadeMask)`} />
-      {/* The ground it climbs away from. */}
-      <path d={`${climb} L566 800 L40 800 Z`} fill="#ffc83d" opacity="0.14" />
-      <path d={climb} fill="none" stroke="#ffc83d" strokeWidth="18" strokeLinecap="round" />
-      {/* Where somebody got out, and where somebody did not. */}
-      <circle cx="420" cy="470" r="20" fill="#f2ece0" stroke="#0e3a36" strokeWidth="6" />
-      <circle cx="566" cy="96" r="26" fill="#ff2e55" stroke="#f2ece0" strokeWidth="7" />
-      <g transform="translate(300 300)">
-        <text
-          x="0"
-          y="0"
-          textAnchor="middle"
-          fontSize="150"
-          fontWeight="900"
-          fontFamily="var(--font-poster)"
-          fill="#f2ece0"
-          opacity="0.9"
-        >
-          2.41
-        </text>
-      </g>
-    </>
-  );
-}
 
 const ART: Record<GameId, { draw: (p: { id: string }) => React.JSX.Element; dot: string; field: string; ink: string }> = {
   blackjack: { draw: Blackjack, dot: "#7e0c22", field: "#b3122e", ink: "#fbf1ea" },
@@ -282,8 +216,6 @@ const ART: Record<GameId, { draw: (p: { id: string }) => React.JSX.Element; dot:
   baccarat: { draw: Baccarat, dot: "#d4a97c", field: "#e8c7a2", ink: "#2a0710" },
   roulette: { draw: Roulette, dot: "#e0421a", field: "#ff5b2e", ink: "#2a0710" },
   slots: { draw: Slots, dot: "#a90e4a", field: "#cc1259", ink: "#fbf1ea" },
-  devil: { draw: Devil, dot: "#4a1220", field: "#1e090f", ink: "#efe3d2" },
-  nerve: { draw: Nerve, dot: "#0a2d2a", field: "#0e3a36", ink: "#f2ece0" },
 };
 
 /** The poster's flat field colour, so containers can extend the art edge to edge. */
