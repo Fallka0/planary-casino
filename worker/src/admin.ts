@@ -99,6 +99,18 @@ async function audit(env: Env, staff: Staff, action: string, targetId: string | 
     .run();
 }
 
+/**
+ * The ceiling on a staff chip adjustment.
+ *
+ * There is deliberately no practical limit — an operator topping an account up
+ * is not something to second-guess — but it is not literally unbounded either.
+ * Every balance is read back out of D1 into a JavaScript number, and past
+ * 2^53 integers stop being exact: 9'007'199'254'740'993 silently becomes
+ * 9'007'199'254'740'992. A ledger that quietly rounds is worse than one that
+ * refuses, so the arithmetic stops where the arithmetic stops being true.
+ */
+const CHIP_CEILING = Number.MAX_SAFE_INTEGER;
+
 function int(value: unknown, min: number, max: number): number | null {
   return typeof value === "number" && Number.isInteger(value) && value >= min && value <= max ? value : null;
 }
@@ -321,14 +333,17 @@ admin.post("/players/:id/adjust", async (c) => {
   if (!can(staff, "chips")) return c.json(denied(), 403);
   const id = c.req.param("id");
   const body = await c.req.json<{ amount: number; reason: string }>();
-  const amount = int(body.amount, -10_000_000, 10_000_000);
+  const amount = int(body.amount, -CHIP_CEILING, CHIP_CEILING);
   const reason = text(body.reason, 200);
-  if (!amount) return c.json({ error: "Enter a whole number of chips, not zero." }, 400);
+  if (amount === null) return c.json({ error: "That is not a whole number of chips the casino can count exactly." }, 400);
+  if (amount === 0) return c.json({ error: "Enter a whole number of chips, not zero." }, 400);
   if (reason.length < 3) return c.json({ error: "Give a reason; it's kept with the change." }, 400);
   const t = Date.now();
   const [update] = await c.env.DB.batch([
     amount > 0
-      ? c.env.DB.prepare("UPDATE players SET balance = balance + ?1 WHERE user_id = ?2").bind(amount, id)
+      // The ceiling is checked as a subtraction so the sum itself never has to
+      // be formed at a size the comparison could no longer be trusted at.
+      ? c.env.DB.prepare("UPDATE players SET balance = balance + ?1 WHERE user_id = ?2 AND balance <= ?3 - ?1").bind(amount, id, CHIP_CEILING)
       : c.env.DB.prepare("UPDATE players SET balance = balance + ?1 WHERE user_id = ?2 AND balance >= ?3").bind(amount, id, -amount),
     c.env.DB.prepare("INSERT INTO ledger (user_id, amount, kind, ref, created_at) SELECT ?1, ?2, 'adjustment', ?3, ?4 WHERE changes() = 1").bind(
       id,
@@ -337,7 +352,15 @@ admin.post("/players/:id/adjust", async (c) => {
       t,
     ),
   ]);
-  if (!update.meta.changes) return c.json({ error: amount < 0 ? "The player doesn't have that many chips." : "Player not found." }, 409);
+  if (!update.meta.changes) {
+    if (amount < 0) return c.json({ error: "The player doesn't have that many chips." }, 409);
+    // A credit only fails for two reasons, and they read very differently.
+    const exists = await c.env.DB.prepare("SELECT 1 FROM players WHERE user_id = ?").bind(id).first();
+    return c.json(
+      { error: exists ? "That would take their balance past the largest number the casino can count exactly." : "Player not found." },
+      409,
+    );
+  }
   await audit(c.env, staff, "chips.adjust", id, { amount, reason });
   await notify(c.env, id, "staff", null, { text: `Your balance was ${amount > 0 ? "credited" : "debited"} ${Math.abs(amount).toLocaleString("de-CH")} chips: ${reason}` });
   const p = await c.env.DB.prepare("SELECT balance FROM players WHERE user_id = ?").bind(id).first<{ balance: number }>();
