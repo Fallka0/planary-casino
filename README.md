@@ -1,36 +1,42 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Planary Casino
 
-## Getting Started
+The lobby for a set of **play-money** card and table games under the Planary brand. One Planary account and one chip balance across every game. Chips have no cash value and cannot be bought or sold: this is a game launcher, not a gambling site.
 
-First, run the development server:
+**Live:** [planary-casino.vercel.app](https://planary-casino.vercel.app)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+![Next.js](https://img.shields.io/badge/Next.js-000?logo=nextdotjs) ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white) ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare_Workers-F38020?logo=cloudflareworkers&logoColor=white)
+
+## What it does
+
+- Game lobby linking to the individual games, each on its own subdomain ([Blackjack](https://github.com/Fallka0/planary-blackjack), [Slots](https://github.com/Fallka0/planary-slots), more coming)
+- Server-side **wallet** per account, so the chip balance is the same in every game
+- Social layer: friends, online status, messages, notifications
+- Weekly leaderboards and achievements
+- Sign-in through the shared Planary auth service, verified server-side
+
+## Fairness
+
+Every game's odds are published and checked. `scripts/rtp.mjs` computes each slot machine's return to player twice, once in closed form and once by brute force over every possible reel combination, and fails if either result disagrees with the figure shown to players.
+
+## Architecture
+
+```
+src/       Next.js app: lobby, profiles, friends, leaderboard, rules
+worker/    Cloudflare Worker: wallet, social, achievements, admin API
+shared/    code shared between app, worker and games
+scripts/   fairness and RTP checks
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## How it was built
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Developed with AI coding agents (Claude Code). I write the specs (`PRODUCT.md`, `DESIGN.md`), steer the agents, and review and test what they produce.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Run locally
 
-## Learn More
+```bash
+npm install
+cp .env.example .env.local
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Part of [Planary](https://github.com/Fallka0?tab=repositories&q=planary).
