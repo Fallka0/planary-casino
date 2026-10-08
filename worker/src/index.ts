@@ -61,8 +61,13 @@ function cleanName(raw: unknown) {
     .slice(0, 24) || "Player";
 }
 
+/**
+ * No fixed ceiling: a no-limit table takes any bet the balance covers, and a
+ * win pays up to 2.5× that across several hands. A cap here would let the bet
+ * through and then refuse the payout, so the only bound is what stays exact.
+ */
 function isInt(value: unknown, min: number): value is number {
-  return typeof value === "number" && Number.isInteger(value) && value >= min && value <= 100_000_000;
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= min;
 }
 
 // ── Internal API for game servers (shared key) ───────
