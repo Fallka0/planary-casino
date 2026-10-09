@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Env, Player } from "./env";
-import { type BlackjackRound, bumpStat, checkLive, getStats, type RouletteRound, recordRound, unlock, recordGrimoire } from "./achievements";
+import { type BlackjackRound, bumpStat, checkLive, getStats, type PokerRound, type RouletteRound, recordRound, unlock, recordGrimoire } from "./achievements";
 import { notify, resolveFriendRequests } from "./notify";
 import { BADGE_COLUMNS, badge, pairKey, presenceOf, social, unreadCounts } from "./social";
 import { nextZurichMidnight, zurichDay, zurichWeekStart } from "./time";
@@ -13,7 +13,7 @@ import { claimBonus, credit, debit, ensurePlayer, getPlayer, transfer } from "./
 type Vars = { player: Player };
 const app = new Hono<{ Bindings: Env; Variables: Vars }>();
 
-const PRESENCE_WHERE = new Set(["lobby", "blackjack", "roulette", "slots", "grimoire"]);
+const PRESENCE_WHERE = new Set(["lobby", "blackjack", "poker", "roulette", "slots", "grimoire"]);
 
 /**
  * How long a game round is kept. A regulated operator would set this to five
@@ -101,8 +101,8 @@ app.post("/internal/status", async (c) => {
 
 /** A finished round, reported by a game server: updates counters and unlocks achievements. */
 app.post("/internal/round", async (c) => {
-  const { userId, round, tablemates } = await c.req.json<{ userId: string; round: BlackjackRound | RouletteRound; tablemates?: string[] }>();
-  if (!round || (round.game !== "blackjack" && round.game !== "roulette")) return c.json({ error: "bad round" }, 400);
+  const { userId, round, tablemates } = await c.req.json<{ userId: string; round: BlackjackRound | PokerRound | RouletteRound; tablemates?: string[] }>();
+  if (!round || (round.game !== "blackjack" && round.game !== "poker" && round.game !== "roulette")) return c.json({ error: "bad round" }, 400);
   const unlocked = await recordRound(c.env, userId, round, Array.isArray(tablemates) ? tablemates.slice(0, 20) : []);
   return c.json({ unlocked: unlocked.map((a) => ({ id: a.id, name: a.name })) });
 });

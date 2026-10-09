@@ -2,7 +2,7 @@ import { ITEMS } from "./catalog";
 import type { Env } from "./env";
 import { notify } from "./notify";
 
-export type Category = "blackjack" | "roulette" | "grimoire" | "chips" | "social" | "collector";
+export type Category = "blackjack" | "poker" | "roulette" | "grimoire" | "chips" | "social" | "collector";
 /** Visual weight of the badge; rarity (how many players own it) is computed live. */
 export type Grade = 1 | 2 | 3 | 4;
 
@@ -33,6 +33,19 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: "four_hands", name: "Four-Way Split", description: "Split into four hands in one round.", category: "blackjack", grade: 3, glyph: "4" },
   { id: "natural_10", name: "Ten Naturals", description: "Get ten blackjacks. Unlocks the Twenty-one banner.", category: "blackjack", grade: 3, glyph: "21×10", progress: { stat: "bj_naturals", target: 10 } },
   { id: "bj_hands_1000", name: "Card Shark", description: "Play 1'000 rounds of blackjack. Unlocks the Card Shark title.", category: "blackjack", grade: 4, glyph: "1K", progress: { stat: "bj_hands", target: 1000 } },
+
+  // Hold'em. A poker hand is mostly decided by how it was played rather than
+  // what was dealt, so these lean on the rare hands a player will remember
+  // showing down, plus the volume that only comes from sitting there.
+  { id: "pk_first_hand", name: "Opening Hand", description: "Play your first hand of Hold'em.", category: "poker", grade: 1, glyph: "@spade" },
+  { id: "pk_showdown", name: "Shown Down", description: "Win a hand of Hold'em at showdown.", category: "poker", grade: 1, glyph: "SD" },
+  { id: "pk_allin", name: "Shoved", description: "Win a hand you were all-in for.", category: "poker", grade: 2, glyph: "ALL" },
+  { id: "pk_hands_100", name: "Grinder", description: "Play 100 hands of Hold'em.", category: "poker", grade: 2, glyph: "100", progress: { stat: "pk_hands", target: 100 } },
+  { id: "pk_boat", name: "Full Boat", description: "Show down a full house.", category: "poker", grade: 2, glyph: "FH" },
+  { id: "pk_quads", name: "Quads", description: "Show down four of a kind.", category: "poker", grade: 3, glyph: "XXXX" },
+  { id: "pk_hands_1000", name: "Table Regular", description: "Play 1'000 hands of Hold'em.", category: "poker", grade: 3, glyph: "1K", progress: { stat: "pk_hands", target: 1000 } },
+  { id: "pk_straight_flush", name: "Straight Flush", description: "Show down a straight flush.", category: "poker", grade: 4, glyph: "SF" },
+  { id: "pk_royal", name: "Royal", description: "Show down a royal flush. Almost nobody ever does.", category: "poker", grade: 4, glyph: "RF", secret: true },
 
   // Roulette
   { id: "first_spin", name: "First Spin", description: "Bet on your first roulette spin.", category: "roulette", grade: 1, glyph: "@wheel" },
@@ -216,6 +229,25 @@ export interface BlackjackRound {
   insuranceWon: boolean;
 }
 
+/**
+ * One hand of Hold'em, as the table reports it. There is no "result" the way
+ * blackjack has one: a hand is won, folded, or shown down and lost, and the
+ * category is the hand that was actually turned over.
+ */
+export interface PokerRound {
+  game: "poker";
+  net: number;
+  won: boolean;
+  /** Reached a showdown with cards face up. */
+  showdown: boolean;
+  /** 0–9 as shared/holdem.ts ranks them, or null if it never got shown. */
+  category: number | null;
+  allIn: boolean;
+  folded: boolean;
+  players: number;
+  pot: number;
+}
+
 export interface RouletteRound {
   game: "roulette";
   net: number;
@@ -237,7 +269,7 @@ async function areFriends(env: Env, userId: string, others: string[]) {
   return row !== null;
 }
 
-export async function recordRound(env: Env, userId: string, round: BlackjackRound | RouletteRound, tablemates: string[]) {
+export async function recordRound(env: Env, userId: string, round: BlackjackRound | PokerRound | RouletteRound, tablemates: string[]) {
   const ids: string[] = [];
   const stats = await getStats(env, userId);
   const writes = [];
@@ -269,6 +301,22 @@ export async function recordRound(env: Env, userId: string, round: BlackjackRoun
     if (round.hands.length >= 4) ids.push("four_hands");
     if (round.hands.some((h) => h.cards >= 5 && h.total <= 21 && h.result !== "bust")) ids.push("five_card");
     if (round.insuranceWon) ids.push("insured");
+  } else if (round.game === "poker") {
+    const hands = (stats.pk_hands ?? 0) + 1;
+    writes.push(setStat(env, userId, "pk_hands", hands));
+    ids.push("pk_first_hand");
+    if (hands >= 100) ids.push("pk_hands_100");
+    if (hands >= 1000) ids.push("pk_hands_1000");
+    if (round.won && round.showdown) ids.push("pk_showdown");
+    if (round.won && round.allIn) ids.push("pk_allin");
+    // The hand categories, as shared/holdem.ts ranks them: 6 is a full
+    // house, 7 quads, 8 a straight flush and 9 the royal.
+    if (round.showdown && round.category !== null) {
+      if (round.category >= 6) ids.push("pk_boat");
+      if (round.category >= 7) ids.push("pk_quads");
+      if (round.category >= 8) ids.push("pk_straight_flush");
+      if (round.category >= 9) ids.push("pk_royal");
+    }
   } else {
     const spins = (stats.roulette_spins ?? 0) + 1;
     const straightHit = round.bets.find((b) => b.type === "straight" && b.won);

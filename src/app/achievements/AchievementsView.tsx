@@ -12,6 +12,7 @@ import { percent, rarityLabel } from "@/lib/image";
 
 const CATEGORIES: { id: AchievementEntry["category"]; label: string }[] = [
   { id: "blackjack", label: "Blackjack" },
+  { id: "poker", label: "Hold’em" },
   { id: "roulette", label: "Roulette" },
   { id: "grimoire", label: "Grimoire" },
   { id: "chips", label: "Chips" },
