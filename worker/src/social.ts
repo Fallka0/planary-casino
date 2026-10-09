@@ -12,7 +12,7 @@ export const social = new Hono<{ Bindings: Env; Variables: Vars }>();
 const ONLINE_MS = 75_000;
 const MAX_AVATAR_BYTES = 300_000;
 const MAX_MESSAGE = 1000;
-const GAMES = new Set(["blackjack", "roulette"]);
+const GAMES = new Set(["blackjack", "poker", "roulette"]);
 const TABLE_ID = /^[tp]-[a-z0-9]{6}$/;
 
 export const pairKey = (a: string, b: string) => (a < b ? [a, b] : [b, a]);

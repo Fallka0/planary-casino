@@ -7,7 +7,7 @@
 # vectors, which is what actually catches a drift.
 set -e
 here=$(cd "$(dirname "$0")/.." && pwd)
-for project in planary-roulette planary-blackjack planary-slots; do
+for project in planary-roulette planary-blackjack planary-slots planary-poker; do
   target="$here/../$project"
   [ -d "$target" ] || { echo "skip $project (not here)"; continue; }
   mkdir -p "$target/shared" "$target/scripts"

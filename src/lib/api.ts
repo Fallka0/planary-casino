@@ -166,7 +166,7 @@ export interface AchievementEntry {
   id: string;
   name: string;
   description: string;
-  category: "blackjack" | "roulette" | "grimoire" | "chips" | "social" | "collector";
+  category: "blackjack" | "poker" | "roulette" | "grimoire" | "chips" | "social" | "collector";
   grade: 1 | 2 | 3 | 4;
   glyph: string;
   secret: boolean;
