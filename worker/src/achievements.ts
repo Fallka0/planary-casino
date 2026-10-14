@@ -1,6 +1,7 @@
 import { ITEMS } from "./catalog";
 import type { Env } from "./env";
 import { notify } from "./notify";
+import { credit } from "./wallet";
 
 export type Category = "blackjack" | "poker" | "roulette" | "grimoire" | "chips" | "social" | "collector";
 /** Visual weight of the badge; rarity (how many players own it) is computed live. */
@@ -19,6 +20,9 @@ export interface Achievement {
   /** Progress bar: which counter, and the goal. */
   progress?: { stat: string; target: number };
 }
+
+/** Chips paid out once when an achievement unlocks, by its grade. */
+export const GRADE_CHIPS: Record<Grade, number> = { 1: 500, 2: 1000, 3: 2500, 4: 5000 };
 
 export const ACHIEVEMENTS: Achievement[] = [
   // Blackjack
@@ -89,7 +93,7 @@ export const ACHIEVEMENTS: Achievement[] = [
 
   // Collector
   { id: "new_face", name: "New Face", description: "Upload a profile picture.", category: "collector", grade: 1, glyph: "@camera" },
-  { id: "dressed_up", name: "Dressed Up", description: "Buy something in the shop.", category: "collector", grade: 1, glyph: "@bag" },
+  { id: "dressed_up", name: "Dressed Up", description: "Open a case or buy something on the market.", category: "collector", grade: 1, glyph: "@bag" },
   { id: "collector", name: "Collector", description: "Own ten cosmetics.", category: "collector", grade: 3, glyph: "×10", progress: { stat: "items", target: 10 } },
 ];
 
@@ -124,7 +128,8 @@ export async function bumpStat(env: Env, userId: string, key: string, delta: num
 export async function liveStats(env: Env, userId: string) {
   const [friends, items, player] = await Promise.all([
     env.DB.prepare("SELECT COUNT(*) AS n FROM friendships WHERE status = 'accepted' AND (user_low = ?1 OR user_high = ?1)").bind(userId).first<{ n: number }>(),
-    env.DB.prepare("SELECT COUNT(*) AS n FROM inventory WHERE user_id = ?").bind(userId).first<{ n: number }>(),
+    // Distinct items: a second copy of the same border is stock, not a collection.
+    env.DB.prepare("SELECT COUNT(DISTINCT item_id) AS n FROM inventory WHERE user_id = ?").bind(userId).first<{ n: number }>(),
     env.DB.prepare("SELECT balance, bonus_streak FROM players WHERE user_id = ?").bind(userId).first<{ balance: number; bonus_streak: number }>(),
   ]);
   return { friends: friends?.n ?? 0, items: items?.n ?? 0, balance: player?.balance ?? 0, bonus_streak: player?.bonus_streak ?? 0 };
@@ -138,13 +143,13 @@ export function rewardsFor(achievementId: string) {
 }
 
 /**
- * Unlocks what isn't unlocked yet, hands out reward cosmetics, and notifies.
- * Returns the newly unlocked.
+ * Unlocks what isn't unlocked yet, pays its chips, hands out reward cosmetics,
+ * and notifies. Returns the newly unlocked.
  *
  * Both side effects can be turned off, which only an operator granting a badge
  * by hand ever wants: a replacement for one that was wrongly revoked should not
- * hand out a second copy of the cosmetic, and a quiet fix-up should not ring
- * the player's bell for something they already know they have.
+ * pay out or hand over a second copy of the cosmetic, and a quiet fix-up should
+ * not ring the player's bell for something they already know they have.
  */
 export async function unlock(
   env: Env,
@@ -166,11 +171,15 @@ export async function unlock(
     if (granted.length) {
       await env.DB.batch(
         granted.map((item) =>
-          env.DB.prepare("INSERT OR IGNORE INTO inventory (user_id, item_id, source, created_at) VALUES (?, ?, 'achievement', ?)").bind(userId, item.id, t),
+          env.DB.prepare(
+            "INSERT INTO inventory (user_id, item_id, source, created_at) SELECT ?1, ?2, 'achievement', ?3 WHERE NOT EXISTS (SELECT 1 FROM inventory WHERE user_id = ?1 AND item_id = ?2)",
+          ).bind(userId, item.id, t),
         ),
       );
     }
-    if (announce) await notify(env, userId, "achievement", null, { id, rewards: granted.map((r) => r.id) });
+    const chips = rewards ? GRADE_CHIPS[achievement.grade] : 0;
+    if (chips) await credit(env, userId, chips, { kind: "achievement", ref: id });
+    if (announce) await notify(env, userId, "achievement", null, { id, rewards: granted.map((r) => r.id), chips });
   }
   return fresh;
 }
@@ -395,6 +404,7 @@ export async function achievementList(env: Env, userId: string, withProgress: bo
       description: hidden ? "Keep playing to find out." : a.description,
       category: a.category,
       grade: a.grade,
+      chips: GRADE_CHIPS[a.grade],
       glyph: hidden ? "?" : a.glyph,
       secret: Boolean(a.secret),
       rarity: rarity(a.id),

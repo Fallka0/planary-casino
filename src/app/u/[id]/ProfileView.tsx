@@ -161,7 +161,7 @@ function Actions({ p }: { p: Profile }) {
   if (p.relation === "self") {
     return (
       <div className="profile-actions">
-        <Link className="btn btn-quiet" href="/shop">
+        <Link className="btn btn-quiet" href="/market?tab=inventory">
           <Sparkles size={16} strokeWidth={2.1} aria-hidden="true" /> Customize
         </Link>
       </div>

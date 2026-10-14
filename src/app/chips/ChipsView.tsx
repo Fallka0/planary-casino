@@ -39,6 +39,16 @@ function describe(entry: LedgerEntry) {
       return `${entry.game === "roulette" ? "Roulette" : "Blackjack"} · ${entry.amount < 0 ? "bet" : "payout"}`;
     case "shop":
       return "Shop purchase";
+    case "achievement":
+      return "Achievement reward";
+    case "case":
+      return `${entry.ref === "afterhours" ? "Afterhours" : "Classic"} Case opened`;
+    case "market_buy":
+      return `Market · bought from ${entry.counterparty_name ?? "a player"}`;
+    case "market_sale":
+      return `Market · sold to ${entry.counterparty_name ?? "a player"}, after the fee`;
+    case "adjustment":
+      return "Adjustment by Planary Casino";
   }
 }
 

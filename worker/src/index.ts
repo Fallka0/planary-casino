@@ -6,6 +6,7 @@ import { notify, resolveFriendRequests } from "./notify";
 import { BADGE_COLUMNS, badge, pairKey, presenceOf, social, unreadCounts } from "./social";
 import { nextZurichMidnight, zurichDay, zurichWeekStart } from "./time";
 import { admin } from "./admin";
+import { market } from "./market";
 import { pruneRounds, openCommitment, revealCommitment, roundById, roundsForPlayer, saveRound, sealClientSeed, type RoundRecord } from "./archive";
 import { betRefusal, blockedReason, getSettings, isMuted } from "./policy";
 import { claimBonus, credit, debit, ensurePlayer, getPlayer, transfer } from "./wallet";
@@ -469,6 +470,7 @@ app.get("/v1/leaderboard", async (c) => {
 });
 
 app.route("/v1", social);
+app.route("/v1", market);
 app.route("/admin", admin);
 
 // Profile pictures are public images; the version in the URL makes them cache forever.

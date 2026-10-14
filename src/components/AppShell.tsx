@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useId, useRef, useState } from "react";
-import { Award, Coins, Gift, LayoutGrid, LogIn, LogOut, MessageCircle, Scale, Search, ShoppingBag, Spade, Trophy, UserRound, Users } from "lucide-react";
+import { Award, Coins, Gift, LayoutGrid, LogIn, LogOut, MessageCircle, Scale, Search, Spade, Store, Trophy, UserRound, Users } from "lucide-react";
 import { describePresence, type FriendsData, type Me, useCasino, useCasinoAction } from "@/lib/api";
 import { formatChips } from "@/lib/games";
 import { useAuth } from "./AuthProvider";
@@ -20,7 +20,7 @@ const NAV = [
   { href: "/messages", label: "Messages", icon: MessageCircle },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/achievements", label: "Achievements", icon: Award },
-  { href: "/shop", label: "Shop", icon: ShoppingBag },
+  { href: "/market", label: "Market", icon: Store },
   { href: "/chips", label: "Chips", icon: Coins },
 ];
 
@@ -224,7 +224,7 @@ function AccountButton({ name, email }: { name: string; email: string }) {
         <div className="account-menu" id={panelId} onClick={() => setOpen(false)}>
           <Link href="/u/me">Your profile</Link>
           <Link href="/achievements">Achievements</Link>
-          <Link href="/shop">Shop</Link>
+          <Link href="/market">Market</Link>
           <Link href="/leaderboard">Leaderboard</Link>
           <Link href="/chips">Chips</Link>
           <a href="https://wishlist.planary.ch">Planary Wishlist</a>

@@ -5,10 +5,11 @@ import { roundById, searchRounds } from "./archive";
 import { bankBalance, bankEntry } from "./bank";
 import { cors } from "hono/cors";
 import { ACHIEVEMENT_MAP, ACHIEVEMENTS, achievementsOf, getStats, liveStats, rewardsFor, unlock } from "./achievements";
-import { CATALOG, ITEMS } from "./catalog";
+import { CASES, CATALOG } from "./catalog";
 import type { Env, Player } from "./env";
+import { MARKET_FEE } from "./market";
 import { notify } from "./notify";
-import { blockedReason, dailyLoss, DEFAULT_SETTINGS, gameStatus, getSettings, isMuted, shopOverrides } from "./policy";
+import { blockedReason, dailyLoss, DEFAULT_SETTINGS, gameStatus, getSettings, isMuted } from "./policy";
 import {
   checkStats,
   COMPUTED,
@@ -696,27 +697,51 @@ admin.post("/games/:game", async (c) => {
   return c.json({ ok: true });
 });
 
-// ── Economy: settings and shop ───────────────────────
+// ── Economy: settings, cases and the market ─────────
 
 admin.get("/economy", async (c) => {
-  const [settings, overrides, owners, revenue] = await Promise.all([
+  const [settings, copies, offers, sales, opened] = await Promise.all([
     getSettings(c.env, true),
-    shopOverrides(c.env),
-    c.env.DB.prepare("SELECT item_id, COUNT(*) AS n FROM inventory GROUP BY item_id").all<{ item_id: string; n: number }>(),
-    c.env.DB.prepare("SELECT ref AS item_id, COALESCE(-SUM(amount), 0) AS chips FROM ledger WHERE kind = 'shop' GROUP BY ref").all<{ item_id: string; chips: number }>(),
+    c.env.DB.prepare("SELECT item_id, COUNT(*) AS copies, COUNT(DISTINCT user_id) AS owners FROM inventory GROUP BY item_id").all<{
+      item_id: string;
+      copies: number;
+      owners: number;
+    }>(),
+    c.env.DB.prepare("SELECT item_id, COUNT(*) AS n, MIN(price) AS lowest FROM listings GROUP BY item_id").all<{ item_id: string; n: number; lowest: number }>(),
+    c.env.DB.prepare("SELECT item_id, COUNT(*) AS n, SUM(price) AS volume, SUM(fee) AS fees FROM market_sales GROUP BY item_id").all<{
+      item_id: string;
+      n: number;
+      volume: number;
+      fees: number;
+    }>(),
+    c.env.DB.prepare("SELECT case_id, COUNT(*) AS n, SUM(price) AS chips FROM case_openings WHERE opened_at IS NOT NULL GROUP BY case_id").all<{
+      case_id: string;
+      n: number;
+      chips: number;
+    }>(),
   ]);
-  const ownedBy = new Map(owners.results.map((r) => [r.item_id, r.n]));
-  const earned = new Map(revenue.results.map((r) => [r.item_id, r.chips]));
+  const held = new Map(copies.results.map((r) => [r.item_id, r]));
+  const offer = new Map(offers.results.map((r) => [r.item_id, r]));
+  const sold = new Map(sales.results.map((r) => [r.item_id, r]));
+  const opens = new Map(opened.results.map((r) => [r.case_id, r]));
   return c.json({
     settings,
     defaults: DEFAULT_SETTINGS,
+    fee: MARKET_FEE,
+    cases: CASES.map((box) => ({ id: box.id, name: box.name, price: box.price, items: box.items.length, opened: opens.get(box.id)?.n ?? 0, chips: opens.get(box.id)?.chips ?? 0 })),
     items: CATALOG.map((item) => ({
-      ...item,
-      basePrice: item.price,
-      price: item.price === null ? null : (overrides.get(item.id)?.price ?? item.price),
-      enabled: overrides.get(item.id)?.enabled !== 0,
-      owners: ownedBy.get(item.id) ?? 0,
-      revenue: earned.get(item.id) ?? 0,
+      id: item.id,
+      kind: item.kind,
+      name: item.name,
+      tier: item.tier,
+      reward: item.reward ?? null,
+      copies: held.get(item.id)?.copies ?? 0,
+      owners: held.get(item.id)?.owners ?? 0,
+      listings: offer.get(item.id)?.n ?? 0,
+      lowest: offer.get(item.id)?.lowest ?? null,
+      sales: sold.get(item.id)?.n ?? 0,
+      volume: sold.get(item.id)?.volume ?? 0,
+      fees: sold.get(item.id)?.fees ?? 0,
     })),
   });
 });
@@ -753,48 +778,32 @@ admin.post("/settings", async (c) => {
   return c.json({ settings: await getSettings(c.env, true) });
 });
 
-admin.post("/shop/:itemId", async (c) => {
-  const staff = c.get("staff");
-  if (!can(staff, "economy")) return c.json(denied(), 403);
-  const item = ITEMS.get(c.req.param("itemId"));
-  if (!item) return c.json({ error: "Unknown item." }, 404);
-  const body = await c.req.json<{ price?: number | null; enabled?: boolean }>();
-  const current = (await shopOverrides(c.env)).get(item.id);
-  let price = current?.price ?? null;
-  if (body.price !== undefined) {
-    if (item.price === null) return c.json({ error: "Reward items have no price." }, 400);
-    price = body.price === null ? null : int(body.price, 1, 10_000_000);
-    if (body.price !== null && price === null) return c.json({ error: "Price must be a whole number of chips." }, 400);
-  }
-  const enabled = body.enabled === undefined ? (current?.enabled ?? 1) : body.enabled ? 1 : 0;
-  await c.env.DB.prepare(
-    "INSERT INTO shop_overrides (item_id, price, enabled, updated_at) VALUES (?1, ?2, ?3, ?4) ON CONFLICT (item_id) DO UPDATE SET price = ?2, enabled = ?3, updated_at = ?4",
-  )
-    .bind(item.id, price, enabled, Date.now())
-    .run();
-  await audit(c.env, staff, "shop.update", item.id, { price, enabled: Boolean(enabled) });
-  return c.json({ ok: true });
-});
-
 // ── Bank ─────────────────────────────────────────────
 //
 // The house's account: see migrations/0006_bank.sql. Sources are a game id,
-// 'shop' or 'staff'; the panel reads chips_in and chips_out by what they mean
-// for each.
+// 'cases', 'market' (the fee on each sale), 'shop' (before the market) or
+// 'staff'; the panel reads chips_in and chips_out by what they mean for each.
 
 interface Flows {
   wagered: number;
   paid: number;
   shop: number;
+  cases: number;
+  market: number;
   deposits: number;
   withdrawals: number;
   net: number;
 }
 
+/** Sources that aren't a game: the bank's other income, and what staff moved. */
+const NOT_A_GAME = new Set(["shop", "cases", "market", "staff"]);
+
 function flows(rows: { source: string; chips_in: number; chips_out: number }[]): Flows {
-  const f = { wagered: 0, paid: 0, shop: 0, deposits: 0, withdrawals: 0, net: 0 };
+  const f = { wagered: 0, paid: 0, shop: 0, cases: 0, market: 0, deposits: 0, withdrawals: 0, net: 0 };
   for (const r of rows) {
     if (r.source === "shop") f.shop += r.chips_in;
+    else if (r.source === "cases") f.cases += r.chips_in;
+    else if (r.source === "market") f.market += r.chips_in;
     else if (r.source === "staff") (f.deposits += r.chips_in), (f.withdrawals += r.chips_out);
     else (f.wagered += r.chips_in), (f.paid += r.chips_out);
     f.net += r.chips_in - r.chips_out;
@@ -831,9 +840,7 @@ admin.get("/bank", async (c) => {
     s.chips_out += r.chips_out;
     bySource.set(r.source, s);
   }
-  const sources = [...bySource.values()].sort(
-    (a, b) => Number(a.source === "shop" || a.source === "staff") - Number(b.source === "shop" || b.source === "staff") || b.chips_in - a.chips_in,
-  );
+  const sources = [...bySource.values()].sort((a, b) => Number(NOT_A_GAME.has(a.source)) - Number(NOT_A_GAME.has(b.source)) || b.chips_in - a.chips_in);
 
   // The balance at the close of each day, walked forward from where it stood before the period.
   const byDay = new Map<string, Row[]>();

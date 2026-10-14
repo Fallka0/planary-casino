@@ -146,7 +146,11 @@ export async function resetAccount(env: Env, player: Player, plan: ResetPlan, st
     steps.push([null, env.DB.prepare("UPDATE players SET showcase = NULL WHERE user_id = ?1").bind(id)]);
   }
 
-  if (want.has("cosmetics")) steps.push(["items", env.DB.prepare("DELETE FROM inventory WHERE user_id = ?1").bind(id)]);
+  if (want.has("cosmetics")) {
+    // Their market listings go with the copies they were selling.
+    steps.push([null, env.DB.prepare("DELETE FROM listings WHERE seller_id = ?1").bind(id)]);
+    steps.push(["items", env.DB.prepare("DELETE FROM inventory WHERE user_id = ?1").bind(id)]);
+  }
   if (want.has("achievements") || want.has("cosmetics")) steps.push([null, unequipUnowned(env, id)]);
 
   if (want.has("social")) {

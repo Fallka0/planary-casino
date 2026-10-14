@@ -1,4 +1,6 @@
-// Everything a player can own. Items with `reward` come from an achievement and can't be bought.
+// Everything a player can own, and the cases it comes out of. Items with `reward`
+// come from an achievement and stay with the player who earned it; everything else
+// drops from a case and can be sold on to other players.
 // Ids double as CSS class names in the casino and the game tables, so keep them stable.
 
 export type ItemKind = "border" | "banner" | "title" | "cardback" | "chipset";
@@ -9,7 +11,10 @@ export interface Item {
   kind: ItemKind;
   name: string;
   tier: Tier;
-  /** Price in chips; null when it's only an achievement reward. */
+  /**
+   * What the item used to cost in the shop, kept as a guide to its worth. null
+   * when it's only an achievement reward. Nothing is sold at this price any more.
+   */
   price: number | null;
   blurb: string;
   /** Achievement id that grants it. */
@@ -71,6 +76,102 @@ export const CATALOG: Item[] = [
   { id: "chips-midnight", kind: "chipset", name: "Midnight", tier: "rare", price: 1500, blurb: "Deep blues for late tables." },
   { id: "chips-sunset", kind: "chipset", name: "Sunset", tier: "rare", price: 1500, blurb: "Orange and pink, from the wheel poster." },
   { id: "chips-gold", kind: "chipset", name: "Gold rush", tier: "epic", price: 6000, blurb: "Every chip looks like the big one." },
+
+  // Afterhours: case-only. Banners and titles, because those render in the
+  // casino alone; a new border or chip set would also need every game table.
+  { id: "banner-ticker", kind: "banner", name: "Ticker tape", tier: "common", price: 700, blurb: "Results scrolling past all night." },
+  { id: "banner-velvet", kind: "banner", name: "Velvet rope", tier: "rare", price: 2000, blurb: "Behind it is where you want to be." },
+  { id: "banner-marquee", kind: "banner", name: "Marquee", tier: "epic", price: 6000, blurb: "Bulbs round the sign, every one lit." },
+  { id: "banner-afterglow", kind: "banner", name: "Afterglow", tier: "epic", price: 7000, blurb: "The street outside at four in the morning." },
+  { id: "banner-aurora", kind: "banner", name: "Aurora", tier: "legendary", price: 22000, blurb: "Light that never quite settles." },
+  { id: "title-night-shift", kind: "title", name: "Night Shift", tier: "common", price: 500, blurb: "Clocks in when the lights go down." },
+  { id: "title-high-card", kind: "title", name: "High Card", tier: "common", price: 500, blurb: "Not much, but it's something." },
+  { id: "title-the-closer", kind: "title", name: "The Closer", tier: "rare", price: 2500, blurb: "Turns the last hand round." },
+  { id: "title-smooth-operator", kind: "title", name: "Smooth Operator", tier: "epic", price: 6000, blurb: "Never seen sweating." },
+  { id: "title-last-call", kind: "title", name: "Last Call", tier: "legendary", price: 18000, blurb: "Leaves when the house does." },
 ];
 
 export const ITEMS = new Map(CATALOG.map((item) => [item.id, item]));
+
+/** Achievement rewards are earned, not traded. */
+export const tradeable = (item: Item) => !item.reward;
+
+// ── Cases ────────────────────────────────────────────
+
+/**
+ * How likely each tier is, out of 10'000. A case without a tier hands its share
+ * to the others in proportion; within a tier every item is equally likely.
+ */
+export const TIER_ODDS: Record<Tier, number> = { common: 6000, rare: 2800, epic: 1000, legendary: 200 };
+
+export interface Case {
+  id: string;
+  name: string;
+  price: number;
+  blurb: string;
+  items: string[];
+}
+
+/** The items that first appeared in the Afterhours case, and only come out of it. */
+const AFTERHOURS_NEW = [
+  "banner-ticker",
+  "banner-velvet",
+  "banner-marquee",
+  "banner-afterglow",
+  "banner-aurora",
+  "title-night-shift",
+  "title-high-card",
+  "title-the-closer",
+  "title-smooth-operator",
+  "title-last-call",
+];
+
+export const CASES: Case[] = [
+  {
+    id: "classic",
+    name: "Classic Case",
+    price: 2000,
+    blurb: "Everything the shop used to sell: borders, banners, titles, card backs and chips.",
+    items: CATALOG.filter((item) => item.price !== null && !AFTERHOURS_NEW.includes(item.id)).map((item) => item.id),
+  },
+  {
+    id: "afterhours",
+    name: "Afterhours Case",
+    price: 2000,
+    blurb: "New banners and titles for the late tables, and a few old favourites from after dark.",
+    items: [
+      ...AFTERHOURS_NEW,
+      "title-night-owl",
+      "chips-midnight",
+      "banner-night",
+      "cardback-deco",
+    ],
+  },
+];
+
+export const CASE_MAP = new Map(CASES.map((c) => [c.id, c]));
+
+/**
+ * The draw table for a case: each item with an integer weight, in a fixed order,
+ * and the total. A roll in [0, total) lands on exactly one item. The order and
+ * the weights are part of what a player checks, so they never depend on anything
+ * but the case itself.
+ */
+export function drawTable(box: Case) {
+  const items = box.items.map((id) => ITEMS.get(id)!).filter(Boolean);
+  const perTier = new Map<Tier, number>();
+  for (const item of items) perTier.set(item.tier, (perTier.get(item.tier) ?? 0) + 1);
+  // Scaled so every weight is a whole number however many items share a tier.
+  const entries = items.map((item) => ({ item, weight: Math.round((TIER_ODDS[item.tier] * 1000) / perTier.get(item.tier)!) }));
+  return { entries, total: entries.reduce((sum, e) => sum + e.weight, 0) };
+}
+
+/** The item a roll lands on. */
+export function itemAt(box: Case, roll: number) {
+  let at = roll;
+  for (const { item, weight } of drawTable(box).entries) {
+    if (at < weight) return item;
+    at -= weight;
+  }
+  throw new Error("roll outside the table");
+}
