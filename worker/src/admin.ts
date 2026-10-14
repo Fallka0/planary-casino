@@ -841,9 +841,10 @@ admin.get("/bank", async (c) => {
   let balance = total.net - period.net;
   const daily = Array.from({ length: days }, (_, i) => {
     const day = dayBefore(today, days - 1 - i);
-    const net = flows(byDay.get(day) ?? []).net;
-    balance += net;
-    return { day, net, balance };
+    const f = flows(byDay.get(day) ?? []);
+    balance += f.net;
+    // The house's result at the tables, apart from what staff moved in or out.
+    return { day, net: f.net, result: f.wagered - f.paid, balance };
   });
 
   return c.json({
