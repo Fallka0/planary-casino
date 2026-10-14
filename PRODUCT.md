@@ -24,7 +24,7 @@ One Planary account (the same one used for Planary Wishlist and other Planary ap
 - Planary Chips are play money: no cash value, cannot be bought, sold or exchanged.
 - Chips live in a server-side wallet per Planary account (planary-casino-api worker + D1): 5'000 starter chips, a daily bonus of 500 (resets at midnight Europe/Zurich), transfers between friends. Game servers move chips through the internal wallet API.
 - Friends: search by display name, requests that the other person accepts. Friends see each other's presence (lobby / at a Blackjack table) with a Join link.
-- Leaderboard: chips won at the tables in the current week (Monday 00:00 Europe/Zurich) as a percentage of the player's bankroll (balance at week start plus chips received during the week), friends or everyone. Bonuses and transfers don't count as winnings.
+- Leaderboard: chips won at the tables in the current week (Monday 00:00 Europe/Zurich) as a percentage of the player's bankroll (balance at week start plus bonuses and, net of what they sent, chips received from friends during the week), friends or everyone. Bonuses and transfers don't count as winnings.
 - No sample or demo data anywhere: empty states instead.
 - Swiss formatting for numbers (1'000).
 

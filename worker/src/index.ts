@@ -421,8 +421,14 @@ app.post("/v1/friends/remove", async (c) => {
  * Ranks the players who played between ?1 and ?2 by their return: table winnings
  * divided by the bankroll they had that week, so doubling 5k counts the same as
  * doubling 20k. The bankroll is the balance at ?1 plus every chip that came in
- * from outside the tables (bonuses, gifts, adjustments) before ?2 — rewinding the
- * current balance through the ledger gives the balance at ?1.
+ * from outside the tables (bonuses, adjustments) before ?2, plus what friends
+ * sent on balance — rewinding the current balance through the ledger gives the
+ * balance at ?1.
+ *
+ * Transfers count net. Counted one by one, chips passed back and forth would
+ * grow both bankrolls on every trip. A player who sent more than they got
+ * keeps their full bankroll, so parking chips with a friend and playing the
+ * rest doesn't inflate a return either.
  */
 function returnsQuery(filter: string, limit: number) {
   return `SELECT ${BADGE_COLUMNS}, w.net, MAX(p.balance + w.rewind, 1) AS bankroll
@@ -430,7 +436,9 @@ function returnsQuery(filter: string, limit: number) {
       SELECT l.user_id,
         SUM(CASE WHEN l.kind = 'game' AND l.created_at < ?2 THEN l.amount ELSE 0 END) AS net,
         SUM(CASE WHEN l.kind = 'game' AND l.created_at < ?2 THEN 1 ELSE 0 END) AS entries,
-        SUM(CASE WHEN l.kind <> 'game' AND l.amount > 0 AND l.created_at < ?2 THEN l.amount ELSE 0 END) - SUM(l.amount) AS rewind
+        SUM(CASE WHEN l.kind NOT IN ('game', 'transfer_in', 'transfer_out') AND l.amount > 0 AND l.created_at < ?2 THEN l.amount ELSE 0 END)
+          + MAX(SUM(CASE WHEN l.kind IN ('transfer_in', 'transfer_out') AND l.created_at < ?2 THEN l.amount ELSE 0 END), 0)
+          - SUM(l.amount) AS rewind
       FROM ledger l WHERE l.created_at >= ?1 GROUP BY l.user_id
     ) w JOIN players p ON p.user_id = w.user_id
     WHERE w.entries > 0 ${filter}
