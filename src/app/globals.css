@@ -558,7 +558,8 @@ ul, ol { padding: 0; list-style: none; }
 .rank-pos { color: var(--text-3); font-weight: 700; font-variant-numeric: tabular-nums; text-align: center; }
 .rank:first-child .rank-pos { color: var(--cherry); }
 .rank-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rank-chips { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.rank-chips { display: inline-flex; align-items: baseline; gap: 10px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.rank-net { display: inline-flex; align-items: center; gap: 4px; color: var(--text-3); font-size: 0.8rem; font-weight: 500; }
 
 /* ── Poster tiles ──────────────────────────────── */
 
