@@ -415,7 +415,27 @@ app.post("/v1/friends/remove", async (c) => {
   return c.json({ relation: "none" });
 });
 
-// ── Leaderboard: net chips won at the tables this week ─
+// ── Leaderboard: chips won at the tables this week, relative to the bankroll ─
+
+/**
+ * Ranks the players who played between ?1 and ?2 by their return: table winnings
+ * divided by the bankroll they had that week, so doubling 5k counts the same as
+ * doubling 20k. The bankroll is the balance at ?1 plus every chip that came in
+ * from outside the tables (bonuses, gifts, adjustments) before ?2 — rewinding the
+ * current balance through the ledger gives the balance at ?1.
+ */
+function returnsQuery(filter: string, limit: number) {
+  return `SELECT ${BADGE_COLUMNS}, w.net, MAX(p.balance + w.rewind, 1) AS bankroll
+    FROM (
+      SELECT l.user_id,
+        SUM(CASE WHEN l.kind = 'game' AND l.created_at < ?2 THEN l.amount ELSE 0 END) AS net,
+        SUM(CASE WHEN l.kind = 'game' AND l.created_at < ?2 THEN 1 ELSE 0 END) AS entries,
+        SUM(CASE WHEN l.kind <> 'game' AND l.amount > 0 AND l.created_at < ?2 THEN l.amount ELSE 0 END) - SUM(l.amount) AS rewind
+      FROM ledger l WHERE l.created_at >= ?1 GROUP BY l.user_id
+    ) w JOIN players p ON p.user_id = w.user_id
+    WHERE w.entries > 0 ${filter}
+    ORDER BY CAST(w.net AS REAL) / MAX(p.balance + w.rewind, 1) DESC, w.net DESC, p.name_lower ASC LIMIT ${limit}`;
+}
 
 app.get("/v1/leaderboard", async (c) => {
   const me = c.get("player").user_id;
@@ -423,19 +443,20 @@ app.get("/v1/leaderboard", async (c) => {
   const weekStart = zurichWeekStart();
   const friendsFilter =
     scope === "friends"
-      ? `AND (l.user_id = ?2 OR l.user_id IN (
-           SELECT CASE WHEN user_low = ?2 THEN user_high ELSE user_low END FROM friendships
-           WHERE status = 'accepted' AND (user_low = ?2 OR user_high = ?2)))`
+      ? `AND (w.user_id = ?3 OR w.user_id IN (
+           SELECT CASE WHEN user_low = ?3 THEN user_high ELSE user_low END FROM friendships
+           WHERE status = 'accepted' AND (user_low = ?3 OR user_high = ?3)))`
       : "";
-  const { results } = await c.env.DB.prepare(
-    `SELECT ${BADGE_COLUMNS}, SUM(l.amount) AS net, COUNT(*) AS entries
-     FROM ledger l JOIN players p ON p.user_id = l.user_id
-     WHERE l.kind = 'game' AND l.created_at >= ?1 ${friendsFilter}
-     GROUP BY l.user_id ORDER BY net DESC, p.name_lower ASC LIMIT 50`,
-  )
-    .bind(...(scope === "friends" ? [weekStart, me] : [weekStart]))
-    .all<Player & { net: number }>();
-  const rows = results.map((r, i) => ({ rank: i + 1, ...badge(r), net: r.net, isMe: r.user_id === me }));
+  const { results } = await c.env.DB.prepare(returnsQuery(friendsFilter, 50))
+    .bind(...(scope === "friends" ? [weekStart, Number.MAX_SAFE_INTEGER, me] : [weekStart, Number.MAX_SAFE_INTEGER]))
+    .all<Player & { net: number; bankroll: number }>();
+  const rows = results.map((r, i) => ({
+    rank: i + 1,
+    ...badge(r),
+    net: r.net,
+    pct: (r.net / r.bankroll) * 100,
+    isMe: r.user_id === me,
+  }));
   return c.json({ scope, weekStart, rows, me: rows.find((r) => r.isMe) ?? null });
 });
 
@@ -469,10 +490,7 @@ async function crownLastWeek(env: Env) {
   const lastWeek = zurichWeekStart(thisWeek - 1);
   const done = await env.DB.prepare("SELECT 1 FROM weekly_awards WHERE week_start = ?").bind(lastWeek).first();
   if (done) return;
-  const top = await env.DB.prepare(
-    `SELECT user_id, SUM(amount) AS net FROM ledger WHERE kind = 'game' AND created_at >= ? AND created_at < ?
-     GROUP BY user_id ORDER BY net DESC LIMIT 1`,
-  )
+  const top = await env.DB.prepare(returnsQuery("", 1))
     .bind(lastWeek, thisWeek)
     .first<{ user_id: string; net: number }>();
   const winner = top && top.net > 0 ? top.user_id : null;

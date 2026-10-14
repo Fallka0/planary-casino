@@ -38,6 +38,8 @@ export interface FriendsData {
 export interface BoardRow extends PlayerBadge {
   rank: number;
   net: number;
+  /** Table winnings as a percentage of the week's bankroll; what the board ranks by. */
+  pct: number;
   isMe: boolean;
 }
 export interface Board {
