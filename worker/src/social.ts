@@ -49,7 +49,8 @@ async function relation(env: Env, me: string, other: string) {
   return row.requested_by === me ? "requested" : "incoming";
 }
 
-function parseShowcase(raw: string | null): string[] {
+/** The up-to-three achievement ids pinned to a profile, as stored. */
+export function parseShowcase(raw: string | null): string[] {
   try {
     const value = JSON.parse(raw ?? "[]");
     return Array.isArray(value) ? value.filter((v) => typeof v === "string").slice(0, 3) : [];

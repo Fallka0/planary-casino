@@ -3,22 +3,37 @@
 import { Hono } from "hono";
 import { roundById, searchRounds } from "./archive";
 import { cors } from "hono/cors";
-import { achievementsOf, getStats } from "./achievements";
+import { ACHIEVEMENT_MAP, ACHIEVEMENTS, achievementsOf, getStats, liveStats, rewardsFor, unlock } from "./achievements";
 import { CATALOG, ITEMS } from "./catalog";
 import type { Env, Player } from "./env";
 import { notify } from "./notify";
 import { blockedReason, dailyLoss, DEFAULT_SETTINGS, gameStatus, getSettings, isMuted, shopOverrides } from "./policy";
+import {
+  checkStats,
+  COMPUTED,
+  earnedByCounters,
+  isArea,
+  type Opening,
+  RESET_AREAS,
+  resetAccount,
+  revokeAchievements,
+  setStats,
+  STAT_FIELDS,
+  type StatChange,
+} from "./progress";
 import { badge, presenceOf } from "./social";
 import { zurichDay, zurichDayStart } from "./time";
 
 export type Role = "owner" | "manager" | "support" | "viewer";
-type Permission = "view" | "note" | "moderate" | "restrict" | "chips" | "games" | "economy" | "announce" | "audit" | "staff";
+type Permission = "view" | "note" | "moderate" | "restrict" | "chips" | "games" | "economy" | "announce" | "audit" | "staff" | "reset";
 
 const ROLES: Record<Role, Permission[]> = {
   viewer: ["view"],
   support: ["view", "note", "moderate"],
   manager: ["view", "note", "moderate", "restrict", "chips", "games", "economy", "announce", "audit"],
-  owner: ["view", "note", "moderate", "restrict", "chips", "games", "economy", "announce", "audit", "staff"],
+  // "reset" clears a player's record and hands out progress by hand. Both are
+  // irreversible and neither is support work, so the panel's own owner keeps them.
+  owner: ["view", "note", "moderate", "restrict", "chips", "games", "economy", "announce", "audit", "staff", "reset"],
 };
 
 const GAMES = ["blackjack", "roulette", "slots"] as const;
@@ -469,6 +484,134 @@ admin.get("/players/:id/messages", async (c) => {
     .all<{ id: number; sender_id: string; body: string; created_at: number }>();
   await audit(c.env, staff, "messages.read", id, { with: other });
   return c.json({ messages: results.reverse().map((m) => ({ id: m.id, fromPlayer: m.sender_id === id, body: m.body, at: m.created_at })) });
+});
+
+// ── Progress: achievements, counters and resets ──────
+//
+// Every other tool here adds to a player's record. These two take it back, and
+// nothing else can: the weekly leaderboard is a sum over the ledger, the
+// lifetime figures are the same sum sliced differently, and an achievement has
+// no "lock" next to it. A week of testing chip adjustments is permanent
+// otherwise — so this exists, owner-only, and says in the audit log exactly
+// what it moved.
+
+admin.get("/players/:id/progress", async (c) => {
+  const id = c.req.param("id");
+  const p = await c.env.DB.prepare("SELECT name, balance, bonus_streak FROM players WHERE user_id = ?").bind(id).first<{
+    name: string;
+    balance: number;
+    bonus_streak: number;
+  }>();
+  if (!p) return c.json({ error: "Player not found." }, 404);
+  const [owned, stats, live, settings] = await Promise.all([achievementsOf(c.env, id), getStats(c.env, id), liveStats(c.env, id), getSettings(c.env, true)]);
+  const known = new Set(STAT_FIELDS.map((f) => f.key));
+  return c.json({
+    achievements: ACHIEVEMENTS.map((a) => ({
+      id: a.id,
+      name: a.name,
+      description: a.description,
+      category: a.category,
+      grade: a.grade,
+      glyph: a.glyph,
+      secret: Boolean(a.secret),
+      progress: a.progress ?? null,
+      unlockedAt: owned.get(a.id) ?? null,
+      rewards: rewardsFor(a.id).map((item) => ({ id: item.id, name: item.name, kind: item.kind })),
+    })),
+    stats: {
+      fields: STAT_FIELDS,
+      values: { ...stats, bonus_streak: p.bonus_streak },
+      // Counters a game server writes that the panel has no label for yet. Just
+      // the names: every counter's value is in `values`, and a second copy of a
+      // number is a second chance for the two to disagree.
+      extra: Object.keys(stats).filter((key) => !known.has(key)),
+      computed: { balance: live.balance, friends: live.friends, items: live.items },
+      refused: COMPUTED,
+    },
+    reset: { areas: RESET_AREAS, starterChips: settings.starterChips, balance: p.balance, confirm: p.name },
+  });
+});
+
+admin.post("/players/:id/achievements", async (c) => {
+  const staff = c.get("staff");
+  if (!can(staff, "reset")) return c.json(denied(), 403);
+  const id = c.req.param("id");
+  const body = await c.req.json<{ grant?: unknown; revoke?: unknown; rewards?: boolean; silent?: boolean }>();
+  const list = (value: unknown) => (Array.isArray(value) ? [...new Set(value.filter((v): v is string => typeof v === "string"))] : []);
+  const grant = list(body.grant);
+  const revoke = list(body.revoke);
+  if (!grant.length && !revoke.length) return c.json({ error: "Pick at least one achievement." }, 400);
+  const unknown = [...grant, ...revoke].find((a) => !ACHIEVEMENT_MAP.has(a));
+  if (unknown) return c.json({ error: `There's no achievement called "${text(unknown, 40)}".` }, 400);
+  const both = grant.find((a) => revoke.includes(a));
+  if (both) return c.json({ error: `${ACHIEVEMENT_MAP.get(both)?.name} can't be granted and taken back in the same go.` }, 400);
+  if (!(await c.env.DB.prepare("SELECT 1 FROM players WHERE user_id = ?").bind(id).first())) return c.json({ error: "Player not found." }, 404);
+
+  // One switch for both directions: either the cosmetics follow the badge, or
+  // the badge moves on its own. Granting one back that was revoked by mistake
+  // should not hand out a second copy of the item.
+  const rewards = body.rewards !== false;
+  const granted = grant.length ? await unlock(c.env, id, grant, { rewards, announce: body.silent !== true }) : [];
+  const taken = revoke.length ? await revokeAchievements(c.env, id, revoke, rewards) : { revoked: 0, itemsRemoved: 0 };
+  await audit(c.env, staff, "progress.achievements", id, {
+    granted: granted.map((a) => a.id),
+    alreadyHeld: grant.filter((gid) => !granted.some((a) => a.id === gid)),
+    revoked: revoke,
+    rewards,
+    silent: body.silent === true,
+  });
+  return c.json({
+    granted: granted.map((a) => ({ id: a.id, name: a.name })),
+    alreadyHeld: grant.length - granted.length,
+    revoked: taken.revoked,
+    itemsRemoved: taken.itemsRemoved,
+  });
+});
+
+admin.post("/players/:id/stats", async (c) => {
+  const staff = c.get("staff");
+  if (!can(staff, "reset")) return c.json(denied(), 403);
+  const id = c.req.param("id");
+  const body = await c.req.json<{ changes?: Record<string, unknown>; unlock?: boolean }>();
+  const changes: StatChange[] = Object.entries(body.changes ?? {}).map(([key, value]) => ({
+    key: String(key).trim().toLowerCase(),
+    value: value === null ? null : Number(value),
+  }));
+  const wrong = checkStats(changes);
+  if (wrong) return c.json({ error: wrong }, 400);
+  if (!(await c.env.DB.prepare("SELECT 1 FROM players WHERE user_id = ?").bind(id).first())) return c.json({ error: "Player not found." }, 404);
+
+  await setStats(c.env, id, changes);
+  // A counter past its goal and a locked badge above it is the one state the
+  // casino never produces on its own, so by default the milestones follow.
+  const unlocked = body.unlock === false ? [] : await unlock(c.env, id, await earnedByCounters(c.env, id));
+  await audit(c.env, staff, "progress.stats", id, {
+    changes: Object.fromEntries(changes.map((change) => [change.key, change.value])),
+    unlocked: unlocked.map((a) => a.id),
+  });
+  return c.json({ changed: changes.length, unlocked: unlocked.map((a) => ({ id: a.id, name: a.name })) });
+});
+
+admin.post("/players/:id/reset", async (c) => {
+  const staff = c.get("staff");
+  if (!can(staff, "reset")) return c.json(denied(), 403);
+  const id = c.req.param("id");
+  const body = await c.req.json<{ areas?: unknown; opening?: Opening; reason?: string; confirm?: string; notifyPlayer?: boolean }>();
+  const areas = Array.isArray(body.areas) ? [...new Set(body.areas.filter(isArea))] : [];
+  if (!areas.length) return c.json({ error: "Pick what to clear." }, 400);
+  const opening: Opening = body.opening === "zero" || body.opening === "keep" ? body.opening : "starter";
+  const reason = text(body.reason, 200);
+  if (reason.length < 3) return c.json({ error: "Give a reason; it's kept with the reset." }, 400);
+  const p = await c.env.DB.prepare("SELECT * FROM players WHERE user_id = ?").bind(id).first<Player>();
+  if (!p) return c.json({ error: "Player not found." }, 404);
+  // Nothing in here can be undone, so the name gets typed out once.
+  if (text(body.confirm, 60).toLowerCase() !== p.name.toLowerCase()) return c.json({ error: `Type ${p.name} to confirm the reset.` }, 400);
+
+  const result = await resetAccount(c.env, p, { areas, opening, reason }, staff.name);
+  await audit(c.env, staff, "account.reset", id, { areas, opening, reason, ...result });
+  // Sent after the clearing, or clearing the notifications would take it along.
+  if (body.notifyPlayer !== false) await notify(c.env, id, "staff", null, { text: `Your casino account was reset: ${reason}` });
+  return c.json(result);
 });
 
 // ── Transactions ─────────────────────────────────────

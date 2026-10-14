@@ -132,8 +132,26 @@ export async function liveStats(env: Env, userId: string) {
 
 // ── Unlocking ────────────────────────────────────────
 
-/** Unlocks what isn't unlocked yet, hands out reward cosmetics, and notifies. Returns the newly unlocked. */
-export async function unlock(env: Env, userId: string, ids: string[]): Promise<Achievement[]> {
+/** The cosmetics an achievement hands out when it unlocks. */
+export function rewardsFor(achievementId: string) {
+  return [...ITEMS.values()].filter((item) => item.reward === achievementId);
+}
+
+/**
+ * Unlocks what isn't unlocked yet, hands out reward cosmetics, and notifies.
+ * Returns the newly unlocked.
+ *
+ * Both side effects can be turned off, which only an operator granting a badge
+ * by hand ever wants: a replacement for one that was wrongly revoked should not
+ * hand out a second copy of the cosmetic, and a quiet fix-up should not ring
+ * the player's bell for something they already know they have.
+ */
+export async function unlock(
+  env: Env,
+  userId: string,
+  ids: string[],
+  { rewards = true, announce = true }: { rewards?: boolean; announce?: boolean } = {},
+): Promise<Achievement[]> {
   const fresh: Achievement[] = [];
   const t = Date.now();
   for (const id of new Set(ids)) {
@@ -144,15 +162,15 @@ export async function unlock(env: Env, userId: string, ids: string[]): Promise<A
       .run();
     if (!res.meta.changes) continue;
     fresh.push(achievement);
-    const rewards = [...ITEMS.values()].filter((item) => item.reward === id);
-    if (rewards.length) {
+    const granted = rewards ? rewardsFor(id) : [];
+    if (granted.length) {
       await env.DB.batch(
-        rewards.map((item) =>
+        granted.map((item) =>
           env.DB.prepare("INSERT OR IGNORE INTO inventory (user_id, item_id, source, created_at) VALUES (?, ?, 'achievement', ?)").bind(userId, item.id, t),
         ),
       );
     }
-    await notify(env, userId, "achievement", null, { id, rewards: rewards.map((r) => r.id) });
+    if (announce) await notify(env, userId, "achievement", null, { id, rewards: granted.map((r) => r.id) });
   }
   return fresh;
 }
