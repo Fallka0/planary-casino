@@ -1,3 +1,4 @@
+import { bankEntry, touchesBank } from "./bank";
 import type { Env, Player } from "./env";
 import { getSettings } from "./policy";
 import { zurichDay, zurichYesterday } from "./time";
@@ -33,11 +34,13 @@ export async function ensurePlayer(env: Env, userId: string, name: string): Prom
 
 /** Takes chips if the balance covers it. Returns the new balance, or null when it doesn't. */
 export async function debit(env: Env, userId: string, amount: number, entry: { kind: string; game?: string; ref?: string }) {
+  const t = now();
   const [update] = await env.DB.batch([
     env.DB.prepare("UPDATE players SET balance = balance - ?1 WHERE user_id = ?2 AND balance >= ?1").bind(amount, userId),
     env.DB.prepare(
       "INSERT INTO ledger (user_id, amount, kind, game, ref, created_at) SELECT ?1, ?2, ?3, ?4, ?5, ?6 WHERE changes() = 1",
-    ).bind(userId, -amount, entry.kind, entry.game ?? null, entry.ref ?? null, now()),
+    ).bind(userId, -amount, entry.kind, entry.game ?? null, entry.ref ?? null, t),
+    ...(touchesBank(entry) ? [bankEntry(env, entry.game ?? "unknown", "in", amount, t)] : []),
   ]);
   if (!update.meta.changes) return null;
   return (await getPlayer(env, userId))!.balance;
@@ -45,6 +48,7 @@ export async function debit(env: Env, userId: string, amount: number, entry: { k
 
 export async function credit(env: Env, userId: string, amount: number, entry: { kind: string; game?: string; ref?: string }) {
   if (amount > 0) {
+    const t = now();
     await env.DB.batch([
       env.DB.prepare("UPDATE players SET balance = balance + ?1 WHERE user_id = ?2").bind(amount, userId),
       env.DB.prepare("INSERT INTO ledger (user_id, amount, kind, game, ref, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)").bind(
@@ -53,8 +57,10 @@ export async function credit(env: Env, userId: string, amount: number, entry: { 
         entry.kind,
         entry.game ?? null,
         entry.ref ?? null,
-        now(),
+        t,
       ),
+      // Paid even when it takes the bank below zero: a win is never refused.
+      ...(touchesBank(entry) ? [bankEntry(env, entry.game ?? "unknown", "out", amount, t)] : []),
     ]);
   }
   return (await getPlayer(env, userId))?.balance ?? 0;

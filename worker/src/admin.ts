@@ -2,6 +2,7 @@
 
 import { Hono } from "hono";
 import { roundById, searchRounds } from "./archive";
+import { bankBalance, bankEntry } from "./bank";
 import { cors } from "hono/cors";
 import { ACHIEVEMENT_MAP, ACHIEVEMENTS, achievementsOf, getStats, liveStats, rewardsFor, unlock } from "./achievements";
 import { CATALOG, ITEMS } from "./catalog";
@@ -773,6 +774,117 @@ admin.post("/shop/:itemId", async (c) => {
     .run();
   await audit(c.env, staff, "shop.update", item.id, { price, enabled: Boolean(enabled) });
   return c.json({ ok: true });
+});
+
+// ── Bank ─────────────────────────────────────────────
+//
+// The house's account: see migrations/0006_bank.sql. Sources are a game id,
+// 'shop' or 'staff'; the panel reads chips_in and chips_out by what they mean
+// for each.
+
+interface Flows {
+  wagered: number;
+  paid: number;
+  shop: number;
+  deposits: number;
+  withdrawals: number;
+  net: number;
+}
+
+function flows(rows: { source: string; chips_in: number; chips_out: number }[]): Flows {
+  const f = { wagered: 0, paid: 0, shop: 0, deposits: 0, withdrawals: 0, net: 0 };
+  for (const r of rows) {
+    if (r.source === "shop") f.shop += r.chips_in;
+    else if (r.source === "staff") (f.deposits += r.chips_in), (f.withdrawals += r.chips_out);
+    else (f.wagered += r.chips_in), (f.paid += r.chips_out);
+    f.net += r.chips_in - r.chips_out;
+  }
+  return f;
+}
+
+/** The Zurich day `back` days before `day`, both YYYY-MM-DD. */
+function dayBefore(day: string, back: number) {
+  const [y, m, d] = day.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d - back)).toISOString().slice(0, 10);
+}
+
+admin.get("/bank", async (c) => {
+  const days = Math.min(90, Math.max(7, Number(c.req.query("days")) || 30));
+  const today = zurichDay();
+  const first = dayBefore(today, days - 1);
+
+  type Row = { day: string; source: string; chips_in: number; chips_out: number };
+  const [lifetime, recent, moves] = await Promise.all([
+    c.env.DB.prepare("SELECT source, SUM(chips_in) AS chips_in, SUM(chips_out) AS chips_out FROM bank_days GROUP BY source").all<Omit<Row, "day">>(),
+    c.env.DB.prepare("SELECT day, source, chips_in, chips_out FROM bank_days WHERE day >= ? ORDER BY day").bind(first).all<Row>(),
+    c.env.DB.prepare("SELECT id, amount, reason, staff_name, created_at FROM bank_moves ORDER BY id DESC LIMIT 50").all(),
+  ]);
+
+  const total = flows(lifetime.results);
+  const period = flows(recent.results);
+
+  // Per source over the period, games first by how much went through them.
+  const bySource = new Map<string, { source: string; chips_in: number; chips_out: number }>();
+  for (const r of recent.results) {
+    const s = bySource.get(r.source) ?? { source: r.source, chips_in: 0, chips_out: 0 };
+    s.chips_in += r.chips_in;
+    s.chips_out += r.chips_out;
+    bySource.set(r.source, s);
+  }
+  const sources = [...bySource.values()].sort(
+    (a, b) => Number(a.source === "shop" || a.source === "staff") - Number(b.source === "shop" || b.source === "staff") || b.chips_in - a.chips_in,
+  );
+
+  // The balance at the close of each day, walked forward from where it stood before the period.
+  const byDay = new Map<string, Row[]>();
+  for (const r of recent.results) byDay.set(r.day, [...(byDay.get(r.day) ?? []), r]);
+  let balance = total.net - period.net;
+  const daily = Array.from({ length: days }, (_, i) => {
+    const day = dayBefore(today, days - 1 - i);
+    const net = flows(byDay.get(day) ?? []).net;
+    balance += net;
+    return { day, net, balance };
+  });
+
+  return c.json({
+    days,
+    balance: total.net,
+    today: flows(byDay.get(today) ?? []),
+    period,
+    lifetime: total,
+    sources,
+    daily,
+    moves: moves.results,
+  });
+});
+
+admin.post("/bank/move", async (c) => {
+  const staff = c.get("staff");
+  if (!can(staff, "economy")) return c.json(denied(), 403);
+  const body = await c.req.json<{ amount: number; reason: string }>();
+  const amount = int(body.amount, -CHIP_CEILING, CHIP_CEILING);
+  const reason = text(body.reason, 200);
+  if (amount === null) return c.json({ error: "That is not a whole number of chips the casino can count exactly." }, 400);
+  if (amount === 0) return c.json({ error: "Enter a whole number of chips, not zero." }, 400);
+  if (reason.length < 3) return c.json({ error: "Give a reason; it's kept with the move." }, 400);
+  const t = Date.now();
+  const [move] = await c.env.DB.batch([
+    // Checked against the balance inside the same transaction, so two withdrawals can't both spend the same chips.
+    c.env.DB.prepare(
+      `INSERT INTO bank_moves (amount, reason, staff_id, staff_name, created_at)
+       SELECT ?1, ?2, ?3, ?4, ?5 FROM (SELECT COALESCE(SUM(chips_in - chips_out), 0) AS balance FROM bank_days)
+       WHERE CASE WHEN ?1 > 0 THEN balance <= ?6 - ?1 ELSE balance >= -?1 END`,
+    ).bind(amount, reason, staff.user_id, staff.name, t, CHIP_CEILING),
+    bankEntry(c.env, "staff", amount > 0 ? "in" : "out", Math.abs(amount), t),
+  ]);
+  if (!move.meta.changes) {
+    return c.json(
+      { error: amount < 0 ? "The bank doesn't hold that many chips." : "That would take the bank past the largest number the casino can count exactly." },
+      409,
+    );
+  }
+  await audit(c.env, staff, amount > 0 ? "bank.deposit" : "bank.withdraw", null, { amount, reason });
+  return c.json({ balance: await bankBalance(c.env) });
 });
 
 // ── Moderation ───────────────────────────────────────

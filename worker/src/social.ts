@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { ACHIEVEMENT_MAP, achievementList, checkLive, getStats, unlock } from "./achievements";
+import { bankEntry } from "./bank";
 import { CATALOG, ITEMS, type ItemKind, KIND_COLUMN } from "./catalog";
 import type { Env, Player } from "./env";
 import { notify } from "./notify";
@@ -204,6 +205,7 @@ social.post("/shop/buy", async (c) => {
       item.id,
       t,
     ),
+    bankEntry(c.env, "shop", "in", price, t),
   ]);
   if (!update.meta.changes) {
     const owned = await c.env.DB.prepare("SELECT 1 FROM inventory WHERE user_id = ? AND item_id = ?").bind(me, item.id).first();
