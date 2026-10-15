@@ -3,12 +3,10 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { ChipIcon } from "@/components/ChipIcon";
 import { SignInPrompt } from "@/components/SignInPrompt";
 import { type Me, useCasino } from "@/lib/api";
-import { formatChips } from "@/lib/games";
 import { CasesPanel } from "./CasesPanel";
-import type { Kind } from "./cosmetics";
+import type { CaseInfo, Inventory } from "./cosmetics";
 import { InventoryPanel } from "./InventoryPanel";
 import { MarketPanel } from "./MarketPanel";
 
@@ -24,51 +22,53 @@ export function MarketView({ initialTab }: { initialTab: Tab }) {
   const router = useRouter();
   const { user, loading } = useAuth();
   const { data: me } = useCasino<Me>(user ? "/v1/me" : null);
+  const { data: inventory } = useCasino<Inventory>(user ? "/v1/inventory" : null);
+  const { data: cases } = useCasino<{ cases: CaseInfo[] }>(user ? "/v1/cases" : null);
   const [tab, setTab] = useState<Tab>(initialTab);
-  const [kind, setKind] = useState<Kind | undefined>(undefined);
+  const [pick, setPick] = useState<string | null>(null);
 
   function go(next: Tab) {
     setTab(next);
     router.replace(next === "cases" ? "/market" : `/market?tab=${next}`, { scroll: false });
   }
 
+  const owned = inventory ? new Set(inventory.copies.map((c) => c.item.id)).size : 0;
+  const balance = inventory?.balance ?? me?.balance ?? 0;
+
   return (
-    <section className="page" aria-labelledby="page-title">
-      <div className="page-head">
-        <h1 id="page-title">Market</h1>
-        <p className="page-sub">Open cases for borders, banners, titles and table cosmetics, then trade them with other players for chips.</p>
-      </div>
+    <section className="page mk-page" aria-labelledby="page-title">
+      <h1 id="page-title" className="mk-h1">
+        Market
+      </h1>
 
       {loading ? null : !user ? (
         <SignInPrompt what="Sign in to open cases and trade on the market." />
-      ) : !me ? (
-        <div className="panel-skeleton tall" aria-hidden="true" />
       ) : (
         <>
-          <div className="market-bar">
-            <div className="market-tabs" role="tablist" aria-label="Market">
-              {TABS.map((t) => (
-                <button key={t.tab} role="tab" className="market-tab" aria-selected={t.tab === tab} onClick={() => go(t.tab)}>
-                  {t.label}
-                </button>
-              ))}
-            </div>
-            <span className="market-balance">
-              <ChipIcon size={17} /> {formatChips(me.balance)}
-            </span>
+          <div className="mk-tabs" role="tablist" aria-label="Market">
+            {TABS.map((t) => (
+              <button key={t.tab} role="tab" className="mk-tab" aria-selected={t.tab === tab} onClick={() => go(t.tab)}>
+                {t.label}
+                {t.tab === "inventory" && owned ? <span className="mk-tab-count">{owned}</span> : null}
+              </button>
+            ))}
           </div>
-          {tab === "cases" ? (
+          {!me ? (
+            <div className="mk-skeleton mk-skel-stage" aria-hidden="true" />
+          ) : tab === "cases" ? (
             <CasesPanel
               me={me}
-              onSell={(k) => {
-                setKind(k);
+              balance={balance}
+              equipped={inventory?.equipped ?? null}
+              onSell={(itemId) => {
+                setPick(itemId);
                 go("inventory");
               }}
             />
           ) : tab === "market" ? (
-            <MarketPanel me={me} />
+            <MarketPanel me={me} balance={balance} cases={cases?.cases} />
           ) : (
-            <InventoryPanel me={me} onCases={() => go("cases")} initialKind={kind} />
+            <InventoryPanel me={me} inventory={inventory} initialItem={pick} onCases={() => go("cases")} />
           )}
         </>
       )}

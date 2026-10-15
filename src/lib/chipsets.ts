@@ -35,6 +35,12 @@ export const CHIPSETS: Record<string, Record<number, ChipInks>> = {
     100: { fill: "#b8761c", ink: "#fff3c4" },
     500: { fill: "#2a1a02", ink: "#f7d77e" },
   },
+  "chips-taffy": {
+    10: { fill: "#f6eee4", ink: "#d94f7a" },
+    50: { fill: "#ff9ec0", ink: "#5a0f22" },
+    100: { fill: "#ff7a3d", ink: "#fff1e6" },
+    500: { fill: "#136f6f", ink: "#ffd9c4" },
+  },
 };
 
 export function chipInks(set: string | null | undefined, value: number): ChipInks {

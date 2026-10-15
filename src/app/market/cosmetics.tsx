@@ -19,34 +19,93 @@ export interface ItemInfo {
   rewardName: string | null;
 }
 
-export const KINDS: { kind: Kind; label: string; hint: string }[] = [
-  { kind: "border", label: "Borders", hint: "Round your picture everywhere: the sidebar, tables, the leaderboard." },
-  { kind: "banner", label: "Banners", hint: "The backdrop at the top of your profile." },
-  { kind: "title", label: "Titles", hint: "Shown under your name." },
-  { kind: "cardback", label: "Card backs", hint: "The dealer's face-down card and the shuffle at Blackjack, on your screen." },
-  { kind: "chipset", label: "Chips", hint: "Your bets at the tables, as everyone sees them." },
+/** A copy in your inventory, and the listing it's under if it's for sale. */
+export interface Copy {
+  copyId: number;
+  item: ItemInfo;
+  source: string;
+  at: number;
+  listing: { id: number; price: number } | null;
+}
+export interface Inventory {
+  balance: number;
+  equipped: Equipped;
+  copies: Copy[];
+}
+
+export interface CaseItem extends ItemInfo {
+  weight: number;
+}
+export interface CaseInfo {
+  id: string;
+  name: string;
+  price: number;
+  blurb: string;
+  total: number;
+  items: CaseItem[];
+}
+
+export const TIERS: Tier[] = ["common", "rare", "epic", "legendary"];
+export const TIER_LABEL: Record<Tier, string> = { common: "Common", rare: "Rare", epic: "Epic", legendary: "Legendary" };
+export const TIER_ORDER: Record<Tier, number> = { legendary: 0, epic: 1, rare: 2, common: 3 };
+
+export const KIND_LABEL: Record<Kind, string> = { border: "Border", banner: "Banner", title: "Title", cardback: "Card back", chipset: "Chip set" };
+export const KIND_PLURAL: Record<Kind | "all", string> = { all: "items", border: "borders", banner: "banners", title: "titles", cardback: "card backs", chipset: "chip sets" };
+export const KIND_FILTERS: { kind: Kind | "all"; label: string }[] = [
+  { kind: "all", label: "All" },
+  { kind: "border", label: "Borders" },
+  { kind: "banner", label: "Banners" },
+  { kind: "title", label: "Titles" },
+  { kind: "cardback", label: "Card backs" },
+  { kind: "chipset", label: "Chip sets" },
 ];
 
-export function Swatch({ item, me, size = 72 }: { item: Pick<ItemInfo, "id" | "kind" | "name">; me: Me; size?: number }) {
+/** Which case an item comes out of, for the "Kind · Case" line. Rewards come from achievements. */
+export function caseLabel(item: Pick<ItemInfo, "id" | "rewardName">, cases: CaseInfo[] | undefined) {
+  if (item.rewardName) return "Achievement reward";
+  return cases?.find((c) => c.items.some((i) => i.id === item.id))?.name ?? null;
+}
+
+/** A title pill's type size for a well of this height: the handoff's 18 / 16 / 11, and smaller for the thumbnail wells. */
+const titleSize = (size: number) => (size >= 150 ? 18 : size >= 120 ? 16 : size >= 56 ? 11 : size >= 40 ? 8 : 6);
+
+/**
+ * The item itself, drawn to fill whatever well it sits in. `size` is the
+ * height of that well in pixels, which rings and chips scale to; banners and
+ * titles take the space they're given.
+ */
+export function ItemArt({ item, me, size, fill = false }: { item: Pick<ItemInfo, "id" | "kind" | "name">; me: Me; size: number; fill?: boolean }) {
   switch (item.kind) {
     case "border":
-      return <Avatar player={{ ...me, border: item.id }} size={size} />;
-    case "banner":
-      return <span className={`banner-swatch banner ${item.id}`} />;
-    case "title":
-      return <span className="title-swatch">{item.name}</span>;
-    case "cardback":
       return (
-        <span className="cardback-swatch">
-          <span className={`print-back ${item.id}`} />
-          <span className={`print-back ${item.id}`} />
+        <span className="mk-art">
+          <Avatar player={{ ...me, border: item.id }} size={Math.round(size * 0.72)} />
         </span>
       );
+    case "banner":
+      return <span className={`banner ${item.id} ${fill ? "mk-banner-fill" : "mk-banner"}`} />;
+    case "title":
+      return (
+        <span className="mk-art">
+          <span className="mk-title-pill" style={{ fontSize: titleSize(size) }}>
+            {item.name}
+          </span>
+        </span>
+      );
+    case "cardback": {
+      const h = Math.round(size * 0.68);
+      return (
+        <span className="mk-art mk-cards">
+          <span className={`print-back ${item.id}`} style={{ height: h, width: Math.round(h * 0.68) }} />
+          <span className={`print-back ${item.id}`} style={{ height: h, width: Math.round(h * 0.68) }} />
+        </span>
+      );
+    }
     case "chipset":
       return (
-        <span className="chipset-swatch">
+        <span className="mk-art mk-chips">
           {[10, 50, 100, 500].map((v) => (
-            <ChipIcon key={v} size={Math.round(size * 0.55)} value={v} set={item.id} />
+            <ChipIcon key={v} size={Math.round(size * 0.42)} value={v} set={item.id} />
           ))}
         </span>
       );
@@ -54,34 +113,18 @@ export function Swatch({ item, me, size = 72 }: { item: Pick<ItemInfo, "id" | "k
 }
 
 export function TierLabel({ tier }: { tier: Tier }) {
-  return <span className={`item-tier tier-${tier}`}>{tier}</span>;
+  return <span className={`mk-tier tier-${tier}`}>{TIER_LABEL[tier]}</span>;
 }
 
-/** You, wearing what's equipped, with the item you're looking at swapped in. */
-export function FittingRoom({ me, equipped, trying }: { me: Me; equipped: Equipped; trying: ItemInfo | null }) {
-  const look = { ...equipped, ...(trying ? { [trying.kind]: trying.id } : {}) };
-  const title = trying?.kind === "title" ? trying.name : me.title;
-  return (
-    <aside className="fitting" aria-label="Preview">
-      <div className={`fitting-banner banner ${look.banner ?? "banner-default"}`}>
-        <Avatar player={{ ...me, border: look.border }} size={96} />
-      </div>
-      <div className="fitting-copy">
-        {title ? <span className="profile-title">{title}</span> : null}
-        <strong>{me.name}</strong>
-      </div>
-      <div className="fitting-table">
-        <span className="cardback-swatch">
-          <span className={`print-back ${look.cardback ?? "cardback-classic"}`} />
-          <span className={`print-back ${look.cardback ?? "cardback-classic"}`} />
-        </span>
-        <span className="chipset-swatch">
-          {[10, 50, 100, 500].map((v) => (
-            <ChipIcon key={v} size={34} value={v} set={look.chipset} />
-          ))}
-        </span>
-      </div>
-      <p className="fitting-note">{trying ? `Trying on ${trying.name}` : "Pick an item to try it on."}</p>
-    </aside>
-  );
+/** Swiss grouping, the way the casino writes chips: 25'000. */
+export const fmt = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+
+export function ago(ms: number, now = Date.now()) {
+  const s = Math.max(0, Math.round((now - ms) / 1000));
+  if (s < 60) return "Just now";
+  const m = Math.round(s / 60);
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} h ago`;
+  return h < 48 ? "Yesterday" : new Date(ms).toLocaleDateString("de-CH", { day: "numeric", month: "short" });
 }

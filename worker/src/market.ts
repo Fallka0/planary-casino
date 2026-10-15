@@ -58,6 +58,20 @@ market.get("/cases", (c) => {
   });
 });
 
+/** The last few things anyone pulled out of a case, newest first. */
+market.get("/cases/recent", async (c) => {
+  const me = c.get("player").user_id;
+  const { results } = await c.env.DB.prepare(
+    `SELECT o.id, o.item_id, o.case_id, o.opened_at, ${BADGE_COLUMNS} FROM case_openings o JOIN players p ON p.user_id = o.user_id
+     WHERE o.opened_at IS NOT NULL ORDER BY o.opened_at DESC LIMIT 8`,
+  ).all<Player & { id: string; item_id: string; case_id: string; opened_at: number }>();
+  return c.json({
+    drops: results
+      .filter((r) => ITEMS.has(r.item_id))
+      .map((r) => ({ id: r.id, at: r.opened_at, caseId: r.case_id, item: itemView(r.item_id), player: badge(r), mine: r.user_id === me })),
+  });
+});
+
 /**
  * Draws the server seed for the next opening of a case and shows its hash. An
  * unopened one is handed back rather than drawing another, so the commitment a
@@ -202,13 +216,18 @@ market.get("/market/:itemId", async (c) => {
     )
       .bind(itemId)
       .all<Player & { id: number; price: number; created_at: number }>(),
-    c.env.DB.prepare("SELECT price, created_at FROM market_sales WHERE item_id = ? ORDER BY id DESC LIMIT 20").bind(itemId).all<{ price: number; created_at: number }>(),
+    c.env.DB.prepare(
+      `SELECT s.price, s.created_at, s.buyer_id, p.name AS buyer FROM market_sales s LEFT JOIN players p ON p.user_id = s.buyer_id
+       WHERE s.item_id = ? ORDER BY s.id DESC LIMIT 20`,
+    )
+      .bind(itemId)
+      .all<{ price: number; created_at: number; buyer_id: string; buyer: string | null }>(),
   ]);
   const me = c.get("player").user_id;
   return c.json({
     item: itemView(itemId),
     listings: listings.results.map((l) => ({ id: l.id, price: l.price, at: l.created_at, seller: badge(l), mine: l.user_id === me })),
-    sales: sales.results.map((s) => ({ price: s.price, at: s.created_at })),
+    sales: sales.results.map((s) => ({ price: s.price, at: s.created_at, buyer: s.buyer_id === me ? null : (s.buyer ?? "A player"), mine: s.buyer_id === me })),
   });
 });
 

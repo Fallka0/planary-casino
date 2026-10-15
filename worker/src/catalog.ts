@@ -89,6 +89,23 @@ export const CATALOG: Item[] = [
   { id: "title-the-closer", kind: "title", name: "The Closer", tier: "rare", price: 2500, blurb: "Turns the last hand round." },
   { id: "title-smooth-operator", kind: "title", name: "Smooth Operator", tier: "epic", price: 6000, blurb: "Never seen sweating." },
   { id: "title-last-call", kind: "title", name: "Last Call", tier: "legendary", price: 18000, blurb: "Leaves when the house does." },
+
+  // Boardwalk: case-only, and the first case with rings, card backs and chips of
+  // its own, so every table that draws those knows these ids too.
+  { id: "border-sand", kind: "border", name: "Sand ring", tier: "common", price: 600, blurb: "Warm, plain, a little gritty." },
+  { id: "banner-pier", kind: "banner", name: "Pier planks", tier: "common", price: 700, blurb: "Boards bleached by a long summer." },
+  { id: "title-day-tripper", kind: "title", name: "Day Tripper", tier: "common", price: 500, blurb: "Home before the lights come on." },
+  { id: "title-low-tide", kind: "title", name: "Low Tide", tier: "common", price: 500, blurb: "Waiting for things to come back in." },
+  { id: "cardback-postcard", kind: "cardback", name: "Postcard", tier: "common", price: 1000, blurb: "Wish you were here." },
+  { id: "chips-taffy", kind: "chipset", name: "Taffy", tier: "common", price: 800, blurb: "Pink, cream and orange, pulled by hand." },
+  { id: "border-lifering", kind: "border", name: "Life ring", tier: "rare", price: 2000, blurb: "Red and white, thrown in when it counts." },
+  { id: "banner-awning", kind: "banner", name: "Awning", tier: "rare", price: 2000, blurb: "The stripes over the ice-cream stand." },
+  { id: "title-high-tide", kind: "title", name: "High Tide", tier: "rare", price: 2500, blurb: "Everything's coming in." },
+  { id: "cardback-seaglass", kind: "cardback", name: "Sea glass", tier: "rare", price: 2000, blurb: "Worn smooth by the waves." },
+  { id: "banner-sunset-strip", kind: "banner", name: "Sunset strip", tier: "epic", price: 6500, blurb: "The sun going down over the water." },
+  { id: "border-ferris", kind: "border", name: "Ferris wheel", tier: "epic", price: 6000, blurb: "Spokes all the way round." },
+  { id: "title-pier-king", kind: "title", name: "Pier King", tier: "epic", price: 6000, blurb: "Runs the boardwalk." },
+  { id: "banner-fireworks", kind: "banner", name: "Fireworks", tier: "legendary", price: 24000, blurb: "The last night of summer." },
 ];
 
 export const ITEMS = new Map(CATALOG.map((item) => [item.id, item]));
@@ -126,13 +143,34 @@ const AFTERHOURS_NEW = [
   "title-last-call",
 ];
 
+/** The items that first appeared in the Boardwalk case, and only come out of it. */
+const BOARDWALK = [
+  "border-sand",
+  "banner-pier",
+  "title-day-tripper",
+  "title-low-tide",
+  "cardback-postcard",
+  "chips-taffy",
+  "border-lifering",
+  "banner-awning",
+  "title-high-tide",
+  "cardback-seaglass",
+  "banner-sunset-strip",
+  "border-ferris",
+  "title-pier-king",
+  "banner-fireworks",
+];
+
+/** Items a newer case introduced; the Classic case keeps to what the shop used to sell. */
+const CASE_ONLY = new Set([...AFTERHOURS_NEW, ...BOARDWALK]);
+
 export const CASES: Case[] = [
   {
     id: "classic",
     name: "Classic Case",
     price: 2000,
     blurb: "Everything the shop used to sell: borders, banners, titles, card backs and chips.",
-    items: CATALOG.filter((item) => item.price !== null && !AFTERHOURS_NEW.includes(item.id)).map((item) => item.id),
+    items: CATALOG.filter((item) => item.price !== null && !CASE_ONLY.has(item.id)).map((item) => item.id),
   },
   {
     id: "afterhours",
@@ -146,6 +184,13 @@ export const CASES: Case[] = [
       "banner-night",
       "cardback-deco",
     ],
+  },
+  {
+    id: "boardwalk",
+    name: "Boardwalk Case",
+    price: 2000,
+    blurb: "Seaside banners, rings, card backs and chips.",
+    items: BOARDWALK,
   },
 ];
 
