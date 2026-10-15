@@ -7,7 +7,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { CASINO_API } from "@/lib/api";
 import { commit, opens, roll } from "../../../shared/fair";
 import { checkCards, prettyCard, shuffledShoe } from "../../../shared/deck";
-import { describe as describeSpin, machineById, MACHINES, payOut, stopsFor, windowAt } from "../../../shared/slots";
+import { describe as describeSpin, describeBonus, formatChips, machineVersion, MACHINES, payOut, playFromSeed, stopsFor, windowAt } from "../../../shared/slots";
 
 /**
  * Check a spin or a hand for yourself.
@@ -32,12 +32,29 @@ interface Fields {
   /** Blackjack: where in the shoe the hand started, and the cards it pulled. */
   from: string;
   drawn: string;
-  /** Slots: which machine, and where its reels came to rest. */
+  /** Slots: which machine and which version of it, the stake, whether the bonus was bought, and where its reels came to rest. */
   machine: string;
+  version: string;
+  lineBet: string;
+  bought: string;
   stops: string;
 }
 
-const EMPTY: Fields = { serverSeed: "", hash: "", clientSeed: "", nonce: "", pockets: "37", claimed: "", from: "", drawn: "", machine: "cherry", stops: "" };
+const EMPTY: Fields = {
+  serverSeed: "",
+  hash: "",
+  clientSeed: "",
+  nonce: "",
+  pockets: "37",
+  claimed: "",
+  from: "",
+  drawn: "",
+  machine: "cherry",
+  version: String(MACHINES[0].version),
+  lineBet: "1",
+  bought: "no",
+  stops: "",
+};
 
 const COMMON: { key: keyof Fields; label: string; hint: string; mono?: boolean }[] = [
   { key: "serverSeed", label: "Server seed", hint: "Published by the table afterwards.", mono: true },
@@ -59,7 +76,10 @@ const EXTRA: Record<Mode, { key: keyof Fields; label: string; hint: string; mono
   slots: [
     { key: "nonce", label: "Spin number", hint: "Counts your spins on that machine." },
     { key: "machine", label: "Machine", hint: `One of: ${MACHINES.map((m) => m.id).join(", ")}.`, mono: true },
-    { key: "stops", label: "Where the reels stopped", hint: "One number per reel, as recorded: 7 14 2", mono: true },
+    { key: "version", label: "Machine version", hint: "1 for Cherry Press, Nine Window and Night Press; 2 for Lunar Press, Nine Moons and Supernova." },
+    { key: "lineBet", label: "Stake per line", hint: "As recorded. It changes what the round paid, never where the reels stop." },
+    { key: "bought", label: "Bonus bought?", hint: "yes when the bonus was bought outright — then the reels did not turn.", mono: true },
+    { key: "stops", label: "Where the reels stopped", hint: "One number per reel, as recorded: 7 14 2. Empty for a bought bonus.", mono: true },
   ],
 };
 
@@ -108,7 +128,16 @@ function Verifier() {
         const round = (await res.json()) as {
           game: string;
           outcome: string;
-          log: { from?: number; drawn?: string[]; machine?: string; spin?: number; stops?: number[] } | null;
+          log: {
+            from?: number;
+            drawn?: string[];
+            machine?: string;
+            spin?: number;
+            stops?: number[] | null;
+            version?: number;
+            lineBet?: number;
+            bought?: boolean;
+          } | null;
           proof: { hash: string; clientSeed: string; nonce: number; serverSeed: string | null };
         };
         const game: Mode =
@@ -126,6 +155,10 @@ function Verifier() {
           from: round.log?.from !== undefined ? String(round.log.from) : "",
           drawn: (round.log?.drawn ?? []).join(" "),
           machine: round.log?.machine ?? "cherry",
+          // Rounds filed before machines had versions are version 1.
+          version: String(round.log?.version ?? 1),
+          lineBet: String(round.log?.lineBet ?? 1),
+          bought: round.log?.bought ? "yes" : "no",
           stops: (round.log?.stops ?? []).join(" "),
         });
         setVerdict(null);
@@ -185,25 +218,81 @@ function Verifier() {
     }
 
     if (mode === "slots") {
-      const cabinet = machineById(fields.machine.trim().toLowerCase());
+      const id = fields.machine.trim().toLowerCase();
+      const version = Number.parseInt(fields.version, 10) || 1;
+      // The machine as it was when it dealt this round: a version-1 spin is
+      // checked against version 1's strips, never against today's.
+      const cabinet = machineVersion(id, version);
+      const bought = /^y/i.test(fields.bought.trim());
+      const lineBet = Number.parseInt(fields.lineBet, 10) || 1;
       const claimed = fields.stops.trim().split(/[\s,]+/).filter(Boolean).map(Number);
       if (!cabinet) {
-        setVerdict({ ok: false, text: <><strong>Which machine?</strong> It has to be one of {MACHINES.map((m) => m.id).join(", ")} — each one has its own reels.</> });
+        setVerdict({
+          ok: false,
+          text: (
+            <>
+              <strong>Which machine?</strong> It has to be one of {MACHINES.map((m) => m.id).join(", ")}, at version 1 or 2 — each has its own reels.
+            </>
+          ),
+        });
         return;
       }
-      if (!Number.isInteger(nonce) || claimed.length !== cabinet.reels.length || claimed.some((stop) => !Number.isInteger(stop))) {
+      const needsStops = !bought;
+      if (!Number.isInteger(nonce) || (needsStops && (claimed.length !== cabinet.reels.length || claimed.some((stop) => !Number.isInteger(stop))))) {
         setVerdict({ ok: false, text: <><strong>Something is missing.</strong> A spin needs its number and one stop for each of the {cabinet.reels.length} reels.</> });
         return;
       }
-      const stops = await stopsFor(cabinet, fields.serverSeed, fields.clientSeed, nonce);
-      const same = stops.join(" ") === claimed.join(" ");
-      // What those stops put on screen, so the check ends in symbols a person
-      // can compare with what they saw, not only in reel positions.
-      const screen = windowAt(cabinet, stops);
-      const paid = payOut(cabinet, screen, 1);
-      rows.push([`Where this seed stops ${cabinet.name}'s reels`, stops.join(" "), same]);
-      rows.push(["What that puts on screen", screen.map((reel) => reel.join("/")).join("  ")]);
-      rows.push(["And what it pays", describeSpin(cabinet, paid)]);
+
+      if (cabinet.version === 1) {
+        const stops = await stopsFor(cabinet, fields.serverSeed, fields.clientSeed, nonce);
+        const same = stops.join(" ") === claimed.join(" ");
+        // What those stops put on screen, so the check ends in symbols a person
+        // can compare with what they saw, not only in reel positions.
+        const screen = windowAt(cabinet, stops);
+        const paid = payOut(cabinet, screen, lineBet);
+        rows.push([`Where this seed stops ${cabinet.name}'s reels`, stops.join(" "), same]);
+        rows.push(["What that puts on screen", screen.map((reel) => reel.join("/")).join("  ")]);
+        rows.push(["And what it pays", describeSpin(cabinet, paid)]);
+        setWork(rows);
+        setVerdict(
+          same
+            ? {
+                ok: true,
+                text: (
+                  <>
+                    <strong>It checks out.</strong> The seed matches the hash the machine showed before the lever moved, and it stops {cabinet.name}
+                    &apos;s reels at <b className="num">{stops.join(" ")}</b> —{" "}
+                    {paid.returned > 0 ? <>which pays <b>{describeSpin(cabinet, paid).toLowerCase()}</b>, the spin you were paid on.</> : <>the spin you saw, and it pays nothing.</>}
+                  </>
+                ),
+              }
+            : { ok: false, text: <><strong>That does not add up.</strong> These seeds stop the reels at {stops.join(" ")}, not where you entered. Check the spin number and that this is the right machine.</> },
+        );
+        return;
+      }
+
+      // Version 2: the whole round — reels, then the bonus game drawn from the
+      // same stream — replayed with the same `play()` the machine room runs.
+      const round = await playFromSeed(cabinet, fields.serverSeed, fields.clientSeed, nonce, lineBet, bought);
+      const same = bought || (round.stops ?? []).join(" ") === claimed.join(" ");
+      if (round.stops && round.window) {
+        rows.push([`Where this seed stops ${cabinet.name}'s reels`, round.stops.join(" "), same]);
+        rows.push(["What that puts on screen", round.window.map((reel) => reel.join("/")).join("  ")]);
+        rows.push(["What the reels pay", round.basePays > 0 ? `${describeSpin(cabinet, round)}: ${formatChips(round.basePays)} chips` : "nothing"]);
+      } else {
+        rows.push(["The reels", "did not turn: the bonus was bought"]);
+      }
+      if (round.bonus) {
+        const detail =
+          round.bonus.kind === "free"
+            ? round.bonus.spins.map((spin, i) => `${i + 1}: ×${spin.multiplier} ${formatChips(spin.pays)}${spin.added ? ` (+${spin.added})` : ""}`).join(" · ")
+            : round.bonus.kind === "hold"
+              ? `${round.bonus.start.length} coins to start, ${round.bonus.respins.length} respins${round.bonus.full ? ", full window" : ""}`
+              : `inner segment ${round.bonus.inner + 1}${round.bonus.outer !== null ? `, outer segment ${round.bonus.outer + 1}` : ""}`;
+        rows.push([`The bonus game, drawn from the same seed: ${describeBonus(round.bonus)}`, detail]);
+        rows.push(["What the bonus game pays", `${formatChips(round.bonus.pays)} chips`]);
+      }
+      rows.push(["The whole round paid", `${formatChips(round.returned)} chips on a stake of ${formatChips(round.staked)}`]);
       setWork(rows);
       setVerdict(
         same
@@ -211,19 +300,16 @@ function Verifier() {
               ok: true,
               text: (
                 <>
-                  <strong>It checks out.</strong> The seed matches the hash the machine showed before the lever moved, and it stops the reels
-                  at <b className="num">{stops.join(" ")}</b> —{" "}
-                  {paid.returned > 0 ? (
-                    <>
-                      which pays <b>{describeSpin(cabinet, paid).toLowerCase()}</b>, the spin you were paid on.
-                    </>
-                  ) : (
-                    <>the spin you saw, and it pays nothing.</>
-                  )}
+                  <strong>It checks out.</strong> The seed matches the hash the machine showed before the {bought ? "bonus was bought" : "lever moved"}, and
+                  it plays the whole round out to <b className="num">{formatChips(round.returned)}</b> chips
+                  {round.bonus ? <>, bonus game included</> : null} — at {formatChips(lineBet)} a line, which is what you should have been paid.
                 </>
               ),
             }
-          : { ok: false, text: <><strong>That does not add up.</strong> These seeds stop the reels at {stops.join(" ")}, not where you entered. Check the spin number and that this is the right machine.</> },
+          : {
+              ok: false,
+              text: <><strong>That does not add up.</strong> These seeds stop the reels at {round.stops?.join(" ")}, not where you entered. Check the spin number, the version and that this is the right machine.</>,
+            },
       );
       return;
     }

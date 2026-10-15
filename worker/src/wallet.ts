@@ -5,11 +5,18 @@ import { zurichDay, zurichYesterday } from "./time";
 
 const now = () => Date.now();
 
+export function cleanName(raw: unknown) {
+  return String(raw ?? "")
+    .replace(/[\u0000-\u001f\u007f<>]/g, "")
+    .trim()
+    .slice(0, 24) || "Player";
+}
+
 export async function getPlayer(env: Env, userId: string) {
   return env.DB.prepare("SELECT * FROM players WHERE user_id = ?").bind(userId).first<Player>();
 }
 
-/** Creates the player on first contact (with starter chips) and keeps the display name in sync. */
+/** Creates the player on first contact (with starter chips) and keeps the display name in sync, unless they picked their own. */
 export async function ensurePlayer(env: Env, userId: string, name: string): Promise<Player> {
   const t = now();
   const { starterChips } = await getSettings(env);
@@ -24,7 +31,7 @@ export async function ensurePlayer(env: Env, userId: string, name: string): Prom
     ),
   ]);
   if (!inserted.meta.changes) {
-    await env.DB.prepare("UPDATE players SET name = ?2, name_lower = ?3 WHERE user_id = ?1 AND name <> ?2")
+    await env.DB.prepare("UPDATE players SET name = ?2, name_lower = ?3 WHERE user_id = ?1 AND name <> ?2 AND name_custom = 0")
       .bind(userId, name, name.toLowerCase())
       .run();
   }

@@ -348,6 +348,23 @@
 .profile-pic-error { position: absolute; top: calc(100% + 8px); left: 0; width: 280px; }
 .profile-copy { display: grid; gap: 2px; margin-right: auto; min-width: 0; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45); }
 .profile-copy h1 { font-family: var(--font-poster); font-size: clamp(2.4rem, 5vw, 3.6rem); font-weight: 900; line-height: 0.95; text-transform: uppercase; overflow-wrap: anywhere; }
+.profile-name-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.profile-name-edit { flex: none; opacity: 0.7; text-shadow: none; }
+.profile-name-edit:hover, .profile-name-edit:focus-visible { opacity: 1; }
+.name-form { display: grid; gap: 8px; max-width: 420px; text-shadow: none; }
+.name-form input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 12px 4px 12px 4px;
+  border: 1px solid var(--line-2);
+  background: var(--layer-1);
+  color: var(--text);
+  font-family: var(--font-poster);
+  font-size: 1.6rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.name-form .form-error { margin: 0; }
 .profile-title {
   justify-self: start;
   padding: 3px 10px;

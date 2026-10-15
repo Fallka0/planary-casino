@@ -8,7 +8,7 @@ import { nextZurichMidnight, zurichDay, zurichWeekStart } from "./time";
 import { admin } from "./admin";
 import { pruneRounds, openCommitment, revealCommitment, roundById, roundsForPlayer, saveRound, sealClientSeed, type RoundRecord } from "./archive";
 import { betRefusal, blockedReason, getSettings, isMuted } from "./policy";
-import { claimBonus, credit, debit, ensurePlayer, getPlayer, transfer } from "./wallet";
+import { claimBonus, cleanName, credit, debit, ensurePlayer, getPlayer, transfer } from "./wallet";
 
 type Vars = { player: Player };
 const app = new Hono<{ Bindings: Env; Variables: Vars }>();
@@ -52,13 +52,6 @@ async function sweepRounds(env: Env) {
       Date.now(),
     )
     .run();
-}
-
-function cleanName(raw: unknown) {
-  return String(raw ?? "")
-    .replace(/[\u0000-\u001f\u007f<>]/g, "")
-    .trim()
-    .slice(0, 24) || "Player";
 }
 
 /**

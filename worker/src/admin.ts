@@ -432,6 +432,19 @@ admin.post("/players/:id/bio/remove", async (c) => {
   return c.json({ ok: true });
 });
 
+/** A chosen name that breaks the rules goes back to the Planary account name on their next visit. */
+admin.post("/players/:id/name/reset", async (c) => {
+  const staff = c.get("staff");
+  if (!can(staff, "moderate")) return c.json(denied(), 403);
+  const id = c.req.param("id");
+  const p = await c.env.DB.prepare("SELECT name FROM players WHERE user_id = ?").bind(id).first<{ name: string }>();
+  if (!p) return c.json({ error: "Player not found." }, 404);
+  await c.env.DB.prepare("UPDATE players SET name_custom = 0 WHERE user_id = ?").bind(id).run();
+  await audit(c.env, staff, "name.reset", id, { was: p.name });
+  await notify(c.env, id, "staff", null, { text: "Your casino name was reset because it broke the house rules." });
+  return c.json({ ok: true });
+});
+
 admin.post("/players/:id/notes", async (c) => {
   const staff = c.get("staff");
   if (!can(staff, "note")) return c.json(denied(), 403);

@@ -209,22 +209,28 @@ export default function RulesPage() {
         <p className="rules-lede">
           A slot machine is normally the one game in a casino where you cannot see the odds: you are shown the symbols and
           never how many of each are on the reel, so there is no way to work out what a combination is worth or how often
-          it lands. All three machines here publish their reel strips instead.
+          it lands. All three machines here publish their reel strips instead — and their bonus games&apos; wheels, coin tables and
+          multipliers with them.
         </p>
         <div className="rules-cols">
           <div>
             <h3>House rules</h3>
             <ul className="rules-list compact">
               <li>
-                Three machines: Cherry Press (three reels, one line), Nine Window (three by three, five lines) and Night
-                Press (five reels, twenty lines, with free spins).
+                Three machines: Lunar Press (three reels, one line, the Orbit Wheel), Nine Moons (three by three, five lines,
+                Hold &amp; Win) and Supernova (five reels, twenty lines, expanding wilds and free spins).
               </li>
               <li>
                 A line pays for the run of identical symbols starting at the leftmost reel. Each symbol has its own pay
                 per run length, which is why a single cherry can pay on a classic machine.
               </li>
               <li>Stakes are per line, so a five-line machine costs five times the line stake each spin.</li>
-              <li>A free spin stakes nothing, is played at the stake that won it, and cannot win further free spins.</li>
+              <li>
+                A bonus game is drawn from the same committed seed as the spin that started it, so it is fixed before the lever
+                moves and checked as one round. Free spins stake nothing and pay at the stake that won them, times a
+                multiplier that rises with every free spin.
+              </li>
+              <li>The bonus can be bought outright; its price is set so that buying returns the same 96% as spinning.</li>
               <li>Every reel strip is published in the open, and each machine prints its own return on the cabinet.</li>
             </ul>
           </div>
@@ -237,6 +243,7 @@ export default function RulesPage() {
                   <th scope="col">Lines</th>
                   <th scope="col">Returns</th>
                   <th scope="col">Pays on</th>
+                  <th scope="col">Bonus</th>
                 </tr>
               </thead>
               <tbody>
@@ -246,13 +253,15 @@ export default function RulesPage() {
                     <td>{machine.lines.length}</td>
                     <td>{(machine.rtp * 100).toFixed(2)}%</td>
                     <td>{(machine.hitRate * 100).toFixed(1)}% of spins</td>
+                    <td>{machine.feature ? (machine.feature.kind === "wheel" ? "Orbit Wheel" : machine.feature.kind === "hold" ? "Hold & Win" : "Free spins") : "—"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
             <p className="rules-note">
-              These are not estimates. Each one is worked out from the published strips and checked against every window
-              the machine can show — 24.3 million of them on Night Press.
+              These are not estimates. Each one is worked out from the published strips and bonus tables, checked against
+              every window the machine can show — 39 million of them on Supernova — and against hundreds of thousands of
+              bonus games played by the machine&apos;s own code.
             </p>
           </div>
         </div>

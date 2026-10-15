@@ -58,6 +58,7 @@ export const CATALOG: Item[] = [
   { id: "title-whale", kind: "title", name: "Whale", tier: "legendary", price: null, blurb: "For holding 100'000 chips.", reward: "balance_100k" },
   { id: "title-champion", kind: "title", name: "Champion", tier: "legendary", price: null, blurb: "For a week at number one.", reward: "weekly_top" },
   { id: "title-bookbinder", kind: "title", name: "Bookbinder", tier: "rare", price: null, blurb: "For finishing the book.", reward: "grim_plain" },
+  { id: "title-goat", kind: "title", name: "GOAT", tier: "legendary", price: null, blurb: "For every blackjack badge.", reward: "bj_goat" },
 
   // Blackjack card backs (the dealer's face-down card and the shuffle, on your screen)
   { id: "cardback-navy", kind: "cardback", name: "Navy lattice", tier: "common", price: 1000, blurb: "A classic club deck." },

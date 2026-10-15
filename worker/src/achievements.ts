@@ -33,6 +33,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: "four_hands", name: "Four-Way Split", description: "Split into four hands in one round.", category: "blackjack", grade: 3, glyph: "4" },
   { id: "natural_10", name: "Ten Naturals", description: "Get ten blackjacks. Unlocks the Twenty-one banner.", category: "blackjack", grade: 3, glyph: "21×10", progress: { stat: "bj_naturals", target: 10 } },
   { id: "bj_hands_1000", name: "Card Shark", description: "Play 1'000 rounds of blackjack. Unlocks the Card Shark title.", category: "blackjack", grade: 4, glyph: "1K", progress: { stat: "bj_hands", target: 1000 } },
+  { id: "bj_goat", name: "GOAT", description: "Earn every other blackjack badge. Unlocks the GOAT title.", category: "blackjack", grade: 4, glyph: "GOAT", secret: true },
 
   // Roulette
   { id: "first_spin", name: "First Spin", description: "Bet on your first roulette spin.", category: "roulette", grade: 1, glyph: "@wheel" },
@@ -81,6 +82,9 @@ export const ACHIEVEMENTS: Achievement[] = [
 ];
 
 export const ACHIEVEMENT_MAP = new Map(ACHIEVEMENTS.map((a) => [a.id, a]));
+
+/** Every blackjack badge GOAT asks for — all of them but itself. */
+const BLACKJACK_SET = ACHIEVEMENTS.filter((a) => a.category === "blackjack" && a.id !== "bj_goat").map((a) => a.id);
 
 // ── Counters ─────────────────────────────────────────
 
@@ -141,7 +145,17 @@ export async function unlock(env: Env, userId: string, ids: string[]): Promise<A
     }
     await notify(env, userId, "achievement", null, { id, rewards: rewards.map((r) => r.id) });
   }
+  if (fresh.some((a) => a.category === "blackjack" && a.id !== "bj_goat")) fresh.push(...(await checkGoat(env, userId)));
   return fresh;
+}
+
+/** GOAT is the last blackjack badge: it unlocks once all the others are in. */
+async function checkGoat(env: Env, userId: string): Promise<Achievement[]> {
+  const placeholders = BLACKJACK_SET.map((_, i) => `?${i + 2}`).join(",");
+  const row = await env.DB.prepare(`SELECT COUNT(*) AS n FROM achievements WHERE user_id = ?1 AND achievement_id IN (${placeholders})`)
+    .bind(userId, ...BLACKJACK_SET)
+    .first<{ n: number }>();
+  return (row?.n ?? 0) >= BLACKJACK_SET.length ? unlock(env, userId, ["bj_goat"]) : [];
 }
 
 /** The six bindings, in the order they unlock. Mirrors shared decks in planary-grimoire. */
@@ -203,7 +217,9 @@ export async function checkLive(env: Env, userId: string) {
   if (live.balance >= 25_000) ids.push("balance_25k");
   if (live.balance >= 100_000) ids.push("balance_100k");
   if (live.bonus_streak >= 7) ids.push("bonus_streak_7");
-  return ids.length ? unlock(env, userId, ids) : [];
+  const fresh = ids.length ? await unlock(env, userId, ids) : [];
+  // Catches players who had the full blackjack set before GOAT existed.
+  return [...fresh, ...(await checkGoat(env, userId))];
 }
 
 // ── Rounds reported by the game servers ──────────────
