@@ -5,6 +5,7 @@ import type { Env, Player } from "./env";
 import { notify } from "./notify";
 import { isMuted } from "./policy";
 import { zurichWeekStart } from "./time";
+import { cleanName } from "./wallet";
 
 type Vars = { player: Player };
 export const social = new Hono<{ Bindings: Env; Variables: Vars }>();
@@ -92,6 +93,8 @@ social.get("/profile/:id", async (c) => {
 
   return c.json({
     ...badge(p),
+    // Only you need to know whether your name is your own pick or the account's.
+    customName: rel === "self" ? Boolean(p.name_custom) : undefined,
     bio: p.bio,
     banner: p.banner,
     joinedAt: p.created_at,
@@ -114,7 +117,24 @@ social.get("/profile/:id", async (c) => {
 
 social.post("/profile", async (c) => {
   const me = c.get("player");
-  const body = await c.req.json<{ bio?: string | null; showcase?: string[] }>();
+  const body = await c.req.json<{ name?: string | null; bio?: string | null; showcase?: string[] }>();
+  if (body.name !== undefined) {
+    // Blank hands the name back to the Planary account; the next request syncs it.
+    const raw = body.name === null ? "" : String(body.name).trim();
+    if (!raw) {
+      await c.env.DB.prepare("UPDATE players SET name_custom = 0 WHERE user_id = ?").bind(me.user_id).run();
+    } else {
+      const name = cleanName(raw);
+      if (name.length < 2) return c.json({ error: "Names need at least two characters." }, 400);
+      const taken = await c.env.DB.prepare("SELECT 1 FROM players WHERE name_lower = ? AND user_id <> ? LIMIT 1")
+        .bind(name.toLowerCase(), me.user_id)
+        .first();
+      if (taken) return c.json({ error: "Another player already goes by that name." }, 409);
+      await c.env.DB.prepare("UPDATE players SET name = ?, name_lower = ?, name_custom = 1 WHERE user_id = ?")
+        .bind(name, name.toLowerCase(), me.user_id)
+        .run();
+    }
+  }
   if (body.bio !== undefined) {
     const bio = body.bio === null ? null : String(body.bio).replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, "").trim().slice(0, 160) || null;
     await c.env.DB.prepare("UPDATE players SET bio = ? WHERE user_id = ?").bind(bio, me.user_id).run();

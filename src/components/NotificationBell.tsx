@@ -152,7 +152,7 @@ export function NotificationBell() {
   const [now, setNow] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const panelId = useId();
-  const { data, reload } = useCasino<{ notifications: NotificationItem[] }>(open ? "/v1/notifications" : null);
+  const { data, error, reload } = useCasino<{ notifications: NotificationItem[] }>(open ? "/v1/notifications" : null);
   const act = useCasinoAction();
 
   useEffect(() => {
@@ -192,7 +192,10 @@ export function NotificationBell() {
           <div className="bell-head">
             <h2>Notifications</h2>
           </div>
-          {!data ? (
+          {!data && error ? (
+            // Without this a failed load leaves the placeholder up for good, which reads as an empty panel.
+            <p className="form-error bell-empty">Couldn't load your notifications. Try again in a moment.</p>
+          ) : !data ? (
             <div className="panel-skeleton" aria-hidden="true" />
           ) : data.notifications.length === 0 ? (
             <p className="bell-empty">Nothing yet. Friend requests, invites and new achievements show up here.</p>

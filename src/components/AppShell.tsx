@@ -216,7 +216,7 @@ function AccountButton({ name, email }: { name: string; email: string }) {
       <button className="account-btn" aria-expanded={open} aria-controls={panelId} onClick={() => setOpen((v) => !v)}>
         <Avatar player={me ?? { name, avatar: null, border: null }} size={36} />
         <span className="account-copy">
-          <span className="account-name">{name}</span>
+          <span className="account-name">{me?.name ?? name}</span>
           <span className="account-mail">{me?.title ?? email}</span>
         </span>
       </button>

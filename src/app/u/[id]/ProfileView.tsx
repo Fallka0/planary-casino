@@ -105,6 +105,65 @@ function BioEditor({ bio, onDone }: { bio: string | null; onDone: () => void }) 
   );
 }
 
+function NameEditor({ name, custom, onDone }: { name: string; custom: boolean; onDone: () => void }) {
+  const act = useCasinoAction();
+  const [value, setValue] = useState(name);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save(next: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await act("/v1/profile", { name: next });
+      onDone();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't save the name.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form
+      className="name-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (value.trim() === name) onDone();
+        else void save(value);
+      }}
+    >
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value.slice(0, 24))}
+        maxLength={24}
+        aria-label="Your casino name"
+        autoFocus
+        onKeyDown={(e) => e.key === "Escape" && onDone()}
+      />
+      <div className="bio-actions">
+        <span className="bio-count">{value.length}/24</span>
+        {custom ? (
+          <button type="button" className="link-btn" onClick={() => void save("")} disabled={busy}>
+            Use my Planary name
+          </button>
+        ) : null}
+        <button type="button" className="btn btn-sm btn-quiet" onClick={onDone}>
+          Cancel
+        </button>
+        <button type="submit" className="btn btn-sm btn-cherry" disabled={busy || value.trim().length < 2}>
+          Save
+        </button>
+      </div>
+      {error ? (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
 function ShowcasePicker({ owned, pinned, onDone }: { owned: AchievementEntry[]; pinned: string[]; onDone: () => void }) {
   const act = useCasinoAction();
   const [picked, setPicked] = useState<string[]>(pinned);
@@ -208,6 +267,7 @@ export function ProfileView({ id }: { id: string }) {
   const self = p?.relation === "self";
   const { data: mine } = useCasino<{ achievements: AchievementEntry[] }>(self ? "/v1/achievements" : null);
   const [editingBio, setEditingBio] = useState(false);
+  const [editingName, setEditingName] = useState(false);
   const [picking, setPicking] = useState(false);
 
   if (loading) return null;
@@ -234,7 +294,18 @@ export function ProfileView({ id }: { id: string }) {
           </div>
           <div className="profile-copy">
             {p.title ? <span className="profile-title">{p.title}</span> : null}
-            <h1 id="profile-name">{p.name}</h1>
+            {editingName ? (
+              <NameEditor name={p.name} custom={Boolean(p.customName)} onDone={() => setEditingName(false)} />
+            ) : (
+              <div className="profile-name-row">
+                <h1 id="profile-name">{p.name}</h1>
+                {self ? (
+                  <button className="icon-btn profile-name-edit" onClick={() => setEditingName(true)} aria-label="Edit name">
+                    <Pencil size={16} strokeWidth={2} aria-hidden="true" />
+                  </button>
+                ) : null}
+              </div>
+            )}
             <p className="profile-meta">
               {describePresence(p.presence)} · Joined {joined(p.joinedAt)}
             </p>

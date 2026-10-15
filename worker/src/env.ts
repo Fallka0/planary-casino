@@ -15,6 +15,8 @@ export interface Env {
 export interface Player {
   user_id: string;
   name: string;
+  /** 1 once the player picked their own name; the account sync then leaves it alone. */
+  name_custom: number;
   balance: number;
   bonus_day: string | null;
   presence_where: string | null;

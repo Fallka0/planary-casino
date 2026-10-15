@@ -181,6 +181,8 @@ export interface AchievementEntry {
 }
 
 export interface Profile extends PlayerBadge {
+  /** Your own profile only: true when you picked the name rather than taking the account's. */
+  customName?: boolean;
   bio: string | null;
   banner: string | null;
   joinedAt: number;

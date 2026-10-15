@@ -83,15 +83,15 @@ export const GAMES: Game[] = [
   {
     id: "slots",
     name: "Slots",
-    tagline: "Three machines with their reel strips published.",
+    tagline: "Three planetary machines, with bonus games and their odds in the open.",
     blurb:
-      "Now open. A classic three-reeler, a nine-window grid and a five-reel night machine — each with its reel strips in the open and its return printed on the cabinet.",
+      "Lunar Press spins the Orbit Wheel, Nine Moons locks its coins for Hold & Win, and Supernova runs free spins with a climbing multiplier — every reel strip and bonus table published, every return printed on the cabinet.",
     subdomain: "slots",
     players: "1 player",
     tags: ["Solo", "Quick"],
     caption: "Pull the lever",
     status: "live",
-    rules: ["Every strip is published", "96% back, checked against every window", "Each spin committed before the lever moves"],
+    rules: ["Every strip and bonus table is published", "96% back, bonus games included", "Each round committed before the lever moves"],
   },
 ];
 
