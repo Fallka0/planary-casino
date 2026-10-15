@@ -413,34 +413,40 @@ app.post("/v1/friends/remove", async (c) => {
 
 /**
  * Ranks the players who played between ?1 and ?2 by their return: table winnings
- * divided by the bankroll they had that week, so doubling 5k counts the same as
- * doubling 20k. The bankroll is the balance at ?1 plus every chip that came in
- * from outside the tables (bonuses, adjustments) before ?2, plus what friends
- * sent on balance — rewinding the current balance through the ledger gives the
- * balance at ?1.
+ * as a share of their peak capital, so doubling 5k counts the same as doubling
+ * 20k.
  *
- * Achievement chips count net too: chips set aside to be claimed again and
- * then claimed back are no new money.
- *
- * Transfers count net. Counted one by one, chips passed back and forth would
- * grow both bankrolls on every trip. A player who sent more than they got
- * keeps their full bankroll, so parking chips with a friend and playing the
- * rest doesn't inflate a return either.
+ * Peak capital is the most a player had to play with that week: their balance
+ * at ?1, plus the highest running total of chips that came in from outside the
+ * tables before ?2 (bonuses, gifts, claims, sales, minus what went out). Every
+ * flow counts in order, so
+ *  - chips borrowed from a friend and played with count, however they leave again;
+ *  - chips passed back and forth count once, at their high point, not per trip;
+ *  - parking chips with a friend doesn't shrink it: the peak is already set;
+ *  - chips set aside and claimed back (0009) only ever return it to where it was.
+ * The balance at ?1 is the current balance rewound through the ledger.
  */
 function returnsQuery(filter: string, limit: number) {
-  return `SELECT ${BADGE_COLUMNS}, w.net, MAX(p.balance + w.rewind, 1) AS bankroll
-    FROM (
-      SELECT l.user_id,
-        SUM(CASE WHEN l.kind = 'game' AND l.created_at < ?2 THEN l.amount ELSE 0 END) AS net,
-        SUM(CASE WHEN l.kind = 'game' AND l.created_at < ?2 THEN 1 ELSE 0 END) AS entries,
-        SUM(CASE WHEN l.kind NOT IN ('game', 'transfer_in', 'transfer_out', 'achievement') AND l.amount > 0 AND l.created_at < ?2 THEN l.amount ELSE 0 END)
-          + MAX(SUM(CASE WHEN l.kind IN ('transfer_in', 'transfer_out') AND l.created_at < ?2 THEN l.amount ELSE 0 END), 0)
-          + MAX(SUM(CASE WHEN l.kind = 'achievement' AND l.created_at < ?2 THEN l.amount ELSE 0 END), 0)
-          - SUM(l.amount) AS rewind
-      FROM ledger l WHERE l.created_at >= ?1 GROUP BY l.user_id
-    ) w JOIN players p ON p.user_id = w.user_id
+  return `WITH week AS (
+      SELECT l.id, l.user_id, l.kind, l.amount, l.created_at FROM ledger l WHERE l.created_at >= ?1
+    ),
+    brought AS (
+      SELECT user_id, SUM(CASE WHEN kind <> 'game' THEN amount ELSE 0 END)
+               OVER (PARTITION BY user_id ORDER BY created_at, id ROWS UNBOUNDED PRECEDING) AS upto
+      FROM week WHERE created_at < ?2
+    ),
+    peak AS (SELECT user_id, MAX(0, MAX(upto)) AS most FROM brought GROUP BY user_id),
+    w AS (
+      SELECT user_id,
+        SUM(CASE WHEN kind = 'game' AND created_at < ?2 THEN amount ELSE 0 END) AS net,
+        SUM(CASE WHEN kind = 'game' AND created_at < ?2 THEN 1 ELSE 0 END) AS entries,
+        SUM(amount) AS since
+      FROM week GROUP BY user_id
+    )
+    SELECT ${BADGE_COLUMNS}, w.net, MAX(p.balance - w.since + COALESCE(k.most, 0), 1) AS bankroll
+    FROM w JOIN players p ON p.user_id = w.user_id LEFT JOIN peak k ON k.user_id = w.user_id
     WHERE w.entries > 0 ${filter}
-    ORDER BY CAST(w.net AS REAL) / MAX(p.balance + w.rewind, 1) DESC, w.net DESC, p.name_lower ASC LIMIT ${limit}`;
+    ORDER BY CAST(w.net AS REAL) / MAX(p.balance - w.since + COALESCE(k.most, 0), 1) DESC, w.net DESC, p.name_lower ASC LIMIT ${limit}`;
 }
 
 app.get("/v1/leaderboard", async (c) => {

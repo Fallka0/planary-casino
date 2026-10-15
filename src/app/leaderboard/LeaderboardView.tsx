@@ -17,8 +17,9 @@ export function LeaderboardView() {
       <div className="page-head">
         <h1 id="page-title">Leaderboard</h1>
         <p className="page-sub">
-          Chips won at the tables this week{week ? `, since Monday ${week}` : ""}, as a share of your bankroll: turning 5,000 into
-          10,000 ranks the same as turning 20,000 into 40,000. Bonuses and gifts don&apos;t count as winnings. Resets every Monday.
+          Chips won at the tables this week{week ? `, since Monday ${week}` : ""}, as a share of the most you had to play with: your
+          Monday balance plus the chips you brought in during the week. Turning 5,000 into 10,000 ranks the same as turning 20,000 into
+          40,000. Bonuses and gifts don&apos;t count as winnings. Resets every Monday.
         </p>
       </div>
 
