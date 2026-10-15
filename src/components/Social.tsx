@@ -10,6 +10,8 @@ import { useAuth } from "./AuthProvider";
 interface Unread {
   messages: number;
   notifications: number;
+  /** Unlocked achievements whose chips are still waiting in the Achievements tab. */
+  claims: number;
 }
 
 export interface NotificationItem {
@@ -26,8 +28,10 @@ export interface NotificationItem {
     table?: string;
     id?: string;
     rewards?: string[];
-    /** Chips an achievement paid out. */
+    /** Chips an achievement pays when it's claimed. */
     chips?: number;
+    /** The achievement unlocked with its rewards waiting to be claimed. */
+    claim?: boolean;
     title?: string;
     body?: string;
     text?: string;
@@ -45,7 +49,7 @@ interface Toast {
 }
 
 const SocialContext = createContext<{ unread: Unread; refresh: () => void }>({
-  unread: { messages: 0, notifications: 0 },
+  unread: { messages: 0, notifications: 0, claims: 0 },
   refresh: () => {},
 });
 
@@ -57,7 +61,7 @@ export const useSocial = () => useContext(SocialContext);
  */
 export function SocialProvider({ children }: { children: React.ReactNode }) {
   const { accessToken } = useAuth();
-  const [unread, setUnread] = useState<Unread>({ messages: 0, notifications: 0 });
+  const [unread, setUnread] = useState<Unread>({ messages: 0, notifications: 0, claims: 0 });
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [blocked, setBlocked] = useState<string | null>(null);
 
@@ -131,7 +135,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
           <Link key={t.key} href="/achievements" className="unlock-toast" onClick={() => setToasts((list) => list.slice(1))}>
             <AchievementBadge grade={t.achievement.grade} glyph={t.achievement.glyph} size={58} />
             <span className="unlock-copy">
-              <span className="unlock-kicker">Achievement unlocked{t.chips ? ` · +${formatChips(t.chips)} chips` : ""}</span>
+              <span className="unlock-kicker">Achievement unlocked{t.chips ? ` · claim +${formatChips(t.chips)} chips` : ""}</span>
               <strong>{t.achievement.name}</strong>
             </span>
           </Link>

@@ -120,10 +120,16 @@ function Item({ n, now, onDone }: { n: NotificationItem; now: number; onDone: ()
       text = (
         <>
           Unlocked <strong>{n.achievement?.name ?? "an achievement"}</strong>
-          {n.data?.chips ? ` for ${formatChips(n.data.chips)} chips` : ""}
-          {n.data?.rewards?.length ? ", with a reward in your inventory" : ""}.
+          {n.data?.claim
+            ? `. Claim ${n.data.chips ? `${formatChips(n.data.chips)} chips` : "it"}${n.data.rewards?.length ? " and its reward" : ""} in Achievements.`
+            : `${n.data?.chips ? ` for ${formatChips(n.data.chips)} chips` : ""}${n.data?.rewards?.length ? ", with a reward in your inventory" : ""}.`}
         </>
       );
+      actions = n.data?.claim ? (
+        <Link className="btn btn-sm btn-cherry" href="/achievements" onClick={onDone}>
+          Claim
+        </Link>
+      ) : null;
       break;
   }
 

@@ -177,6 +177,10 @@ export interface AchievementEntry {
   /** Share of all players who own it, 0–1. */
   rarity: number;
   unlockedAt: number | null;
+  /** Unlocked, with its chips and any reward still waiting to be claimed. Only on your own list. */
+  claimable: boolean;
+  /** Cosmetics it hands out when claimed. */
+  rewards?: { id: string; name: string; kind: string }[];
   progress: { value: number; target: number } | null;
 }
 

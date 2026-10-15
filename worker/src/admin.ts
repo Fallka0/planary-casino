@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { roundById, searchRounds } from "./archive";
 import { bankBalance, bankEntry } from "./bank";
 import { cors } from "hono/cors";
-import { ACHIEVEMENT_MAP, ACHIEVEMENTS, achievementsOf, getStats, liveStats, rewardsFor, unlock } from "./achievements";
+import { ACHIEVEMENT_MAP, ACHIEVEMENTS, achievementsOf, getStats, liveStats, rewardsFor, unclaimed, unlock } from "./achievements";
 import { CASES, CATALOG } from "./catalog";
 import type { Env, Player } from "./env";
 import { MARKET_FEE } from "./market";
@@ -518,7 +518,14 @@ admin.get("/players/:id/progress", async (c) => {
     bonus_streak: number;
   }>();
   if (!p) return c.json({ error: "Player not found." }, 404);
-  const [owned, stats, live, settings] = await Promise.all([achievementsOf(c.env, id), getStats(c.env, id), liveStats(c.env, id), getSettings(c.env, true)]);
+  const [owned, stats, live, settings, waiting] = await Promise.all([
+    achievementsOf(c.env, id),
+    getStats(c.env, id),
+    liveStats(c.env, id),
+    getSettings(c.env, true),
+    unclaimed(c.env, id),
+  ]);
+  const toClaim = new Set(waiting);
   const known = new Set(STAT_FIELDS.map((f) => f.key));
   return c.json({
     achievements: ACHIEVEMENTS.map((a) => ({
@@ -531,6 +538,8 @@ admin.get("/players/:id/progress", async (c) => {
       secret: Boolean(a.secret),
       progress: a.progress ?? null,
       unlockedAt: owned.get(a.id) ?? null,
+      /** Unlocked, but the player hasn't collected its chips and cosmetic yet. */
+      unclaimed: toClaim.has(a.id),
       rewards: rewardsFor(a.id).map((item) => ({ id: item.id, name: item.name, kind: item.kind })),
     })),
     stats: {

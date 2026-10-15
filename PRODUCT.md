@@ -25,7 +25,7 @@ One Planary account (the same one used for Planary Wishlist and other Planary ap
 - Chips live in a server-side wallet per Planary account (planary-casino-api worker + D1): 5'000 starter chips, a daily bonus of 500 (resets at midnight Europe/Zurich), transfers between friends. Game servers move chips through the internal wallet API.
 - Friends: search by display name, requests that the other person accepts. Friends see each other's presence (lobby / at a Blackjack table) with a Join link.
 - Leaderboard: chips won at the tables in the current week (Monday 00:00 Europe/Zurich) as a percentage of the player's bankroll (balance at week start plus bonuses and, net of what they sent, chips received from friends during the week), friends or everyone. Bonuses and transfers don't count as winnings.
-- Achievements pay chips once when they unlock, by grade: 500, 1'000, 2'500, 5'000. Some also hand out a cosmetic that stays with the player.
+- Achievements unlock on their own; their chips (by grade: 500, 1'000, 2'500, 5'000) and any reward cosmetic wait in the Achievements tab until the player claims them. Reward cosmetics stay with the player.
 - Market (casino.planary.ch/market): cosmetics come out of cases bought from the house for chips, provably fair the same way a table round is, and can be sold to other players for chips. The house keeps 5% of each sale. Case chips and that fee go into the house's bank; achievement rewards can't be traded.
 - No sample or demo data anywhere: empty states instead.
 - Swiss formatting for numbers (1'000).

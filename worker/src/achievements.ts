@@ -1,7 +1,6 @@
 import { ITEMS } from "./catalog";
 import type { Env } from "./env";
 import { notify } from "./notify";
-import { credit } from "./wallet";
 
 export type Category = "blackjack" | "poker" | "roulette" | "grimoire" | "chips" | "social" | "collector";
 /** Visual weight of the badge; rarity (how many players own it) is computed live. */
@@ -147,13 +146,15 @@ export function rewardsFor(achievementId: string) {
 }
 
 /**
- * Unlocks what isn't unlocked yet, pays its chips, hands out reward cosmetics,
- * and notifies. Returns the newly unlocked.
+ * Unlocks what isn't unlocked yet and notifies. Returns the newly unlocked.
  *
- * Both side effects can be turned off, which only an operator granting a badge
- * by hand ever wants: a replacement for one that was wrongly revoked should not
- * pay out or hand over a second copy of the cosmetic, and a quiet fix-up should
- * not ring the player's bell for something they already know they have.
+ * Nothing is paid here: the chips and any reward cosmetic wait in the
+ * Achievements tab until the player claims them (`claim`).
+ *
+ * Both of those can be turned off, which only an operator granting a badge by
+ * hand ever wants: a replacement for one that was wrongly revoked comes
+ * already claimed, so it pays nothing twice, and a quiet fix-up doesn't ring
+ * the player's bell for something they already know they have.
  */
 export async function unlock(
   env: Env,
@@ -166,24 +167,15 @@ export async function unlock(
   for (const id of new Set(ids)) {
     const achievement = ACHIEVEMENT_MAP.get(id);
     if (!achievement) continue;
-    const res = await env.DB.prepare("INSERT OR IGNORE INTO achievements (user_id, achievement_id, unlocked_at) VALUES (?, ?, ?)")
-      .bind(userId, id, t)
+    const res = await env.DB.prepare("INSERT OR IGNORE INTO achievements (user_id, achievement_id, unlocked_at, claimed_at) VALUES (?, ?, ?, ?)")
+      .bind(userId, id, t, rewards ? null : t)
       .run();
     if (!res.meta.changes) continue;
     fresh.push(achievement);
-    const granted = rewards ? rewardsFor(id) : [];
-    if (granted.length) {
-      await env.DB.batch(
-        granted.map((item) =>
-          env.DB.prepare(
-            "INSERT INTO inventory (user_id, item_id, source, created_at) SELECT ?1, ?2, 'achievement', ?3 WHERE NOT EXISTS (SELECT 1 FROM inventory WHERE user_id = ?1 AND item_id = ?2)",
-          ).bind(userId, item.id, t),
-        ),
-      );
+    if (announce) {
+      const waiting = rewards ? { chips: GRADE_CHIPS[achievement.grade], rewards: rewardsFor(id).map((r) => r.id), claim: true } : {};
+      await notify(env, userId, "achievement", null, { id, ...waiting });
     }
-    const chips = rewards ? GRADE_CHIPS[achievement.grade] : 0;
-    if (chips) await credit(env, userId, chips, { kind: "achievement", ref: id });
-    if (announce) await notify(env, userId, "achievement", null, { id, rewards: granted.map((r) => r.id), chips });
   }
   if (fresh.some((a) => a.category === "blackjack" && a.id !== "bj_goat")) fresh.push(...(await checkGoat(env, userId)));
   return fresh;
@@ -196,6 +188,43 @@ async function checkGoat(env: Env, userId: string): Promise<Achievement[]> {
     .bind(userId, ...BLACKJACK_SET)
     .first<{ n: number }>();
   return (row?.n ?? 0) >= BLACKJACK_SET.length ? unlock(env, userId, ["bj_goat"]) : [];
+}
+
+/**
+ * Pays out an unlocked achievement: its chips, and its reward cosmetics if it
+ * has any. Returns what it paid, or null when there was nothing to claim (not
+ * unlocked, or claimed already).
+ *
+ * Marking it claimed is the guard: it only succeeds once, and the chips only
+ * move if it did, in the same transaction. Reward cosmetics are one per
+ * player, so their inserts are safe to repeat.
+ */
+export async function claim(env: Env, userId: string, id: string) {
+  const achievement = ACHIEVEMENT_MAP.get(id);
+  if (!achievement) return null;
+  const chips = GRADE_CHIPS[achievement.grade];
+  const items = rewardsFor(id);
+  const t = Date.now();
+  const [claimed] = await env.DB.batch([
+    env.DB.prepare("UPDATE achievements SET claimed_at = ?3 WHERE user_id = ?1 AND achievement_id = ?2 AND claimed_at IS NULL").bind(userId, id, t),
+    env.DB.prepare("UPDATE players SET balance = balance + ?2 WHERE user_id = ?1 AND changes() = 1").bind(userId, chips),
+    env.DB.prepare("INSERT INTO ledger (user_id, amount, kind, ref, created_at) SELECT ?1, ?2, 'achievement', ?3, ?4 WHERE changes() = 1").bind(userId, chips, id, t),
+    ...items.map((item) =>
+      env.DB.prepare(
+        `INSERT INTO inventory (user_id, item_id, source, created_at) SELECT ?1, ?2, 'achievement', ?3
+         WHERE NOT EXISTS (SELECT 1 FROM inventory WHERE user_id = ?1 AND item_id = ?2)
+           AND EXISTS (SELECT 1 FROM achievements WHERE user_id = ?1 AND achievement_id = ?4 AND claimed_at IS NOT NULL)`,
+      ).bind(userId, item.id, t, id),
+    ),
+  ]);
+  if (!claimed.meta.changes) return null;
+  return { id, chips, items: items.map((i) => i.id) };
+}
+
+/** Unlocked achievements whose rewards are still waiting to be claimed. */
+export async function unclaimed(env: Env, userId: string) {
+  const { results } = await env.DB.prepare("SELECT achievement_id AS id FROM achievements WHERE user_id = ? AND claimed_at IS NULL").bind(userId).all<{ id: string }>();
+  return results.map((r) => r.id).filter((id) => ACHIEVEMENT_MAP.has(id));
 }
 
 /** The six bindings, in the order they unlock. Mirrors shared decks in planary-grimoire. */
@@ -404,12 +433,14 @@ export async function achievementsOf(env: Env, userId: string) {
 
 /** Every achievement with its rarity, and for `userId` whether it's unlocked and how far along they are. */
 export async function achievementList(env: Env, userId: string, withProgress: boolean) {
-  const [rarity, owned, stats, live] = await Promise.all([
+  const [rarity, owned, stats, live, waiting] = await Promise.all([
     rarities(env),
     achievementsOf(env, userId),
     withProgress ? getStats(env, userId) : Promise.resolve({} as Record<string, number>),
     withProgress ? liveStats(env, userId) : Promise.resolve(null),
+    withProgress ? unclaimed(env, userId) : Promise.resolve([] as string[]),
   ]);
+  const toClaim = new Set(waiting);
   const values: Record<string, number> = { ...stats, ...(live ?? {}) };
   return ACHIEVEMENTS.map((a) => {
     const unlockedAt = owned.get(a.id) ?? null;
@@ -425,6 +456,10 @@ export async function achievementList(env: Env, userId: string, withProgress: bo
       secret: Boolean(a.secret),
       rarity: rarity(a.id),
       unlockedAt,
+      /** Unlocked, with its chips and rewards still waiting. Only ever true on your own list. */
+      claimable: toClaim.has(a.id),
+      // A secret keeps its reward secret too, until it's unlocked.
+      rewards: hidden ? [] : rewardsFor(a.id).map((item) => ({ id: item.id, name: item.name, kind: item.kind })),
       progress:
         withProgress && a.progress && !unlockedAt ? { value: Math.min(values[a.progress.stat] ?? 0, a.progress.target), target: a.progress.target } : null,
     };

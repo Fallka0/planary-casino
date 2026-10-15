@@ -114,7 +114,7 @@ function Sidebar() {
           <Link key={href} href={href} className="side-link" aria-current={isActive(pathname, href) ? "page" : undefined}>
             <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
             {label}
-            {href === "/messages" ? <UnreadTag /> : null}
+            {href === "/messages" ? <UnreadTag /> : href === "/achievements" ? <ClaimTag /> : null}
           </Link>
         ))}
       </nav>
@@ -186,6 +186,16 @@ function UnreadTag() {
   return unread.messages ? (
     <span className="count-tag side-count" aria-label={`${unread.messages} unread`}>
       {unread.messages > 9 ? "9+" : unread.messages}
+    </span>
+  ) : null;
+}
+
+/** Achievements with chips still waiting to be claimed. */
+function ClaimTag() {
+  const { unread } = useSocial();
+  return unread.claims ? (
+    <span className="count-tag side-count" aria-label={`${unread.claims} to claim`}>
+      {unread.claims > 9 ? "9+" : unread.claims}
     </span>
   ) : null;
 }
@@ -312,7 +322,7 @@ function TabBar() {
         <Link key={href} href={href} className="tab" aria-current={isActive(pathname, href) ? "page" : undefined}>
           <Icon size={20} strokeWidth={1.8} aria-hidden="true" />
           <span>{label}</span>
-          {href === "/messages" ? <UnreadTag /> : null}
+          {href === "/messages" ? <UnreadTag /> : href === "/achievements" ? <ClaimTag /> : null}
         </Link>
       ))}
     </nav>

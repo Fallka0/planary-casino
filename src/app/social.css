@@ -774,3 +774,10 @@ a.person-name:hover { text-decoration: underline; text-underline-offset: 3px; }
 }
 
 .achv-foot .achv-chips { color: var(--text-3); font-size: 0.78rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.achv.is-claimable { background: var(--layer-1); border-color: var(--line-2); }
+.achv-claim { justify-self: start; margin-top: 6px; }
+.achv-claims { display: flex; align-items: center; gap: 16px; padding: 16px 20px; border-radius: var(--r-lg); background: var(--layer-1); border: 1px solid var(--line-2); }
+.achv-claims > span { display: grid; line-height: 1.2; }
+.achv-claims small { color: var(--text-3); font-size: 0.74rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.achv-claims strong { font-family: var(--font-poster); font-size: 1.5rem; font-weight: 800; text-transform: uppercase; font-variant-numeric: tabular-nums; }
+.achv-claims span span { color: var(--text-3); font-size: 0.86rem; }

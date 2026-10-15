@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { ACHIEVEMENT_MAP, achievementList, getStats, unlock } from "./achievements";
+import { ACHIEVEMENT_MAP, achievementList, checkLive, claim, getStats, unclaimed, unlock } from "./achievements";
 import { ITEMS } from "./catalog";
 import type { Env, Player } from "./env";
 import { notify } from "./notify";
@@ -61,11 +61,12 @@ export function parseShowcase(raw: string | null): string[] {
 }
 
 export async function unreadCounts(env: Env, userId: string) {
-  const [messages, notifications] = await Promise.all([
+  const [messages, notifications, claims] = await Promise.all([
     env.DB.prepare("SELECT COUNT(*) AS n FROM messages WHERE recipient_id = ? AND read_at IS NULL").bind(userId).first<{ n: number }>(),
     env.DB.prepare("SELECT COUNT(*) AS n FROM notifications WHERE user_id = ? AND read_at IS NULL").bind(userId).first<{ n: number }>(),
+    env.DB.prepare("SELECT COUNT(*) AS n FROM achievements WHERE user_id = ? AND claimed_at IS NULL").bind(userId).first<{ n: number }>(),
   ]);
-  return { messages: messages?.n ?? 0, notifications: notifications?.n ?? 0 };
+  return { messages: messages?.n ?? 0, notifications: notifications?.n ?? 0, claims: claims?.n ?? 0 };
 }
 
 // ── Profiles ─────────────────────────────────────────
@@ -184,6 +185,30 @@ social.post("/profile/avatar/remove", async (c) => {
 });
 
 // ── Achievements ─────────────────────────────────────
+
+/** Pays out one unlocked achievement: its chips and any reward cosmetic. */
+social.post("/achievements/:id/claim", async (c) => {
+  const me = c.get("player").user_id;
+  const paid = await claim(c.env, me, c.req.param("id"));
+  if (!paid) return c.json({ error: "Nothing to claim there. It may already be yours." }, 409);
+  // The chips can tip a balance milestone, which is an achievement of its own.
+  const unlocked = await checkLive(c.env, me);
+  const balance = await c.env.DB.prepare("SELECT balance FROM players WHERE user_id = ?").bind(me).first<{ balance: number }>();
+  return c.json({ claimed: [paid], balance: balance?.balance ?? 0, unlocked: unlocked.map((a) => a.id) });
+});
+
+/** Everything waiting, in one go. */
+social.post("/achievements/claim-all", async (c) => {
+  const me = c.get("player").user_id;
+  const claimed = [];
+  for (const id of await unclaimed(c.env, me)) {
+    const paid = await claim(c.env, me, id);
+    if (paid) claimed.push(paid);
+  }
+  const unlocked = await checkLive(c.env, me);
+  const balance = await c.env.DB.prepare("SELECT balance FROM players WHERE user_id = ?").bind(me).first<{ balance: number }>();
+  return c.json({ claimed, balance: balance?.balance ?? 0, unlocked: unlocked.map((a) => a.id) });
+});
 
 social.get("/achievements", async (c) => {
   const me = c.get("player").user_id;
