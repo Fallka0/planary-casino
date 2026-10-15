@@ -212,6 +212,12 @@
         "value": "8px",
         "createdAt": "2026-10-15T08:07:58.738Z",
         "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(.34, 1.56, .64, 1)",
+        "createdAt": "2026-10-15T08:13:43.504Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (README choreography table, Recoil beat); the user asked to implement it"
       }
     ]
   }
