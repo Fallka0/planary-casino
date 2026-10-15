@@ -1,0 +1,224 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(0.3, 1.5, 0.6, 1)",
+        "createdAt": "2026-10-15T08:07:57.508Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#136f6f",
+        "createdAt": "2026-10-15T08:07:57.549Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#26246b",
+        "createdAt": "2026-10-15T08:07:57.584Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#6fe3ec",
+        "createdAt": "2026-10-15T08:07:57.620Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#b48cff",
+        "createdAt": "2026-10-15T08:07:57.656Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#ff7a3d",
+        "createdAt": "2026-10-15T08:07:57.691Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "1.2rem",
+        "createdAt": "2026-10-15T08:07:57.727Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "1.3rem",
+        "createdAt": "2026-10-15T08:07:57.765Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "1.45rem",
+        "createdAt": "2026-10-15T08:07:57.801Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "1.4rem",
+        "createdAt": "2026-10-15T08:07:57.837Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "1.6rem",
+        "createdAt": "2026-10-15T08:07:57.873Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "10px",
+        "createdAt": "2026-10-15T08:07:57.908Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "11px",
+        "createdAt": "2026-10-15T08:07:57.944Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "13px",
+        "createdAt": "2026-10-15T08:07:57.980Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "16px",
+        "createdAt": "2026-10-15T08:07:58.015Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "16px !important",
+        "createdAt": "2026-10-15T08:07:58.051Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "18px",
+        "createdAt": "2026-10-15T08:07:58.088Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "18px !important",
+        "createdAt": "2026-10-15T08:07:58.124Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "2.4rem",
+        "createdAt": "2026-10-15T08:07:58.159Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "2.6rem",
+        "createdAt": "2026-10-15T08:07:58.195Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "28px !important",
+        "createdAt": "2026-10-15T08:07:58.231Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "30px",
+        "createdAt": "2026-10-15T08:07:58.266Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "3rem",
+        "createdAt": "2026-10-15T08:07:58.302Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "6px !important",
+        "createdAt": "2026-10-15T08:07:58.337Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "8px !important",
+        "createdAt": "2026-10-15T08:07:58.373Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "sfmono-regular",
+        "createdAt": "2026-10-15T08:07:58.414Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "10px",
+        "createdAt": "2026-10-15T08:07:58.453Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "21px",
+        "createdAt": "2026-10-15T08:07:58.488Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "2cqw",
+        "createdAt": "2026-10-15T08:07:58.523Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "2px",
+        "createdAt": "2026-10-15T08:07:58.559Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "4px",
+        "createdAt": "2026-10-15T08:07:58.594Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "5px",
+        "createdAt": "2026-10-15T08:07:58.630Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "6px",
+        "createdAt": "2026-10-15T08:07:58.666Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "7px",
+        "createdAt": "2026-10-15T08:07:58.702Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "8px",
+        "createdAt": "2026-10-15T08:07:58.738Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (design_handoff_market/README.md, high fidelity, values final); the user asked to implement it"
+      },
+      {
+        "rule": "bounce-easing",
+        "value": "cubic-bezier(.34, 1.56, .64, 1)",
+        "createdAt": "2026-10-15T08:13:43.504Z",
+        "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (README choreography table, Recoil beat); the user asked to implement it"
+      }
+    ]
+  }
+}

@@ -1,8 +1,9 @@
 import { ITEMS } from "./catalog";
 import type { Env } from "./env";
 import { notify } from "./notify";
+import { credit } from "./wallet";
 
-export type Category = "blackjack" | "roulette" | "grimoire" | "chips" | "social" | "collector";
+export type Category = "blackjack" | "poker" | "roulette" | "grimoire" | "chips" | "social" | "collector";
 /** Visual weight of the badge; rarity (how many players own it) is computed live. */
 export type Grade = 1 | 2 | 3 | 4;
 
@@ -20,6 +21,9 @@ export interface Achievement {
   progress?: { stat: string; target: number };
 }
 
+/** Chips paid out once when an achievement unlocks, by its grade. */
+export const GRADE_CHIPS: Record<Grade, number> = { 1: 500, 2: 1000, 3: 2500, 4: 5000 };
+
 export const ACHIEVEMENTS: Achievement[] = [
   // Blackjack
   { id: "first_hand", name: "Pull Up a Chair", description: "Play your first hand of blackjack.", category: "blackjack", grade: 1, glyph: "@spade" },
@@ -34,6 +38,19 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: "natural_10", name: "Ten Naturals", description: "Get ten blackjacks. Unlocks the Twenty-one banner.", category: "blackjack", grade: 3, glyph: "21×10", progress: { stat: "bj_naturals", target: 10 } },
   { id: "bj_hands_1000", name: "Card Shark", description: "Play 1'000 rounds of blackjack. Unlocks the Card Shark title.", category: "blackjack", grade: 4, glyph: "1K", progress: { stat: "bj_hands", target: 1000 } },
   { id: "bj_goat", name: "GOAT", description: "Earn every other blackjack badge. Unlocks the GOAT title.", category: "blackjack", grade: 4, glyph: "GOAT", secret: true },
+
+  // Hold'em. A poker hand is mostly decided by how it was played rather than
+  // what was dealt, so these lean on the rare hands a player will remember
+  // showing down, plus the volume that only comes from sitting there.
+  { id: "pk_first_hand", name: "Opening Hand", description: "Play your first hand of Hold'em.", category: "poker", grade: 1, glyph: "@spade" },
+  { id: "pk_showdown", name: "Shown Down", description: "Win a hand of Hold'em at showdown.", category: "poker", grade: 1, glyph: "SD" },
+  { id: "pk_allin", name: "Shoved", description: "Win a hand you were all-in for.", category: "poker", grade: 2, glyph: "ALL" },
+  { id: "pk_hands_100", name: "Grinder", description: "Play 100 hands of Hold'em.", category: "poker", grade: 2, glyph: "100", progress: { stat: "pk_hands", target: 100 } },
+  { id: "pk_boat", name: "Full Boat", description: "Show down a full house.", category: "poker", grade: 2, glyph: "FH" },
+  { id: "pk_quads", name: "Quads", description: "Show down four of a kind.", category: "poker", grade: 3, glyph: "XXXX" },
+  { id: "pk_hands_1000", name: "Table Regular", description: "Play 1'000 hands of Hold'em.", category: "poker", grade: 3, glyph: "1K", progress: { stat: "pk_hands", target: 1000 } },
+  { id: "pk_straight_flush", name: "Straight Flush", description: "Show down a straight flush.", category: "poker", grade: 4, glyph: "SF" },
+  { id: "pk_royal", name: "Royal", description: "Show down a royal flush. Almost nobody ever does.", category: "poker", grade: 4, glyph: "RF", secret: true },
 
   // Roulette
   { id: "first_spin", name: "First Spin", description: "Bet on your first roulette spin.", category: "roulette", grade: 1, glyph: "@wheel" },
@@ -77,7 +94,7 @@ export const ACHIEVEMENTS: Achievement[] = [
 
   // Collector
   { id: "new_face", name: "New Face", description: "Upload a profile picture.", category: "collector", grade: 1, glyph: "@camera" },
-  { id: "dressed_up", name: "Dressed Up", description: "Buy something in the shop.", category: "collector", grade: 1, glyph: "@bag" },
+  { id: "dressed_up", name: "Dressed Up", description: "Open a case or buy something on the market.", category: "collector", grade: 1, glyph: "@bag" },
   { id: "collector", name: "Collector", description: "Own ten cosmetics.", category: "collector", grade: 3, glyph: "×10", progress: { stat: "items", target: 10 } },
 ];
 
@@ -115,7 +132,8 @@ export async function bumpStat(env: Env, userId: string, key: string, delta: num
 export async function liveStats(env: Env, userId: string) {
   const [friends, items, player] = await Promise.all([
     env.DB.prepare("SELECT COUNT(*) AS n FROM friendships WHERE status = 'accepted' AND (user_low = ?1 OR user_high = ?1)").bind(userId).first<{ n: number }>(),
-    env.DB.prepare("SELECT COUNT(*) AS n FROM inventory WHERE user_id = ?").bind(userId).first<{ n: number }>(),
+    // Distinct items: a second copy of the same border is stock, not a collection.
+    env.DB.prepare("SELECT COUNT(DISTINCT item_id) AS n FROM inventory WHERE user_id = ?").bind(userId).first<{ n: number }>(),
     env.DB.prepare("SELECT balance, bonus_streak FROM players WHERE user_id = ?").bind(userId).first<{ balance: number; bonus_streak: number }>(),
   ]);
   return { friends: friends?.n ?? 0, items: items?.n ?? 0, balance: player?.balance ?? 0, bonus_streak: player?.bonus_streak ?? 0 };
@@ -123,8 +141,26 @@ export async function liveStats(env: Env, userId: string) {
 
 // ── Unlocking ────────────────────────────────────────
 
-/** Unlocks what isn't unlocked yet, hands out reward cosmetics, and notifies. Returns the newly unlocked. */
-export async function unlock(env: Env, userId: string, ids: string[]): Promise<Achievement[]> {
+/** The cosmetics an achievement hands out when it unlocks. */
+export function rewardsFor(achievementId: string) {
+  return [...ITEMS.values()].filter((item) => item.reward === achievementId);
+}
+
+/**
+ * Unlocks what isn't unlocked yet, pays its chips, hands out reward cosmetics,
+ * and notifies. Returns the newly unlocked.
+ *
+ * Both side effects can be turned off, which only an operator granting a badge
+ * by hand ever wants: a replacement for one that was wrongly revoked should not
+ * pay out or hand over a second copy of the cosmetic, and a quiet fix-up should
+ * not ring the player's bell for something they already know they have.
+ */
+export async function unlock(
+  env: Env,
+  userId: string,
+  ids: string[],
+  { rewards = true, announce = true }: { rewards?: boolean; announce?: boolean } = {},
+): Promise<Achievement[]> {
   const fresh: Achievement[] = [];
   const t = Date.now();
   for (const id of new Set(ids)) {
@@ -135,15 +171,19 @@ export async function unlock(env: Env, userId: string, ids: string[]): Promise<A
       .run();
     if (!res.meta.changes) continue;
     fresh.push(achievement);
-    const rewards = [...ITEMS.values()].filter((item) => item.reward === id);
-    if (rewards.length) {
+    const granted = rewards ? rewardsFor(id) : [];
+    if (granted.length) {
       await env.DB.batch(
-        rewards.map((item) =>
-          env.DB.prepare("INSERT OR IGNORE INTO inventory (user_id, item_id, source, created_at) VALUES (?, ?, 'achievement', ?)").bind(userId, item.id, t),
+        granted.map((item) =>
+          env.DB.prepare(
+            "INSERT INTO inventory (user_id, item_id, source, created_at) SELECT ?1, ?2, 'achievement', ?3 WHERE NOT EXISTS (SELECT 1 FROM inventory WHERE user_id = ?1 AND item_id = ?2)",
+          ).bind(userId, item.id, t),
         ),
       );
     }
-    await notify(env, userId, "achievement", null, { id, rewards: rewards.map((r) => r.id) });
+    const chips = rewards ? GRADE_CHIPS[achievement.grade] : 0;
+    if (chips) await credit(env, userId, chips, { kind: "achievement", ref: id });
+    if (announce) await notify(env, userId, "achievement", null, { id, rewards: granted.map((r) => r.id), chips });
   }
   if (fresh.some((a) => a.category === "blackjack" && a.id !== "bj_goat")) fresh.push(...(await checkGoat(env, userId)));
   return fresh;
@@ -232,6 +272,25 @@ export interface BlackjackRound {
   insuranceWon: boolean;
 }
 
+/**
+ * One hand of Hold'em, as the table reports it. There is no "result" the way
+ * blackjack has one: a hand is won, folded, or shown down and lost, and the
+ * category is the hand that was actually turned over.
+ */
+export interface PokerRound {
+  game: "poker";
+  net: number;
+  won: boolean;
+  /** Reached a showdown with cards face up. */
+  showdown: boolean;
+  /** 0–9 as shared/holdem.ts ranks them, or null if it never got shown. */
+  category: number | null;
+  allIn: boolean;
+  folded: boolean;
+  players: number;
+  pot: number;
+}
+
 export interface RouletteRound {
   game: "roulette";
   net: number;
@@ -253,7 +312,7 @@ async function areFriends(env: Env, userId: string, others: string[]) {
   return row !== null;
 }
 
-export async function recordRound(env: Env, userId: string, round: BlackjackRound | RouletteRound, tablemates: string[]) {
+export async function recordRound(env: Env, userId: string, round: BlackjackRound | PokerRound | RouletteRound, tablemates: string[]) {
   const ids: string[] = [];
   const stats = await getStats(env, userId);
   const writes = [];
@@ -285,6 +344,22 @@ export async function recordRound(env: Env, userId: string, round: BlackjackRoun
     if (round.hands.length >= 4) ids.push("four_hands");
     if (round.hands.some((h) => h.cards >= 5 && h.total <= 21 && h.result !== "bust")) ids.push("five_card");
     if (round.insuranceWon) ids.push("insured");
+  } else if (round.game === "poker") {
+    const hands = (stats.pk_hands ?? 0) + 1;
+    writes.push(setStat(env, userId, "pk_hands", hands));
+    ids.push("pk_first_hand");
+    if (hands >= 100) ids.push("pk_hands_100");
+    if (hands >= 1000) ids.push("pk_hands_1000");
+    if (round.won && round.showdown) ids.push("pk_showdown");
+    if (round.won && round.allIn) ids.push("pk_allin");
+    // The hand categories, as shared/holdem.ts ranks them: 6 is a full
+    // house, 7 quads, 8 a straight flush and 9 the royal.
+    if (round.showdown && round.category !== null) {
+      if (round.category >= 6) ids.push("pk_boat");
+      if (round.category >= 7) ids.push("pk_quads");
+      if (round.category >= 8) ids.push("pk_straight_flush");
+      if (round.category >= 9) ids.push("pk_royal");
+    }
   } else {
     const spins = (stats.roulette_spins ?? 0) + 1;
     const straightHit = round.bets.find((b) => b.type === "straight" && b.won);
@@ -345,6 +420,7 @@ export async function achievementList(env: Env, userId: string, withProgress: bo
       description: hidden ? "Keep playing to find out." : a.description,
       category: a.category,
       grade: a.grade,
+      chips: GRADE_CHIPS[a.grade],
       glyph: hidden ? "?" : a.glyph,
       secret: Boolean(a.secret),
       rarity: rarity(a.id),

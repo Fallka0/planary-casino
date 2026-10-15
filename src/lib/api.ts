@@ -51,7 +51,7 @@ export interface Board {
 export interface LedgerEntry {
   id: number;
   amount: number;
-  kind: "starter" | "bonus" | "game" | "transfer_in" | "transfer_out" | "shop";
+  kind: "starter" | "bonus" | "game" | "transfer_in" | "transfer_out" | "shop" | "achievement" | "case" | "market_buy" | "market_sale" | "adjustment";
   ref: string | null;
   game: string | null;
   created_at: number;
@@ -168,8 +168,10 @@ export interface AchievementEntry {
   id: string;
   name: string;
   description: string;
-  category: "blackjack" | "roulette" | "grimoire" | "chips" | "social" | "collector";
+  category: "blackjack" | "poker" | "roulette" | "grimoire" | "chips" | "social" | "collector";
   grade: 1 | 2 | 3 | 4;
+  /** Paid once, when it unlocks. */
+  chips: number;
   glyph: string;
   secret: boolean;
   /** Share of all players who own it, 0–1. */

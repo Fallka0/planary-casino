@@ -1,11 +1,12 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Env, Player } from "./env";
-import { type BlackjackRound, bumpStat, checkLive, getStats, type RouletteRound, recordRound, unlock, recordGrimoire } from "./achievements";
+import { type BlackjackRound, bumpStat, checkLive, getStats, type PokerRound, type RouletteRound, recordRound, unlock, recordGrimoire } from "./achievements";
 import { notify, resolveFriendRequests } from "./notify";
 import { BADGE_COLUMNS, badge, pairKey, presenceOf, social, unreadCounts } from "./social";
 import { nextZurichMidnight, zurichDay, zurichWeekStart } from "./time";
 import { admin } from "./admin";
+import { market } from "./market";
 import { pruneRounds, openCommitment, revealCommitment, roundById, roundsForPlayer, saveRound, sealClientSeed, type RoundRecord } from "./archive";
 import { betRefusal, blockedReason, getSettings, isMuted } from "./policy";
 import { claimBonus, cleanName, credit, debit, ensurePlayer, getPlayer, transfer } from "./wallet";
@@ -13,7 +14,7 @@ import { claimBonus, cleanName, credit, debit, ensurePlayer, getPlayer, transfer
 type Vars = { player: Player };
 const app = new Hono<{ Bindings: Env; Variables: Vars }>();
 
-const PRESENCE_WHERE = new Set(["lobby", "blackjack", "roulette", "slots", "grimoire"]);
+const PRESENCE_WHERE = new Set(["lobby", "blackjack", "poker", "roulette", "slots", "grimoire"]);
 
 /**
  * How long a game round is kept. A regulated operator would set this to five
@@ -94,8 +95,8 @@ app.post("/internal/status", async (c) => {
 
 /** A finished round, reported by a game server: updates counters and unlocks achievements. */
 app.post("/internal/round", async (c) => {
-  const { userId, round, tablemates } = await c.req.json<{ userId: string; round: BlackjackRound | RouletteRound; tablemates?: string[] }>();
-  if (!round || (round.game !== "blackjack" && round.game !== "roulette")) return c.json({ error: "bad round" }, 400);
+  const { userId, round, tablemates } = await c.req.json<{ userId: string; round: BlackjackRound | PokerRound | RouletteRound; tablemates?: string[] }>();
+  if (!round || (round.game !== "blackjack" && round.game !== "poker" && round.game !== "roulette")) return c.json({ error: "bad round" }, 400);
   const unlocked = await recordRound(c.env, userId, round, Array.isArray(tablemates) ? tablemates.slice(0, 20) : []);
   return c.json({ unlocked: unlocked.map((a) => ({ id: a.id, name: a.name })) });
 });
@@ -414,8 +415,14 @@ app.post("/v1/friends/remove", async (c) => {
  * Ranks the players who played between ?1 and ?2 by their return: table winnings
  * divided by the bankroll they had that week, so doubling 5k counts the same as
  * doubling 20k. The bankroll is the balance at ?1 plus every chip that came in
- * from outside the tables (bonuses, gifts, adjustments) before ?2 — rewinding the
- * current balance through the ledger gives the balance at ?1.
+ * from outside the tables (bonuses, adjustments) before ?2, plus what friends
+ * sent on balance — rewinding the current balance through the ledger gives the
+ * balance at ?1.
+ *
+ * Transfers count net. Counted one by one, chips passed back and forth would
+ * grow both bankrolls on every trip. A player who sent more than they got
+ * keeps their full bankroll, so parking chips with a friend and playing the
+ * rest doesn't inflate a return either.
  */
 function returnsQuery(filter: string, limit: number) {
   return `SELECT ${BADGE_COLUMNS}, w.net, MAX(p.balance + w.rewind, 1) AS bankroll
@@ -423,7 +430,9 @@ function returnsQuery(filter: string, limit: number) {
       SELECT l.user_id,
         SUM(CASE WHEN l.kind = 'game' AND l.created_at < ?2 THEN l.amount ELSE 0 END) AS net,
         SUM(CASE WHEN l.kind = 'game' AND l.created_at < ?2 THEN 1 ELSE 0 END) AS entries,
-        SUM(CASE WHEN l.kind <> 'game' AND l.amount > 0 AND l.created_at < ?2 THEN l.amount ELSE 0 END) - SUM(l.amount) AS rewind
+        SUM(CASE WHEN l.kind NOT IN ('game', 'transfer_in', 'transfer_out') AND l.amount > 0 AND l.created_at < ?2 THEN l.amount ELSE 0 END)
+          + MAX(SUM(CASE WHEN l.kind IN ('transfer_in', 'transfer_out') AND l.created_at < ?2 THEN l.amount ELSE 0 END), 0)
+          - SUM(l.amount) AS rewind
       FROM ledger l WHERE l.created_at >= ?1 GROUP BY l.user_id
     ) w JOIN players p ON p.user_id = w.user_id
     WHERE w.entries > 0 ${filter}
@@ -454,6 +463,7 @@ app.get("/v1/leaderboard", async (c) => {
 });
 
 app.route("/v1", social);
+app.route("/v1", market);
 app.route("/admin", admin);
 
 // Profile pictures are public images; the version in the URL makes them cache forever.

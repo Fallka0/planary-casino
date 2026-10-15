@@ -34,14 +34,16 @@ export const GAMES: Game[] = [
   },
   {
     id: "poker",
-    name: "Poker",
-    tagline: "Texas Hold'em against friends at the table.",
-    blurb: "No-limit Texas Hold'em with play chips. Open a private table and send the link to your friends.",
+    name: "Hold'em",
+    tagline: "No-limit Texas Hold'em, six seats to a table.",
+    blurb:
+      "Now open. Six seats, blinds and side pots. Sit at a house table and play straight away, or open your own and send the code to your friends.",
     subdomain: "poker",
-    players: "2–8 players",
+    players: "2–6 players",
     tags: ["Cards", "Multiplayer"],
     caption: "All in",
-    status: "soon",
+    status: "live",
+    rules: ["No-limit betting, min-raise enforced", "Side pots built from each player's own total", "Every deck published when the hand ends"],
   },
   {
     id: "baccarat",

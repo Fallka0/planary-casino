@@ -1,9 +1,9 @@
 import { Hono } from "hono";
-import { ACHIEVEMENT_MAP, achievementList, checkLive, getStats, unlock } from "./achievements";
-import { CATALOG, ITEMS, type ItemKind, KIND_COLUMN } from "./catalog";
+import { ACHIEVEMENT_MAP, achievementList, getStats, unlock } from "./achievements";
+import { ITEMS } from "./catalog";
 import type { Env, Player } from "./env";
 import { notify } from "./notify";
-import { isMuted, shopOverrides } from "./policy";
+import { isMuted } from "./policy";
 import { zurichWeekStart } from "./time";
 import { cleanName } from "./wallet";
 
@@ -13,7 +13,7 @@ export const social = new Hono<{ Bindings: Env; Variables: Vars }>();
 const ONLINE_MS = 75_000;
 const MAX_AVATAR_BYTES = 300_000;
 const MAX_MESSAGE = 1000;
-const GAMES = new Set(["blackjack", "roulette"]);
+const GAMES = new Set(["blackjack", "poker", "roulette"]);
 const TABLE_ID = /^[tp]-[a-z0-9]{6}$/;
 
 export const pairKey = (a: string, b: string) => (a < b ? [a, b] : [b, a]);
@@ -50,7 +50,8 @@ async function relation(env: Env, me: string, other: string) {
   return row.requested_by === me ? "requested" : "incoming";
 }
 
-function parseShowcase(raw: string | null): string[] {
+/** The up-to-three achievement ids pinned to a profile, as stored. */
+export function parseShowcase(raw: string | null): string[] {
   try {
     const value = JSON.parse(raw ?? "[]");
     return Array.isArray(value) ? value.filter((v) => typeof v === "string").slice(0, 3) : [];
@@ -180,78 +181,6 @@ social.post("/profile/avatar/remove", async (c) => {
     c.env.DB.prepare("UPDATE players SET avatar_version = 0 WHERE user_id = ?").bind(me),
   ]);
   return c.json({ avatar: null });
-});
-
-// ── Shop ─────────────────────────────────────────────
-
-social.get("/shop", async (c) => {
-  const me = c.get("player");
-  const { results } = await c.env.DB.prepare("SELECT item_id FROM inventory WHERE user_id = ?").bind(me.user_id).all<{ item_id: string }>();
-  const owned = new Set(results.map((r) => r.item_id));
-  const overrides = await shopOverrides(c.env);
-  return c.json({
-    balance: me.balance,
-    equipped: { border: me.border, banner: me.banner, title: me.title, cardback: me.cardback, chipset: me.chipset },
-    items: CATALOG.filter((item) => owned.has(item.id) || overrides.get(item.id)?.enabled !== 0).map((item) => {
-      const reward = item.reward ? ACHIEVEMENT_MAP.get(item.reward) : undefined;
-      // A secret badge's reward mustn't give the secret away before it's earned.
-      const hidden = Boolean(reward?.secret) && !owned.has(item.id);
-      return {
-        ...item,
-        blurb: hidden ? "Keep playing to find out." : item.blurb,
-        price: item.price === null ? null : (overrides.get(item.id)?.price ?? item.price),
-        rewardName: reward ? (hidden ? "a secret badge" : reward.name) : null,
-        owned: owned.has(item.id),
-      };
-    }),
-  });
-});
-
-social.post("/shop/buy", async (c) => {
-  const me = c.get("player").user_id;
-  const { itemId } = await c.req.json<{ itemId: string }>();
-  const item = ITEMS.get(itemId);
-  if (!item) return c.json({ error: "That item doesn't exist." }, 404);
-  if (item.price === null) return c.json({ error: "This one can only be earned through an achievement." }, 400);
-  const override = (await shopOverrides(c.env)).get(item.id);
-  if (override?.enabled === 0) return c.json({ error: "This item isn't for sale right now." }, 400);
-  const price = override?.price ?? item.price;
-  const t = Date.now();
-  const [update] = await c.env.DB.batch([
-    c.env.DB.prepare(
-      `UPDATE players SET balance = balance - ?1 WHERE user_id = ?2 AND balance >= ?1
-         AND NOT EXISTS (SELECT 1 FROM inventory WHERE user_id = ?2 AND item_id = ?3)`,
-    ).bind(price, me, item.id),
-    c.env.DB.prepare("INSERT INTO inventory (user_id, item_id, source, created_at) SELECT ?1, ?2, 'shop', ?3 WHERE changes() = 1").bind(me, item.id, t),
-    c.env.DB.prepare("INSERT INTO ledger (user_id, amount, kind, ref, created_at) SELECT ?1, ?2, 'shop', ?3, ?4 WHERE changes() = 1").bind(
-      me,
-      -price,
-      item.id,
-      t,
-    ),
-  ]);
-  if (!update.meta.changes) {
-    const owned = await c.env.DB.prepare("SELECT 1 FROM inventory WHERE user_id = ? AND item_id = ?").bind(me, item.id).first();
-    return c.json({ error: owned ? "You already own this." : "Not enough chips." }, 409);
-  }
-  const unlocked = [...(await unlock(c.env, me, ["dressed_up"])), ...(await checkLive(c.env, me))];
-  const balance = await c.env.DB.prepare("SELECT balance FROM players WHERE user_id = ?").bind(me).first<{ balance: number }>();
-  return c.json({ balance: balance?.balance ?? 0, unlocked: unlocked.map((a) => a.id) });
-});
-
-social.post("/shop/equip", async (c) => {
-  const me = c.get("player").user_id;
-  const { kind, itemId } = await c.req.json<{ kind: ItemKind; itemId: string | null }>();
-  const column = KIND_COLUMN[kind];
-  if (!column) return c.json({ error: "Unknown slot." }, 400);
-  if (itemId !== null) {
-    const item = ITEMS.get(itemId);
-    if (!item || item.kind !== kind) return c.json({ error: "That doesn't go there." }, 400);
-    const owned = await c.env.DB.prepare("SELECT 1 FROM inventory WHERE user_id = ? AND item_id = ?").bind(me, itemId).first();
-    if (!owned) return c.json({ error: "You don't own this yet." }, 403);
-  }
-  await c.env.DB.prepare(`UPDATE players SET ${column} = ? WHERE user_id = ?`).bind(itemId, me).run();
-  return c.json({ ok: true });
 });
 
 // ── Achievements ─────────────────────────────────────

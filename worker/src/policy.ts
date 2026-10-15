@@ -75,8 +75,3 @@ export async function gameStatus(env: Env) {
   }>();
   return new Map(results.map((r) => [r.game, r]));
 }
-
-export async function shopOverrides(env: Env) {
-  const { results } = await env.DB.prepare("SELECT item_id, price, enabled FROM shop_overrides").all<{ item_id: string; price: number | null; enabled: number }>();
-  return new Map(results.map((r) => [r.item_id, r]));
-}

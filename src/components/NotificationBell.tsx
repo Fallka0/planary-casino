@@ -109,11 +109,19 @@ function Item({ n, now, onDone }: { n: NotificationItem; now: number; onDone: ()
     case "staff":
       text = <>{n.data?.text ?? "A message from Planary Casino."}</>;
       break;
+    case "sale":
+      text = (
+        <>
+          <strong>{who}</strong> bought your {n.data?.name ?? "item"} for {formatChips(n.data?.price ?? 0)}. You got {formatChips(n.data?.amount ?? 0)} chips after the fee.
+        </>
+      );
+      break;
     case "achievement":
       text = (
         <>
           Unlocked <strong>{n.achievement?.name ?? "an achievement"}</strong>
-          {n.data?.rewards?.length ? ", with a reward in your shop inventory" : ""}.
+          {n.data?.chips ? ` for ${formatChips(n.data.chips)} chips` : ""}
+          {n.data?.rewards?.length ? ", with a reward in your inventory" : ""}.
         </>
       );
       break;

@@ -46,6 +46,10 @@
   mask: radial-gradient(farthest-side, transparent calc(100% - 4.5px), #000 calc(100% - 4px));
   box-shadow: 0 0 14px rgba(247, 198, 92, 0.6);
 }
+/* Boardwalk rings; the Blackjack and Roulette tables have the same ids. */
+.avatar.border-sand::before { background: #e8d2a6; }
+.avatar.border-lifering::before { background: repeating-conic-gradient(#e8343a 0 45deg, var(--paper) 45deg 90deg); }
+.avatar.border-ferris::before { background: repeating-conic-gradient(#ff7a3d 0 5deg, #136f6f 5deg 30deg); }
 @keyframes ring-spin { to { rotate: 360deg; } }
 .avatar.is-online::after, .avatar.is-away::after { z-index: 2; }
 
@@ -102,6 +106,69 @@
 }
 @keyframes holo-pan { to { background-position: 300% 0; } }
 
+/* Afterhours case banners */
+.banner-ticker {
+  background:
+    repeating-linear-gradient(90deg, #f7c65c 0 14px, transparent 14px 22px, #f7c65c 22px 26px, transparent 26px 40px) 0 34% / 100% 6px no-repeat,
+    repeating-linear-gradient(90deg, rgba(247, 198, 92, 0.6) 0 8px, transparent 8px 20px, rgba(247, 198, 92, 0.6) 20px 30px, transparent 30px 44px) 0 66% / 100% 6px no-repeat,
+    radial-gradient(circle, rgba(247, 198, 92, 0.12) 0 1px, transparent 1.4px) 0 0 / 5px 5px,
+    linear-gradient(180deg, #16100a, #050302);
+}
+.banner-velvet {
+  background:
+    radial-gradient(ellipse 62% 64% at 50% -14%, transparent 86%, #e2a93b 87% 92%, transparent 93%),
+    repeating-linear-gradient(90deg, rgba(34, 6, 14, 0.38) 0 9px, rgba(255, 214, 224, 0.08) 9px 12px, transparent 12px 22px),
+    linear-gradient(180deg, #d9173c, #7e0c22 70%, #4c1329);
+}
+.banner-marquee {
+  background:
+    radial-gradient(circle, #fbe7a6 0 3.4px, rgba(251, 231, 166, 0.25) 3.6px 6px, transparent 6.4px) 0 0 / 18px 18px repeat-x,
+    radial-gradient(circle, #fbe7a6 0 3.4px, rgba(251, 231, 166, 0.25) 3.6px 6px, transparent 6.4px) 0 100% / 18px 18px repeat-x,
+    linear-gradient(180deg, #b3122e, #6d0a1d);
+}
+.banner-afterglow {
+  background:
+    linear-gradient(180deg, transparent 58%, rgba(14, 6, 32, 0.9) 58% 61%, transparent 61%),
+    radial-gradient(ellipse 80% 70% at 50% 100%, #ff5a78, transparent 70%),
+    linear-gradient(180deg, #1d2a5c, #3b0f5c);
+}
+.banner-aurora { background: linear-gradient(160deg, #0e0620, #1d2a5c 40%, #3b0f5c); }
+.banner-aurora::after {
+  content: "";
+  position: absolute;
+  inset: -20% -10%;
+  z-index: -1;
+  background: linear-gradient(100deg, transparent 20%, rgba(142, 230, 255, 0.55) 35%, rgba(197, 139, 255, 0.5) 50%, rgba(94, 227, 154, 0.4) 62%, transparent 78%) 0 0 / 200% 100%;
+  filter: blur(14px);
+  animation: holo-pan 14s linear infinite;
+}
+
+/* Boardwalk case banners */
+.banner-pier {
+  background:
+    radial-gradient(circle, rgba(42, 9, 21, 0.45) 0 1.6px, transparent 2px) 12px 9px / 48px 20px,
+    repeating-linear-gradient(180deg, #b5714a 0 18px, #8a4f30 18px 20px);
+}
+.banner-awning {
+  background:
+    radial-gradient(circle at 50% 0, transparent 0 11px, #2a0915 11.5px) 0 100% / 24px 12px repeat-x,
+    repeating-linear-gradient(90deg, #ff7a3d 0 24px, var(--paper) 24px 48px);
+}
+.banner-sunset-strip {
+  background:
+    repeating-linear-gradient(180deg, transparent 0 58%, #136f6f 58% 61%, transparent 61% 66%, #136f6f 66% 68%, transparent 68%),
+    linear-gradient(180deg, transparent 0 58%, #136f6f 58%),
+    radial-gradient(circle at 50% 58%, #ff7a3d 0 26%, transparent 26.5%),
+    linear-gradient(180deg, #ffb27a, #ff7a3d 58%);
+}
+.banner-fireworks {
+  background:
+    repeating-conic-gradient(from 0deg at 28% 46%, #fff3c4 0 4deg, transparent 4deg 18deg),
+    repeating-conic-gradient(from 9deg at 74% 54%, #2a0915 0 3deg, transparent 3deg 15deg),
+    linear-gradient(110deg, #ff5a78, #fff3c4, #8ee6ff, #c58bff, #ff5a78) 0 0 / 300% 100%;
+  animation: holo-pan 9s linear infinite;
+}
+
 /* ── Card backs (preview prints; the Blackjack table has the same ids) ─ */
 
 .print-back {
@@ -138,6 +205,13 @@
     #0c0906;
 }
 .cardback-holo { background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.35) 0 1px, transparent 1px 6px), linear-gradient(115deg, #ff5a78, #fff3c4, #8ee6ff, #c58bff) 0 0 / 250% 100%; animation: holo-pan 6s linear infinite; }
+.cardback-postcard {
+  background:
+    linear-gradient(#ff7a3d, #ff7a3d) 70% 16% / 22% 16% no-repeat,
+    radial-gradient(circle, #ff7a3d 0 26%, transparent 30%) 0 0 / 8px 8px,
+    var(--paper);
+}
+.cardback-seaglass { background: repeating-conic-gradient(#5fb7a6 0 25%, #d8f0e6 0 50%) 0 0 / 12px 12px; }
 
 /* ── Achievement medals ────────────────────────── */
 
@@ -696,5 +770,7 @@ a.person-name:hover { text-decoration: underline; text-underline-offset: 3px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .avatar.border-holo::before, .banner-holo, .cardback-holo, .medal-burst, .medal-sheen { animation: none !important; }
+  .avatar.border-holo::before, .banner-holo, .banner-aurora::after, .banner-fireworks, .cardback-holo, .medal-burst, .medal-sheen { animation: none !important; }
 }
+
+.achv-foot .achv-chips { color: var(--text-3); font-size: 0.78rem; font-weight: 600; font-variant-numeric: tabular-nums; }

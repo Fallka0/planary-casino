@@ -2,23 +2,40 @@
 
 import { Hono } from "hono";
 import { roundById, searchRounds } from "./archive";
+import { bankBalance, bankEntry } from "./bank";
 import { cors } from "hono/cors";
-import { achievementsOf, getStats } from "./achievements";
-import { CATALOG, ITEMS } from "./catalog";
+import { ACHIEVEMENT_MAP, ACHIEVEMENTS, achievementsOf, getStats, liveStats, rewardsFor, unlock } from "./achievements";
+import { CASES, CATALOG } from "./catalog";
 import type { Env, Player } from "./env";
+import { MARKET_FEE } from "./market";
 import { notify } from "./notify";
-import { blockedReason, dailyLoss, DEFAULT_SETTINGS, gameStatus, getSettings, isMuted, shopOverrides } from "./policy";
+import { blockedReason, dailyLoss, DEFAULT_SETTINGS, gameStatus, getSettings, isMuted } from "./policy";
+import {
+  checkStats,
+  COMPUTED,
+  earnedByCounters,
+  isArea,
+  type Opening,
+  RESET_AREAS,
+  resetAccount,
+  revokeAchievements,
+  setStats,
+  STAT_FIELDS,
+  type StatChange,
+} from "./progress";
 import { badge, presenceOf } from "./social";
 import { zurichDay, zurichDayStart } from "./time";
 
 export type Role = "owner" | "manager" | "support" | "viewer";
-type Permission = "view" | "note" | "moderate" | "restrict" | "chips" | "games" | "economy" | "announce" | "audit" | "staff";
+type Permission = "view" | "note" | "moderate" | "restrict" | "chips" | "games" | "economy" | "announce" | "audit" | "staff" | "reset";
 
 const ROLES: Record<Role, Permission[]> = {
   viewer: ["view"],
   support: ["view", "note", "moderate"],
   manager: ["view", "note", "moderate", "restrict", "chips", "games", "economy", "announce", "audit"],
-  owner: ["view", "note", "moderate", "restrict", "chips", "games", "economy", "announce", "audit", "staff"],
+  // "reset" clears a player's record and hands out progress by hand. Both are
+  // irreversible and neither is support work, so the panel's own owner keeps them.
+  owner: ["view", "note", "moderate", "restrict", "chips", "games", "economy", "announce", "audit", "staff", "reset"],
 };
 
 const GAMES = ["blackjack", "roulette", "slots"] as const;
@@ -484,6 +501,134 @@ admin.get("/players/:id/messages", async (c) => {
   return c.json({ messages: results.reverse().map((m) => ({ id: m.id, fromPlayer: m.sender_id === id, body: m.body, at: m.created_at })) });
 });
 
+// ── Progress: achievements, counters and resets ──────
+//
+// Every other tool here adds to a player's record. These two take it back, and
+// nothing else can: the weekly leaderboard is a sum over the ledger, the
+// lifetime figures are the same sum sliced differently, and an achievement has
+// no "lock" next to it. A week of testing chip adjustments is permanent
+// otherwise — so this exists, owner-only, and says in the audit log exactly
+// what it moved.
+
+admin.get("/players/:id/progress", async (c) => {
+  const id = c.req.param("id");
+  const p = await c.env.DB.prepare("SELECT name, balance, bonus_streak FROM players WHERE user_id = ?").bind(id).first<{
+    name: string;
+    balance: number;
+    bonus_streak: number;
+  }>();
+  if (!p) return c.json({ error: "Player not found." }, 404);
+  const [owned, stats, live, settings] = await Promise.all([achievementsOf(c.env, id), getStats(c.env, id), liveStats(c.env, id), getSettings(c.env, true)]);
+  const known = new Set(STAT_FIELDS.map((f) => f.key));
+  return c.json({
+    achievements: ACHIEVEMENTS.map((a) => ({
+      id: a.id,
+      name: a.name,
+      description: a.description,
+      category: a.category,
+      grade: a.grade,
+      glyph: a.glyph,
+      secret: Boolean(a.secret),
+      progress: a.progress ?? null,
+      unlockedAt: owned.get(a.id) ?? null,
+      rewards: rewardsFor(a.id).map((item) => ({ id: item.id, name: item.name, kind: item.kind })),
+    })),
+    stats: {
+      fields: STAT_FIELDS,
+      values: { ...stats, bonus_streak: p.bonus_streak },
+      // Counters a game server writes that the panel has no label for yet. Just
+      // the names: every counter's value is in `values`, and a second copy of a
+      // number is a second chance for the two to disagree.
+      extra: Object.keys(stats).filter((key) => !known.has(key)),
+      computed: { balance: live.balance, friends: live.friends, items: live.items },
+      refused: COMPUTED,
+    },
+    reset: { areas: RESET_AREAS, starterChips: settings.starterChips, balance: p.balance, confirm: p.name },
+  });
+});
+
+admin.post("/players/:id/achievements", async (c) => {
+  const staff = c.get("staff");
+  if (!can(staff, "reset")) return c.json(denied(), 403);
+  const id = c.req.param("id");
+  const body = await c.req.json<{ grant?: unknown; revoke?: unknown; rewards?: boolean; silent?: boolean }>();
+  const list = (value: unknown) => (Array.isArray(value) ? [...new Set(value.filter((v): v is string => typeof v === "string"))] : []);
+  const grant = list(body.grant);
+  const revoke = list(body.revoke);
+  if (!grant.length && !revoke.length) return c.json({ error: "Pick at least one achievement." }, 400);
+  const unknown = [...grant, ...revoke].find((a) => !ACHIEVEMENT_MAP.has(a));
+  if (unknown) return c.json({ error: `There's no achievement called "${text(unknown, 40)}".` }, 400);
+  const both = grant.find((a) => revoke.includes(a));
+  if (both) return c.json({ error: `${ACHIEVEMENT_MAP.get(both)?.name} can't be granted and taken back in the same go.` }, 400);
+  if (!(await c.env.DB.prepare("SELECT 1 FROM players WHERE user_id = ?").bind(id).first())) return c.json({ error: "Player not found." }, 404);
+
+  // One switch for both directions: either the cosmetics follow the badge, or
+  // the badge moves on its own. Granting one back that was revoked by mistake
+  // should not hand out a second copy of the item.
+  const rewards = body.rewards !== false;
+  const granted = grant.length ? await unlock(c.env, id, grant, { rewards, announce: body.silent !== true }) : [];
+  const taken = revoke.length ? await revokeAchievements(c.env, id, revoke, rewards) : { revoked: 0, itemsRemoved: 0 };
+  await audit(c.env, staff, "progress.achievements", id, {
+    granted: granted.map((a) => a.id),
+    alreadyHeld: grant.filter((gid) => !granted.some((a) => a.id === gid)),
+    revoked: revoke,
+    rewards,
+    silent: body.silent === true,
+  });
+  return c.json({
+    granted: granted.map((a) => ({ id: a.id, name: a.name })),
+    alreadyHeld: grant.length - granted.length,
+    revoked: taken.revoked,
+    itemsRemoved: taken.itemsRemoved,
+  });
+});
+
+admin.post("/players/:id/stats", async (c) => {
+  const staff = c.get("staff");
+  if (!can(staff, "reset")) return c.json(denied(), 403);
+  const id = c.req.param("id");
+  const body = await c.req.json<{ changes?: Record<string, unknown>; unlock?: boolean }>();
+  const changes: StatChange[] = Object.entries(body.changes ?? {}).map(([key, value]) => ({
+    key: String(key).trim().toLowerCase(),
+    value: value === null ? null : Number(value),
+  }));
+  const wrong = checkStats(changes);
+  if (wrong) return c.json({ error: wrong }, 400);
+  if (!(await c.env.DB.prepare("SELECT 1 FROM players WHERE user_id = ?").bind(id).first())) return c.json({ error: "Player not found." }, 404);
+
+  await setStats(c.env, id, changes);
+  // A counter past its goal and a locked badge above it is the one state the
+  // casino never produces on its own, so by default the milestones follow.
+  const unlocked = body.unlock === false ? [] : await unlock(c.env, id, await earnedByCounters(c.env, id));
+  await audit(c.env, staff, "progress.stats", id, {
+    changes: Object.fromEntries(changes.map((change) => [change.key, change.value])),
+    unlocked: unlocked.map((a) => a.id),
+  });
+  return c.json({ changed: changes.length, unlocked: unlocked.map((a) => ({ id: a.id, name: a.name })) });
+});
+
+admin.post("/players/:id/reset", async (c) => {
+  const staff = c.get("staff");
+  if (!can(staff, "reset")) return c.json(denied(), 403);
+  const id = c.req.param("id");
+  const body = await c.req.json<{ areas?: unknown; opening?: Opening; reason?: string; confirm?: string; notifyPlayer?: boolean }>();
+  const areas = Array.isArray(body.areas) ? [...new Set(body.areas.filter(isArea))] : [];
+  if (!areas.length) return c.json({ error: "Pick what to clear." }, 400);
+  const opening: Opening = body.opening === "zero" || body.opening === "keep" ? body.opening : "starter";
+  const reason = text(body.reason, 200);
+  if (reason.length < 3) return c.json({ error: "Give a reason; it's kept with the reset." }, 400);
+  const p = await c.env.DB.prepare("SELECT * FROM players WHERE user_id = ?").bind(id).first<Player>();
+  if (!p) return c.json({ error: "Player not found." }, 404);
+  // Nothing in here can be undone, so the name gets typed out once.
+  if (text(body.confirm, 60).toLowerCase() !== p.name.toLowerCase()) return c.json({ error: `Type ${p.name} to confirm the reset.` }, 400);
+
+  const result = await resetAccount(c.env, p, { areas, opening, reason }, staff.name);
+  await audit(c.env, staff, "account.reset", id, { areas, opening, reason, ...result });
+  // Sent after the clearing, or clearing the notifications would take it along.
+  if (body.notifyPlayer !== false) await notify(c.env, id, "staff", null, { text: `Your casino account was reset: ${reason}` });
+  return c.json(result);
+});
+
 // ── Transactions ─────────────────────────────────────
 
 admin.get("/ledger", async (c) => {
@@ -565,27 +710,51 @@ admin.post("/games/:game", async (c) => {
   return c.json({ ok: true });
 });
 
-// ── Economy: settings and shop ───────────────────────
+// ── Economy: settings, cases and the market ─────────
 
 admin.get("/economy", async (c) => {
-  const [settings, overrides, owners, revenue] = await Promise.all([
+  const [settings, copies, offers, sales, opened] = await Promise.all([
     getSettings(c.env, true),
-    shopOverrides(c.env),
-    c.env.DB.prepare("SELECT item_id, COUNT(*) AS n FROM inventory GROUP BY item_id").all<{ item_id: string; n: number }>(),
-    c.env.DB.prepare("SELECT ref AS item_id, COALESCE(-SUM(amount), 0) AS chips FROM ledger WHERE kind = 'shop' GROUP BY ref").all<{ item_id: string; chips: number }>(),
+    c.env.DB.prepare("SELECT item_id, COUNT(*) AS copies, COUNT(DISTINCT user_id) AS owners FROM inventory GROUP BY item_id").all<{
+      item_id: string;
+      copies: number;
+      owners: number;
+    }>(),
+    c.env.DB.prepare("SELECT item_id, COUNT(*) AS n, MIN(price) AS lowest FROM listings GROUP BY item_id").all<{ item_id: string; n: number; lowest: number }>(),
+    c.env.DB.prepare("SELECT item_id, COUNT(*) AS n, SUM(price) AS volume, SUM(fee) AS fees FROM market_sales GROUP BY item_id").all<{
+      item_id: string;
+      n: number;
+      volume: number;
+      fees: number;
+    }>(),
+    c.env.DB.prepare("SELECT case_id, COUNT(*) AS n, SUM(price) AS chips FROM case_openings WHERE opened_at IS NOT NULL GROUP BY case_id").all<{
+      case_id: string;
+      n: number;
+      chips: number;
+    }>(),
   ]);
-  const ownedBy = new Map(owners.results.map((r) => [r.item_id, r.n]));
-  const earned = new Map(revenue.results.map((r) => [r.item_id, r.chips]));
+  const held = new Map(copies.results.map((r) => [r.item_id, r]));
+  const offer = new Map(offers.results.map((r) => [r.item_id, r]));
+  const sold = new Map(sales.results.map((r) => [r.item_id, r]));
+  const opens = new Map(opened.results.map((r) => [r.case_id, r]));
   return c.json({
     settings,
     defaults: DEFAULT_SETTINGS,
+    fee: MARKET_FEE,
+    cases: CASES.map((box) => ({ id: box.id, name: box.name, price: box.price, items: box.items.length, opened: opens.get(box.id)?.n ?? 0, chips: opens.get(box.id)?.chips ?? 0 })),
     items: CATALOG.map((item) => ({
-      ...item,
-      basePrice: item.price,
-      price: item.price === null ? null : (overrides.get(item.id)?.price ?? item.price),
-      enabled: overrides.get(item.id)?.enabled !== 0,
-      owners: ownedBy.get(item.id) ?? 0,
-      revenue: earned.get(item.id) ?? 0,
+      id: item.id,
+      kind: item.kind,
+      name: item.name,
+      tier: item.tier,
+      reward: item.reward ?? null,
+      copies: held.get(item.id)?.copies ?? 0,
+      owners: held.get(item.id)?.owners ?? 0,
+      listings: offer.get(item.id)?.n ?? 0,
+      lowest: offer.get(item.id)?.lowest ?? null,
+      sales: sold.get(item.id)?.n ?? 0,
+      volume: sold.get(item.id)?.volume ?? 0,
+      fees: sold.get(item.id)?.fees ?? 0,
     })),
   });
 });
@@ -622,27 +791,121 @@ admin.post("/settings", async (c) => {
   return c.json({ settings: await getSettings(c.env, true) });
 });
 
-admin.post("/shop/:itemId", async (c) => {
+// ── Bank ─────────────────────────────────────────────
+//
+// The house's account: see migrations/0006_bank.sql. Sources are a game id,
+// 'cases', 'market' (the fee on each sale), 'shop' (before the market) or
+// 'staff'; the panel reads chips_in and chips_out by what they mean for each.
+
+interface Flows {
+  wagered: number;
+  paid: number;
+  shop: number;
+  cases: number;
+  market: number;
+  deposits: number;
+  withdrawals: number;
+  net: number;
+}
+
+/** Sources that aren't a game: the bank's other income, and what staff moved. */
+const NOT_A_GAME = new Set(["shop", "cases", "market", "staff"]);
+
+function flows(rows: { source: string; chips_in: number; chips_out: number }[]): Flows {
+  const f = { wagered: 0, paid: 0, shop: 0, cases: 0, market: 0, deposits: 0, withdrawals: 0, net: 0 };
+  for (const r of rows) {
+    if (r.source === "shop") f.shop += r.chips_in;
+    else if (r.source === "cases") f.cases += r.chips_in;
+    else if (r.source === "market") f.market += r.chips_in;
+    else if (r.source === "staff") (f.deposits += r.chips_in), (f.withdrawals += r.chips_out);
+    else (f.wagered += r.chips_in), (f.paid += r.chips_out);
+    f.net += r.chips_in - r.chips_out;
+  }
+  return f;
+}
+
+/** The Zurich day `back` days before `day`, both YYYY-MM-DD. */
+function dayBefore(day: string, back: number) {
+  const [y, m, d] = day.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d - back)).toISOString().slice(0, 10);
+}
+
+admin.get("/bank", async (c) => {
+  const days = Math.min(90, Math.max(7, Number(c.req.query("days")) || 30));
+  const today = zurichDay();
+  const first = dayBefore(today, days - 1);
+
+  type Row = { day: string; source: string; chips_in: number; chips_out: number };
+  const [lifetime, recent, moves] = await Promise.all([
+    c.env.DB.prepare("SELECT source, SUM(chips_in) AS chips_in, SUM(chips_out) AS chips_out FROM bank_days GROUP BY source").all<Omit<Row, "day">>(),
+    c.env.DB.prepare("SELECT day, source, chips_in, chips_out FROM bank_days WHERE day >= ? ORDER BY day").bind(first).all<Row>(),
+    c.env.DB.prepare("SELECT id, amount, reason, staff_name, created_at FROM bank_moves ORDER BY id DESC LIMIT 50").all(),
+  ]);
+
+  const total = flows(lifetime.results);
+  const period = flows(recent.results);
+
+  // Per source over the period, games first by how much went through them.
+  const bySource = new Map<string, { source: string; chips_in: number; chips_out: number }>();
+  for (const r of recent.results) {
+    const s = bySource.get(r.source) ?? { source: r.source, chips_in: 0, chips_out: 0 };
+    s.chips_in += r.chips_in;
+    s.chips_out += r.chips_out;
+    bySource.set(r.source, s);
+  }
+  const sources = [...bySource.values()].sort((a, b) => Number(NOT_A_GAME.has(a.source)) - Number(NOT_A_GAME.has(b.source)) || b.chips_in - a.chips_in);
+
+  // The balance at the close of each day, walked forward from where it stood before the period.
+  const byDay = new Map<string, Row[]>();
+  for (const r of recent.results) byDay.set(r.day, [...(byDay.get(r.day) ?? []), r]);
+  let balance = total.net - period.net;
+  const daily = Array.from({ length: days }, (_, i) => {
+    const day = dayBefore(today, days - 1 - i);
+    const f = flows(byDay.get(day) ?? []);
+    balance += f.net;
+    // The house's result at the tables, apart from what staff moved in or out.
+    return { day, net: f.net, result: f.wagered - f.paid, balance };
+  });
+
+  return c.json({
+    days,
+    balance: total.net,
+    today: flows(byDay.get(today) ?? []),
+    period,
+    lifetime: total,
+    sources,
+    daily,
+    moves: moves.results,
+  });
+});
+
+admin.post("/bank/move", async (c) => {
   const staff = c.get("staff");
   if (!can(staff, "economy")) return c.json(denied(), 403);
-  const item = ITEMS.get(c.req.param("itemId"));
-  if (!item) return c.json({ error: "Unknown item." }, 404);
-  const body = await c.req.json<{ price?: number | null; enabled?: boolean }>();
-  const current = (await shopOverrides(c.env)).get(item.id);
-  let price = current?.price ?? null;
-  if (body.price !== undefined) {
-    if (item.price === null) return c.json({ error: "Reward items have no price." }, 400);
-    price = body.price === null ? null : int(body.price, 1, 10_000_000);
-    if (body.price !== null && price === null) return c.json({ error: "Price must be a whole number of chips." }, 400);
+  const body = await c.req.json<{ amount: number; reason: string }>();
+  const amount = int(body.amount, -CHIP_CEILING, CHIP_CEILING);
+  const reason = text(body.reason, 200);
+  if (amount === null) return c.json({ error: "That is not a whole number of chips the casino can count exactly." }, 400);
+  if (amount === 0) return c.json({ error: "Enter a whole number of chips, not zero." }, 400);
+  if (reason.length < 3) return c.json({ error: "Give a reason; it's kept with the move." }, 400);
+  const t = Date.now();
+  const [move] = await c.env.DB.batch([
+    // Checked against the balance inside the same transaction, so two withdrawals can't both spend the same chips.
+    c.env.DB.prepare(
+      `INSERT INTO bank_moves (amount, reason, staff_id, staff_name, created_at)
+       SELECT ?1, ?2, ?3, ?4, ?5 FROM (SELECT COALESCE(SUM(chips_in - chips_out), 0) AS balance FROM bank_days)
+       WHERE CASE WHEN ?1 > 0 THEN balance <= ?6 - ?1 ELSE balance >= -?1 END`,
+    ).bind(amount, reason, staff.user_id, staff.name, t, CHIP_CEILING),
+    bankEntry(c.env, "staff", amount > 0 ? "in" : "out", Math.abs(amount), t),
+  ]);
+  if (!move.meta.changes) {
+    return c.json(
+      { error: amount < 0 ? "The bank doesn't hold that many chips." : "That would take the bank past the largest number the casino can count exactly." },
+      409,
+    );
   }
-  const enabled = body.enabled === undefined ? (current?.enabled ?? 1) : body.enabled ? 1 : 0;
-  await c.env.DB.prepare(
-    "INSERT INTO shop_overrides (item_id, price, enabled, updated_at) VALUES (?1, ?2, ?3, ?4) ON CONFLICT (item_id) DO UPDATE SET price = ?2, enabled = ?3, updated_at = ?4",
-  )
-    .bind(item.id, price, enabled, Date.now())
-    .run();
-  await audit(c.env, staff, "shop.update", item.id, { price, enabled: Boolean(enabled) });
-  return c.json({ ok: true });
+  await audit(c.env, staff, amount > 0 ? "bank.deposit" : "bank.withdraw", null, { amount, reason });
+  return c.json({ balance: await bankBalance(c.env) });
 });
 
 // ── Moderation ───────────────────────────────────────

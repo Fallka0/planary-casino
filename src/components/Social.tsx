@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { callCasino } from "@/lib/api";
+import { formatChips } from "@/lib/games";
 import { AchievementBadge } from "./AchievementBadge";
 import { useAuth } from "./AuthProvider";
 
@@ -13,19 +14,34 @@ interface Unread {
 
 export interface NotificationItem {
   id: number;
-  kind: "friend_request" | "friend_accepted" | "chips_received" | "table_invite" | "achievement" | "announcement" | "staff";
+  kind: "friend_request" | "friend_accepted" | "chips_received" | "table_invite" | "achievement" | "announcement" | "staff" | "sale";
   at: number;
   read: boolean;
   /** An answered prompt (a friend request accepted or declined) keeps its line but loses its buttons. */
   resolved: boolean;
   actor: import("@/lib/api").PlayerBadge | null;
-  data: { amount?: number; game?: string; table?: string; id?: string; rewards?: string[]; title?: string; body?: string; text?: string } | null;
+  data: {
+    amount?: number;
+    game?: string;
+    table?: string;
+    id?: string;
+    rewards?: string[];
+    /** Chips an achievement paid out. */
+    chips?: number;
+    title?: string;
+    body?: string;
+    text?: string;
+    /** A market sale: the item and what it went for. */
+    name?: string | null;
+    price?: number;
+  } | null;
   achievement: { id: string; name: string; glyph: string; grade: 1 | 2 | 3 | 4 } | null;
 }
 
 interface Toast {
   key: number;
   achievement: NonNullable<NotificationItem["achievement"]>;
+  chips: number;
 }
 
 const SocialContext = createContext<{ unread: Unread; refresh: () => void }>({
@@ -63,7 +79,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     }
     const fresh = notifications.filter((n) => n.id > seen.current! && n.kind === "achievement" && n.achievement && !n.read);
     seen.current = Math.max(seen.current, newest);
-    if (fresh.length) setToasts((list) => [...list, ...fresh.reverse().map((n) => ({ key: n.id, achievement: n.achievement! }))]);
+    if (fresh.length) setToasts((list) => [...list, ...fresh.reverse().map((n) => ({ key: n.id, achievement: n.achievement!, chips: n.data?.chips ?? 0 }))]);
   }, [accessToken]);
 
   const lastCount = useRef(0);
@@ -115,7 +131,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
           <Link key={t.key} href="/achievements" className="unlock-toast" onClick={() => setToasts((list) => list.slice(1))}>
             <AchievementBadge grade={t.achievement.grade} glyph={t.achievement.glyph} size={58} />
             <span className="unlock-copy">
-              <span className="unlock-kicker">Achievement unlocked</span>
+              <span className="unlock-kicker">Achievement unlocked{t.chips ? ` · +${formatChips(t.chips)} chips` : ""}</span>
               <strong>{t.achievement.name}</strong>
             </span>
           </Link>

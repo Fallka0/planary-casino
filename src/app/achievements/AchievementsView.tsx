@@ -12,6 +12,7 @@ import { percent, rarityLabel } from "@/lib/image";
 
 const CATEGORIES: { id: AchievementEntry["category"]; label: string }[] = [
   { id: "blackjack", label: "Blackjack" },
+  { id: "poker", label: "Hold’em" },
   { id: "roulette", label: "Roulette" },
   { id: "grimoire", label: "Grimoire" },
   { id: "chips", label: "Chips" },
@@ -38,7 +39,7 @@ function Card({ a }: { a: AchievementEntry }) {
           <span className={`rarity rarity-${label.toLowerCase()}`} title={`${percent(a.rarity)} of players have this`}>
             {label} · {percent(a.rarity)}
           </span>
-          {a.unlockedAt ? <time>{when(a.unlockedAt)}</time> : null}
+          {a.unlockedAt ? <time>{when(a.unlockedAt)}</time> : <span className="achv-chips">+{formatChips(a.chips)} chips</span>}
         </div>
         {a.progress ? (
           <div className="achv-progress" aria-label={`${a.progress.value} of ${a.progress.target}`}>
