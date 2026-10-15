@@ -45,7 +45,11 @@ function Card({ a, onClaim, busy }: { a: AchievementEntry; onClaim?: () => void;
           <span className={`rarity rarity-${label.toLowerCase()}`} title={`${percent(a.rarity)} of players have this`}>
             {label} · {percent(a.rarity)}
           </span>
-          {a.unlockedAt && !a.claimable ? (
+          {a.claimable && onClaim ? (
+            <button className="achv-claim" onClick={onClaim} disabled={busy} title={reward ? `Also${reward.slice(2)}` : undefined}>
+              {busy ? "Claiming…" : a.chips ? `Claim +${formatChips(a.chips)}` : "Claim"}
+            </button>
+          ) : a.unlockedAt && !a.claimable ? (
             <time>{when(a.unlockedAt)}</time>
           ) : (
             <span className="achv-chips">
@@ -53,11 +57,6 @@ function Card({ a, onClaim, busy }: { a: AchievementEntry; onClaim?: () => void;
             </span>
           )}
         </div>
-        {a.claimable && onClaim ? (
-          <button className="btn btn-sm btn-cherry achv-claim" onClick={onClaim} disabled={busy}>
-            {busy ? "Claiming…" : `Claim +${formatChips(a.chips)} chips`}
-          </button>
-        ) : null}
         {a.progress ? (
           <div className="achv-progress" aria-label={`${a.progress.value} of ${a.progress.target}`}>
             <span style={{ width: `${(a.progress.value / a.progress.target) * 100}%` }} />
@@ -149,21 +148,6 @@ export function AchievementsView() {
                 </span>
               </div>
             ) : null}
-            {isMine && waiting.length ? (
-              <div className="achv-claims">
-                <span>
-                  <small>Ready to claim</small>
-                  <strong>+{formatChips(waitingChips)} chips</strong>
-                  <span>
-                    {waiting.length} {waiting.length === 1 ? "achievement" : "achievements"}
-                  </span>
-                </span>
-                <button className="btn btn-cherry" onClick={() => void collect(null)} disabled={claiming !== null}>
-                  {claiming === "all" ? "Claiming…" : waiting.length === 1 ? "Claim" : "Claim all"}
-                </button>
-              </div>
-            ) : null}
-            {claimNote ? <p className={claimNote.ok ? "form-ok" : "form-error"}>{claimNote.text}</p> : null}
             {!isMine && owner ? (
               <Link className="btn btn-quiet" href={`/u/${owner.id}`}>
                 Back to profile
@@ -179,9 +163,17 @@ export function AchievementsView() {
                 </button>
               ))}
             </div>
-            <label className="owned-toggle">
-              <input type="checkbox" checked={rarest} onChange={(e) => setRarest(e.target.checked)} /> Rarest first
-            </label>
+            <div className="achv-bar-end">
+              {claimNote ? <span className={claimNote.ok ? "form-ok" : "form-error"}>{claimNote.text}</span> : null}
+              {isMine && waiting.length > 1 ? (
+                <button className="achv-claim-all" onClick={() => void collect(null)} disabled={claiming !== null} title={`${waiting.length} achievements, +${formatChips(waitingChips)} chips`}>
+                  {claiming === "all" ? "Claiming…" : `Claim all · +${formatChips(waitingChips)}`}
+                </button>
+              ) : null}
+              <label className="owned-toggle">
+                <input type="checkbox" checked={rarest} onChange={(e) => setRarest(e.target.checked)} /> Rarest first
+              </label>
+            </div>
           </div>
 
           {rarest ? (

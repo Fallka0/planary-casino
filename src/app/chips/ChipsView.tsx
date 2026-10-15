@@ -40,7 +40,7 @@ function describe(entry: LedgerEntry) {
     case "shop":
       return "Shop purchase";
     case "achievement":
-      return "Achievement reward";
+      return entry.amount < 0 ? "Achievement chips, set aside to claim" : "Achievement claimed";
     case "case":
       return `${entry.ref === "afterhours" ? "Afterhours" : "Classic"} Case opened`;
     case "market_buy":

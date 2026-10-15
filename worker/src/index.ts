@@ -419,6 +419,9 @@ app.post("/v1/friends/remove", async (c) => {
  * sent on balance — rewinding the current balance through the ledger gives the
  * balance at ?1.
  *
+ * Achievement chips count net too: chips set aside to be claimed again and
+ * then claimed back are no new money.
+ *
  * Transfers count net. Counted one by one, chips passed back and forth would
  * grow both bankrolls on every trip. A player who sent more than they got
  * keeps their full bankroll, so parking chips with a friend and playing the
@@ -430,8 +433,9 @@ function returnsQuery(filter: string, limit: number) {
       SELECT l.user_id,
         SUM(CASE WHEN l.kind = 'game' AND l.created_at < ?2 THEN l.amount ELSE 0 END) AS net,
         SUM(CASE WHEN l.kind = 'game' AND l.created_at < ?2 THEN 1 ELSE 0 END) AS entries,
-        SUM(CASE WHEN l.kind NOT IN ('game', 'transfer_in', 'transfer_out') AND l.amount > 0 AND l.created_at < ?2 THEN l.amount ELSE 0 END)
+        SUM(CASE WHEN l.kind NOT IN ('game', 'transfer_in', 'transfer_out', 'achievement') AND l.amount > 0 AND l.created_at < ?2 THEN l.amount ELSE 0 END)
           + MAX(SUM(CASE WHEN l.kind IN ('transfer_in', 'transfer_out') AND l.created_at < ?2 THEN l.amount ELSE 0 END), 0)
+          + MAX(SUM(CASE WHEN l.kind = 'achievement' AND l.created_at < ?2 THEN l.amount ELSE 0 END), 0)
           - SUM(l.amount) AS rewind
       FROM ledger l WHERE l.created_at >= ?1 GROUP BY l.user_id
     ) w JOIN players p ON p.user_id = w.user_id

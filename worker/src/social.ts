@@ -201,7 +201,7 @@ social.post("/achievements/:id/claim", async (c) => {
 social.post("/achievements/claim-all", async (c) => {
   const me = c.get("player").user_id;
   const claimed = [];
-  for (const id of await unclaimed(c.env, me)) {
+  for (const id of (await unclaimed(c.env, me)).keys()) {
     const paid = await claim(c.env, me, id);
     if (paid) claimed.push(paid);
   }

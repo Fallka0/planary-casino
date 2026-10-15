@@ -525,7 +525,7 @@ admin.get("/players/:id/progress", async (c) => {
     getSettings(c.env, true),
     unclaimed(c.env, id),
   ]);
-  const toClaim = new Set(waiting);
+  const toClaim = new Set(waiting.keys());
   const known = new Set(STAT_FIELDS.map((f) => f.key));
   return c.json({
     achievements: ACHIEVEMENTS.map((a) => ({

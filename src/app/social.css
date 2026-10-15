@@ -775,9 +775,37 @@ a.person-name:hover { text-decoration: underline; text-underline-offset: 3px; }
 
 .achv-foot .achv-chips { color: var(--text-3); font-size: 0.78rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 .achv.is-claimable { background: var(--layer-1); border-color: var(--line-2); }
-.achv-claim { justify-self: start; margin-top: 6px; }
-.achv-claims { display: flex; align-items: center; gap: 16px; padding: 16px 20px; border-radius: var(--r-lg); background: var(--layer-1); border: 1px solid var(--line-2); }
-.achv-claims > span { display: grid; line-height: 1.2; }
-.achv-claims small { color: var(--text-3); font-size: 0.74rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
-.achv-claims strong { font-family: var(--font-poster); font-size: 1.5rem; font-weight: 800; text-transform: uppercase; font-variant-numeric: tabular-nums; }
-.achv-claims span span { color: var(--text-3); font-size: 0.86rem; }
+/* Claiming sits in the card's own foot: a small pill where the date will go. */
+.achv-claim {
+  height: 26px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--cherry-fill);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transition: background-color 0.18s ease, transform 80ms var(--ease-out);
+}
+.achv-claim:hover:not(:disabled) { background: var(--cherry-fill-hover); }
+.achv-claim:active:not(:disabled) { transform: scale(0.97); }
+.achv-claim:disabled { opacity: 0.6; cursor: default; }
+.achv-foot { align-items: center; }
+.achv-bar-end { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px 16px; }
+.achv-bar-end .form-ok, .achv-bar-end .form-error { font-size: 0.78rem; }
+.achv-claim-all {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: none;
+  border: 1px solid var(--line-2);
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+.achv-claim-all:hover:not(:disabled) { background: var(--layer-1); border-color: var(--cherry); }
+.achv-claim-all:disabled { opacity: 0.6; cursor: default; }
