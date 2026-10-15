@@ -8,6 +8,7 @@ import { ACHIEVEMENT_MAP, ACHIEVEMENTS, achievementsOf, getStats, liveStats, rew
 import { CASES, CATALOG } from "./catalog";
 import type { Env, Player } from "./env";
 import { MARKET_FEE } from "./market";
+import { checkName, clearCustomName, nameChangePrice, renameByStaff } from "./names";
 import { notify } from "./notify";
 import { blockedReason, dailyLoss, DEFAULT_SETTINGS, gameStatus, getSettings, isMuted } from "./policy";
 import {
@@ -312,6 +313,7 @@ admin.get("/players/:id", async (c) => {
   ]);
   return c.json({
     ...badge(p),
+    naming: { custom: Boolean(p.name_custom), changes: p.name_changes, nextPrice: nameChangePrice(p) },
     balance: p.balance,
     bio: p.bio,
     joinedAt: p.created_at,
@@ -449,6 +451,23 @@ admin.post("/players/:id/bio/remove", async (c) => {
   return c.json({ ok: true });
 });
 
+/** Renames a player. Free, and it doesn't use up their own free change. */
+admin.post("/players/:id/name", async (c) => {
+  const staff = c.get("staff");
+  if (!can(staff, "moderate")) return c.json(denied(), 403);
+  const id = c.req.param("id");
+  const p = await c.env.DB.prepare("SELECT name FROM players WHERE user_id = ?").bind(id).first<{ name: string }>();
+  if (!p) return c.json({ error: "Player not found." }, 404);
+  const body = await c.req.json<{ name?: string; reason?: string }>().catch(() => ({}) as { name?: string; reason?: string });
+  const checked = await checkName(c.env, id, body.name);
+  if ("error" in checked) return c.json({ error: checked.error }, checked.status);
+  const reason = text(body.reason, 200);
+  await renameByStaff(c.env, id, checked.name);
+  await audit(c.env, staff, "name.set", id, { was: p.name, now: checked.name, reason });
+  await notify(c.env, id, "staff", null, { text: `Your casino name is now ${checked.name}${reason ? `: ${reason}` : "."}` });
+  return c.json({ ok: true, name: checked.name });
+});
+
 /** A chosen name that breaks the rules goes back to the Planary account name on their next visit. */
 admin.post("/players/:id/name/reset", async (c) => {
   const staff = c.get("staff");
@@ -456,10 +475,32 @@ admin.post("/players/:id/name/reset", async (c) => {
   const id = c.req.param("id");
   const p = await c.env.DB.prepare("SELECT name FROM players WHERE user_id = ?").bind(id).first<{ name: string }>();
   if (!p) return c.json({ error: "Player not found." }, 404);
-  await c.env.DB.prepare("UPDATE players SET name_custom = 0 WHERE user_id = ?").bind(id).run();
+  await clearCustomName(c.env, id);
   await audit(c.env, staff, "name.reset", id, { was: p.name });
-  await notify(c.env, id, "staff", null, { text: "Your casino name was reset because it broke the house rules." });
+  await notify(c.env, id, "staff", null, { text: "Your casino name was reset to your Planary account name." });
   return c.json({ ok: true });
+});
+
+/**
+ * A link that lets the player choose a new password, from planary-auth. Staff
+ * hand it over themselves (it's also mailed when auth can send mail); nobody
+ * on staff ever sees or sets the password.
+ */
+admin.post("/players/:id/password-reset", async (c) => {
+  const staff = c.get("staff");
+  if (!can(staff, "restrict")) return c.json(denied(), 403);
+  const id = c.req.param("id");
+  if (!c.env.AUTH_ADMIN_KEY) return c.json({ error: "Password resets aren't set up yet: AUTH_ADMIN_KEY is missing on the casino API." }, 503);
+  const res = await c.env.AUTH.fetch(
+    new Request(`https://auth.internal/api/admin/users/${encodeURIComponent(id)}/reset-link`, {
+      method: "POST",
+      headers: { "X-Admin-Key": c.env.AUTH_ADMIN_KEY },
+    }),
+  );
+  const data = (await res.json().catch(() => ({}))) as { link?: string; expiresAt?: number; mailed?: boolean; error?: string };
+  if (!res.ok || !data.link) return c.json({ error: data.error ?? "The sign-in service didn't make a reset link. Try again." }, res.status === 404 ? 404 : 502);
+  await audit(c.env, staff, "password.reset_link", id, { mailed: Boolean(data.mailed) });
+  return c.json({ link: data.link, expiresAt: data.expiresAt, mailed: Boolean(data.mailed) });
 });
 
 admin.post("/players/:id/notes", async (c) => {

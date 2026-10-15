@@ -9,6 +9,13 @@ export function buildAuthUrl(mode: "login" | "signup", returnTo: string, auto = 
   return target.toString();
 }
 
+/** Name and password live with the Planary account, on auth.planary.ch. */
+export function accountSettingsUrl(returnTo: string) {
+  const target = new URL("/account", AUTH_BASE_URL);
+  target.searchParams.set("returnTo", returnTo);
+  return target.toString();
+}
+
 /** Ends the Planary session too, otherwise single sign-on would sign people straight back in. */
 export function signOutUrl(returnTo: string) {
   const target = new URL("/logout", AUTH_BASE_URL);

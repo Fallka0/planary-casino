@@ -105,17 +105,18 @@ function BioEditor({ bio, onDone }: { bio: string | null; onDone: () => void }) 
   );
 }
 
-function NameEditor({ name, custom, onDone }: { name: string; custom: boolean; onDone: () => void }) {
+function NameEditor({ name, change, onDone }: { name: string; change: { custom: boolean; price: number }; onDone: () => void }) {
   const act = useCasinoAction();
   const [value, setValue] = useState(name);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const unchanged = value.trim() === name;
 
   async function save(next: string) {
     setBusy(true);
     setError(null);
     try {
-      await act("/v1/profile", { name: next });
+      await act("/v1/profile/name", { name: next });
       onDone();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't save the name.");
@@ -129,7 +130,7 @@ function NameEditor({ name, custom, onDone }: { name: string; custom: boolean; o
       className="name-form"
       onSubmit={(e) => {
         e.preventDefault();
-        if (value.trim() === name) onDone();
+        if (unchanged) onDone();
         else void save(value);
       }}
     >
@@ -138,12 +139,16 @@ function NameEditor({ name, custom, onDone }: { name: string; custom: boolean; o
         onChange={(e) => setValue(e.target.value.slice(0, 24))}
         maxLength={24}
         aria-label="Your casino name"
+        aria-describedby="name-price"
         autoFocus
         onKeyDown={(e) => e.key === "Escape" && onDone()}
       />
+      <p className="name-price" id="name-price">
+        {change.price === 0 ? "Your first name change is free." : `A new name costs ${formatChips(change.price)} chips.`}
+      </p>
       <div className="bio-actions">
         <span className="bio-count">{value.length}/24</span>
-        {custom ? (
+        {change.custom ? (
           <button type="button" className="link-btn" onClick={() => void save("")} disabled={busy}>
             Use my Planary name
           </button>
@@ -152,7 +157,7 @@ function NameEditor({ name, custom, onDone }: { name: string; custom: boolean; o
           Cancel
         </button>
         <button type="submit" className="btn btn-sm btn-cherry" disabled={busy || value.trim().length < 2}>
-          Save
+          {change.price && !unchanged ? `Pay ${formatChips(change.price)}` : "Save"}
         </button>
       </div>
       {error ? (
@@ -294,13 +299,13 @@ export function ProfileView({ id }: { id: string }) {
           </div>
           <div className="profile-copy">
             {p.title ? <span className="profile-title">{p.title}</span> : null}
-            {editingName ? (
-              <NameEditor name={p.name} custom={Boolean(p.customName)} onDone={() => setEditingName(false)} />
+            {editingName && p.nameChange ? (
+              <NameEditor name={p.name} change={p.nameChange} onDone={() => setEditingName(false)} />
             ) : (
               <div className="profile-name-row">
                 <h1 id="profile-name">{p.name}</h1>
-                {self ? (
-                  <button className="icon-btn profile-name-edit" onClick={() => setEditingName(true)} aria-label="Edit name">
+                {self && p.nameChange ? (
+                  <button className="icon-btn profile-name-edit" onClick={() => setEditingName(true)} aria-label="Change name">
                     <Pencil size={16} strokeWidth={2} aria-hidden="true" />
                   </button>
                 ) : null}

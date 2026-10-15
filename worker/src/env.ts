@@ -10,13 +10,17 @@ export interface Env {
   OWNER_EMAIL: string;
   /** Browser origins allowed to call /admin (the admin app). */
   ADMIN_ORIGINS: string;
+  /** Shared with planary-auth (secret, same value as its ADMIN_API_KEY). Lets staff make password reset links. */
+  AUTH_ADMIN_KEY?: string;
 }
 
 export interface Player {
   user_id: string;
   name: string;
-  /** 1 once the player picked their own name; the account sync then leaves it alone. */
+  /** 1 once the name is the player's own pick (or staff's); the account sync then leaves it alone. */
   name_custom: number;
+  /** Names the player picked themselves. The first is free. */
+  name_changes: number;
   balance: number;
   bonus_day: string | null;
   presence_where: string | null;

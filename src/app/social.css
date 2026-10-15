@@ -438,6 +438,7 @@
   font-weight: 900;
   text-transform: uppercase;
 }
+.name-price { margin: 0; color: var(--text-2); font-size: 0.85rem; }
 .name-form .form-error { margin: 0; }
 .profile-title {
   justify-self: start;

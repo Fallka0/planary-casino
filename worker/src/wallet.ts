@@ -6,13 +6,6 @@ import { zurichDay, zurichYesterday } from "./time";
 
 const now = () => Date.now();
 
-export function cleanName(raw: unknown) {
-  return String(raw ?? "")
-    .replace(/[\u0000-\u001f\u007f<>]/g, "")
-    .trim()
-    .slice(0, 24) || "Player";
-}
-
 export async function getPlayer(env: Env, userId: string) {
   return env.DB.prepare("SELECT * FROM players WHERE user_id = ?").bind(userId).first<Player>();
 }
