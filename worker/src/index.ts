@@ -8,8 +8,9 @@ import { nextZurichMidnight, zurichDay, zurichWeekStart } from "./time";
 import { admin } from "./admin";
 import { market } from "./market";
 import { pruneRounds, openCommitment, revealCommitment, roundById, roundsForPlayer, saveRound, sealClientSeed, type RoundRecord } from "./archive";
+import { cleanName } from "./names";
 import { betRefusal, blockedReason, getSettings, isMuted } from "./policy";
-import { claimBonus, cleanName, credit, debit, ensurePlayer, getPlayer, transfer } from "./wallet";
+import { claimBonus, credit, debit, ensurePlayer, getPlayer, transfer } from "./wallet";
 
 type Vars = { player: Player };
 const app = new Hono<{ Bindings: Env; Variables: Vars }>();

@@ -38,7 +38,7 @@ function describe(entry: LedgerEntry) {
     case "game":
       return `${entry.game === "roulette" ? "Roulette" : "Blackjack"} · ${entry.amount < 0 ? "bet" : "payout"}`;
     case "shop":
-      return "Shop purchase";
+      return entry.ref === "name-change" ? "Name change" : "Shop purchase";
     case "achievement":
       return entry.amount < 0 ? "Achievement chips, set aside to claim" : "Achievement claimed";
     case "case":
