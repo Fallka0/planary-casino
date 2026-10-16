@@ -12,7 +12,7 @@ const poster = Big_Shoulders({ variable: "--font-poster", weight: ["700", "800",
 export const metadata: Metadata = {
   title: "Planary Casino",
   description: "Blackjack, Poker, Baccarat, Roulette and Slots with one Planary account. Play money only.",
-  icons: { icon: "/favicon.svg" },
+  icons: { icon: "/favicon.svg", apple: "/apple-touch-icon.png" },
 };
 
 const CONTRACT = `<!--

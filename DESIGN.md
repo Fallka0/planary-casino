@@ -341,7 +341,9 @@ Compact, ticket-cut and confident.
 The lobby's carousel is a cover blown up to banner width. The container takes the current cover's field as its ground and its ink as its text; the poster fills the right 64% and feathers leftward into the same field (solid to 30%, gone by 64%), so title, blurb, tags and action sit on the poster's own colour with no dark scrim. Covers crossfade over 0.7s with a slow 1.06 to 1 settle; the ground colour transitions with them. Autoplay is 8s, paused on hover and focus and disabled under reduced motion; a counter pill (field mixed 18% with ink) shows position and a progress ring. On mobile the art takes the top 62% and feathers downward.
 
 ### Chip Mark (signature)
-An authored flat chip: cherry disc, dashed cream edge ring, cream centre with a cherry dot, or a cherry "P" in Big Shoulders 900 as the brand mark. Two inks, no gradient, no bevel. It is both the logo and the unit glyph beside every chip count.
+An authored flat chip: cherry disc, dashed cream edge ring, cream centre with a cherry dot. Two inks, no gradient, no bevel. It is the unit glyph beside every chip count.
+
+The logo (`CasinoLogo`, `public/favicon.svg`) is the same chip language as an emblem: a cherry disc with eight cream edge notches (ring segments, 17.8° each), a cream centre, and the Planary mark (planet with its ring at −28°) in cherry, scaled to 9/16 of the chip. Below about 43px the mark switches to its heavier small cut so the ring and its gap stay readable.
 
 ### Screen-printed Covers (signature)
 600 by 800 SVG covers, subject in the right two thirds. Each is one flat field, a halftone dot screen (14px, rotated 22deg, fading in toward the bottom), a multiply grain pass at 35%, two or three inks, and one plate printed about 10 to 12px off register. Playing cards are cream paper with Big Shoulders indices.
