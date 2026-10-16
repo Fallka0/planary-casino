@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useId, useRef, useState } from "react";
 import { Award, Coins, Gift, LayoutGrid, LogIn, LogOut, MessageCircle, Scale, Search, Spade, Store, Trophy, UserRound, Users } from "lucide-react";
 import { describePresence, type FriendsData, type Me, useCasino, useCasinoAction } from "@/lib/api";
+import { accountSettingsUrl } from "@/lib/auth";
 import { formatChips } from "@/lib/games";
 import { useAuth } from "./AuthProvider";
 import { Avatar } from "./Avatar";
@@ -237,6 +238,7 @@ function AccountButton({ name, email }: { name: string; email: string }) {
           <Link href="/market">Market</Link>
           <Link href="/leaderboard">Leaderboard</Link>
           <Link href="/chips">Chips</Link>
+          <a href={accountSettingsUrl(window.location.href)}>Account &amp; password</a>
           <a href="https://wishlist.planary.ch">Planary Wishlist</a>
           <button onClick={signOut}>Sign out</button>
         </div>
