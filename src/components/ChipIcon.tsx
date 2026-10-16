@@ -1,7 +1,7 @@
 import { chipInks } from "@/lib/chipsets";
 
 /**
- * A Planary Chip, drawn flat in two inks. Used for balances and as the brand mark;
+ * A Planary Chip, drawn flat in two inks. Used for balances (the brand mark is CasinoLogo);
  * with a `value` it's a table chip in that denomination's colours (and the player's chip set).
  */
 export function ChipIcon({ size = 18, letter, value, set }: { size?: number; letter?: string; value?: number; set?: string | null }) {

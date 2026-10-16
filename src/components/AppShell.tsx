@@ -9,6 +9,7 @@ import { accountSettingsUrl } from "@/lib/auth";
 import { formatChips } from "@/lib/games";
 import { useAuth } from "./AuthProvider";
 import { Avatar } from "./Avatar";
+import { CasinoLogo } from "./CasinoLogo";
 import { ChipIcon } from "./ChipIcon";
 import { FriendButton } from "./FriendMenu";
 import { NotificationBell } from "./NotificationBell";
@@ -35,7 +36,7 @@ const TABS = [
 ];
 
 export function BrandMark({ size = 38 }: { size?: number }) {
-  return <ChipIcon size={size} letter="P" />;
+  return <CasinoLogo size={size} />;
 }
 
 function isActive(pathname: string, href: string) {
