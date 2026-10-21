@@ -368,7 +368,8 @@ function Shell({ children }: { children: React.ReactNode }) {
         <main className="content">{children}</main>
         <footer className="legal">
           Play money only. Planary Chips have no cash value and cannot be bought, sold or exchanged.{" "}
-          <Link href="/rules">Fair play &amp; odds</Link> · <a href="https://planary.ch">planary.ch</a>
+          <Link href="/rules">Fair play &amp; odds</Link> · <a href="https://planary.ch/impressum">Impressum</a> ·{" "}
+          <a href="https://planary.ch/datenschutz">Datenschutz</a> · <a href="https://planary.ch">planary.ch</a>
         </footer>
       </div>
       <TabBar />
