@@ -784,6 +784,102 @@ a.person-name:hover { text-decoration: underline; text-underline-offset: 3px; }
   .profile-copy h1 { font-size: 2.3rem; }
 }
 
+/* ── Midnight Macau (case-only; the art is in public/cosmetics/macau) ─── */
+/* The values below come from the design handoff for this case; see .impeccable/config.json. */
+
+/* Midnight Macau rings: drawn art, wider than the 4px ring and some of it outside the
+   circle, so no mask. Each inset fits that art's photo circle to the picture. */
+.avatar.border-bamboo::before, .avatar.border-porcelain::before, .avatar.border-sakura::before, .avatar.border-lacquer::before, .avatar.border-rising-tide::before, .avatar.border-night-sakura::before, .avatar.border-mother-of-pearl::before, .avatar.border-onsen::before { border-radius: 0; -webkit-mask: none; mask: none; background: center / 100% 100% no-repeat; }
+.avatar.border-bamboo::before { inset: -24.07%; background-image: url(/cosmetics/macau/border-bamboo.svg); }
+.avatar.border-porcelain::before { inset: -26.92%; background-image: url(/cosmetics/macau/border-porcelain.svg); }
+.avatar.border-sakura::before { inset: -26.92%; background-image: url(/cosmetics/macau/border-sakura.svg); }
+.avatar.border-lacquer::before { inset: -26.92%; background-image: url(/cosmetics/macau/border-lacquer.svg); }
+.avatar.border-rising-tide::before { inset: -28.74%; background-image: url(/cosmetics/macau/border-rising-tide.svg); }
+.avatar.border-night-sakura::before { inset: -30.0%; background-image: url(/cosmetics/macau/border-night-sakura.svg); }
+.avatar.border-mother-of-pearl::before { inset: -30.0%; background-image: url(/cosmetics/macau/border-mother-of-pearl.svg); }
+/* The capybara sits on top of the ring, so the onsen art reaches well above the picture. */
+.avatar.border-onsen::before { inset: -66% -30% -26%; background-image: url(/cosmetics/macau/border-onsen.svg); }
+
+/* Banners. Most are animated inside the SVG, so reduced motion swaps in a still copy. */
+.banner-seigaiha { background: #1b0b14 url(/cosmetics/macau/banner-seigaiha.svg) center / cover no-repeat; }
+.banner-lattice { background: #1b0b14 url(/cosmetics/macau/banner-lattice.svg) center / cover no-repeat; }
+.banner-strawberry-matcha { background: #1b0b14 url(/cosmetics/macau/banner-strawberry-matcha.svg) center / cover no-repeat; }
+.banner-lanterns { background: #1b0b14 url(/cosmetics/macau/banner-lanterns.svg) center / cover no-repeat; }
+.banner-pagoda-mist { background: #1b0b14 url(/cosmetics/macau/banner-pagoda-mist.svg) center / cover no-repeat; }
+.banner-torii { background: #1b0b14 url(/cosmetics/macau/banner-torii.svg) center / cover no-repeat; }
+.banner-ink-wave { background: #1b0b14 url(/cosmetics/macau/banner-ink-wave.svg) center / cover no-repeat; }
+.banner-yozakura { background: #1b0b14 url(/cosmetics/macau/banner-yozakura.svg) center / cover no-repeat; }
+
+/* Card backs: each file is the whole card, edge included. */
+.print-back.cardback-matcha, .print-back.cardback-mahjong, .print-back.cardback-fan, .print-back.cardback-hongbao, .print-back.cardback-koi, .print-back.cardback-red-dragon { border: 0; border-radius: 4px; background: center / 100% 100% no-repeat; }
+.print-back.cardback-matcha { background-image: url(/cosmetics/macau/cardback-matcha.svg); }
+.print-back.cardback-mahjong { background-image: url(/cosmetics/macau/cardback-mahjong.svg); }
+.print-back.cardback-fan { background-image: url(/cosmetics/macau/cardback-fan.svg); }
+.print-back.cardback-hongbao { background-image: url(/cosmetics/macau/cardback-hongbao.svg); }
+.print-back.cardback-koi { background-image: url(/cosmetics/macau/cardback-koi.svg); }
+.print-back.cardback-red-dragon { background-image: url(/cosmetics/macau/cardback-red-dragon.svg); }
+
+/* Titles stay text; these give a few their own pill: an icon, their own inks. */
+.title-pill.title-lucky-eight, .title-pill.title-dim-sum { background: #f3e6cf; color: #3a1a22; }
+.title-pill.title-golden-koi { background: #ffe3a3; color: #6a3a08; box-shadow: inset 0 0 0 1.4px #e0a43a; }
+.title-pill.title-red-envelope { background: #c41f2c; color: #fde9d6; box-shadow: inset 0 0 0 1.2px #8e1420; }
+/* The icon takes room, so these pills set a little tighter to keep the name whole in a tile. */
+.title-pill.title-lucky-eight, .title-pill.title-dim-sum, .title-pill.title-golden-koi, .title-pill.title-red-envelope, .title-pill.title-night-emperor { letter-spacing: 0.04em; }
+.title-pill.title-night-emperor { background: linear-gradient(#2a2030, #0c080e); color: #f3cd6a; box-shadow: inset 0 0 0 1.6px #e9b949; }
+.title-pill.title-lucky-eight::before, .title-pill.title-dim-sum::before, .title-pill.title-golden-koi::before,
+.title-pill.title-red-envelope::before, .title-pill.title-night-emperor::before {
+  content: "";
+  display: inline-block;
+  width: 1.3em;
+  height: 1.3em;
+  margin: -0.3em 0.35em -0.3em -0.35em;
+  vertical-align: middle;
+  background: center / contain no-repeat;
+}
+.title-pill.title-lucky-eight::before { background-image: url(/cosmetics/macau/title-lucky-eight.icon.svg); }
+.title-pill.title-dim-sum::before { background-image: url(/cosmetics/macau/title-dim-sum.icon.svg); }
+.title-pill.title-golden-koi::before { background-image: url(/cosmetics/macau/title-golden-koi.icon.svg); }
+.title-pill.title-red-envelope::before { background-image: url(/cosmetics/macau/title-red-envelope.icon.svg); }
+.title-pill.title-night-emperor::before { background-image: url(/cosmetics/macau/title-night-emperor.icon.svg); }
+/* Risk for Riches reads 险中求, in holo on a dark pill with a holo edge. The poster face has
+   no CJK, so the characters fall back to a serif that does. */
+.title-pill.title-risk-for-riches {
+  border: 2px solid transparent;
+  background: linear-gradient(#2a0b14, #2a0b14) padding-box, linear-gradient(110deg, #ff5a78, #fff3c4, #8ee6ff, #c58bff) border-box;
+  color: #fff3c4;
+  font-family: var(--font-poster), "Noto Serif TC", "PingFang TC", "Microsoft JhengHei", serif;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+}
+@supports (background-clip: text) {
+  .title-pill.title-risk-for-riches {
+    background: linear-gradient(110deg, #ff5a78, #fff3c4, #8ee6ff, #c58bff, #ff5a78) 0 0 / 300% 100%, linear-gradient(#2a0b14, #2a0b14),
+      linear-gradient(110deg, #ff5a78, #fff3c4, #8ee6ff, #c58bff, #ff5a78);
+    -webkit-background-clip: text, padding-box, border-box;
+    background-clip: text, padding-box, border-box;
+    color: transparent;
+    animation: holo-pan 6s linear infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner-strawberry-matcha { background-image: url(/cosmetics/macau/banner-strawberry-matcha.static.svg); }
+  .banner-lanterns { background-image: url(/cosmetics/macau/banner-lanterns.static.svg); }
+  .banner-pagoda-mist { background-image: url(/cosmetics/macau/banner-pagoda-mist.static.svg); }
+  .banner-torii { background-image: url(/cosmetics/macau/banner-torii.static.svg); }
+  .banner-ink-wave { background-image: url(/cosmetics/macau/banner-ink-wave.static.svg); }
+  .banner-yozakura { background-image: url(/cosmetics/macau/banner-yozakura.static.svg); }
+  .avatar.border-lacquer::before { background-image: url(/cosmetics/macau/border-lacquer.static.svg); }
+  .avatar.border-mother-of-pearl::before { background-image: url(/cosmetics/macau/border-mother-of-pearl.static.svg); }
+  .avatar.border-night-sakura::before { background-image: url(/cosmetics/macau/border-night-sakura.static.svg); }
+  .avatar.border-onsen::before { background-image: url(/cosmetics/macau/border-onsen.static.svg); }
+  .avatar.border-rising-tide::before { background-image: url(/cosmetics/macau/border-rising-tide.static.svg); }
+  .print-back.cardback-hongbao { background-image: url(/cosmetics/macau/cardback-hongbao.static.svg); }
+  .print-back.cardback-koi { background-image: url(/cosmetics/macau/cardback-koi.static.svg); }
+  .print-back.cardback-red-dragon { background-image: url(/cosmetics/macau/cardback-red-dragon.static.svg); }
+  .title-pill.title-risk-for-riches { animation: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .avatar.border-holo::before, .banner-holo, .banner-aurora::after, .banner-fireworks, .cardback-holo, .medal-burst, .medal-sheen { animation: none !important; }
 }

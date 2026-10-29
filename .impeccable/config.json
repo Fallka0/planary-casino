@@ -218,6 +218,108 @@
         "value": "cubic-bezier(.34, 1.56, .64, 1)",
         "createdAt": "2026-10-15T08:13:43.504Z",
         "reason": "Specified verbatim in the user-supplied Claude Design handoff for /market (README choreography table, Recoil beat); the user asked to implement it"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#0b0608",
+        "createdAt": "2026-10-29T10:02:09.000Z",
+        "reason": "Specified verbatim in the user-supplied design handoff design_handoff_midnight_macau/README.md; the user approved it"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#0c080e",
+        "createdAt": "2026-10-29T10:02:09.000Z",
+        "reason": "Specified verbatim in the user-supplied design handoff design_handoff_midnight_macau/README.md; the user approved it"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#1b0b14",
+        "createdAt": "2026-10-29T10:02:09.000Z",
+        "reason": "Specified verbatim in the user-supplied design handoff design_handoff_midnight_macau/README.md; the user approved it"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#2a0b14",
+        "createdAt": "2026-10-29T10:02:09.000Z",
+        "reason": "Specified verbatim in the user-supplied design handoff design_handoff_midnight_macau/README.md; the user approved it"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#2a2030",
+        "createdAt": "2026-10-29T10:02:09.000Z",
+        "reason": "Specified verbatim in the user-supplied design handoff design_handoff_midnight_macau/README.md; the user approved it"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#3a1a22",
+        "createdAt": "2026-10-29T10:02:09.000Z",
+        "reason": "Specified verbatim in the user-supplied design handoff design_handoff_midnight_macau/README.md; the user approved it"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#6a3a08",
+        "createdAt": "2026-10-29T10:02:09.000Z",
+        "reason": "Specified verbatim in the user-supplied design handoff design_handoff_midnight_macau/README.md; the user approved it"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#8e1420",
+        "createdAt": "2026-10-29T10:02:09.000Z",
+        "reason": "Specified verbatim in the user-supplied design handoff design_handoff_midnight_macau/README.md; the user approved it"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#c41f2c",
+        "createdAt": "2026-10-29T10:02:09.000Z",
+        "reason": "Specified verbatim in the user-supplied design handoff design_handoff_midnight_macau/README.md; the user approved it"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#e0a43a",
+        "createdAt": "2026-10-29T10:02:09.000Z",
+        "reason": "Specified verbatim in the user-supplied design handoff design_handoff_midnight_macau/README.md; the user approved it"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#e8b84a",
+        "createdAt": "2026-10-29T10:02:09.000Z",
+        "reason": "Specified verbatim in the user-supplied design handoff design_handoff_midnight_macau/README.md; the user approved it"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#e9b949",
+        "createdAt": "2026-10-29T10:02:09.000Z",
+        "reason": "Specified verbatim in the user-supplied design handoff design_handoff_midnight_macau/README.md; the user approved it"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#f3cd6a",
+        "createdAt": "2026-10-29T10:02:09.000Z",
+        "reason": "Specified verbatim in the user-supplied design handoff design_handoff_midnight_macau/README.md; the user approved it"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#f3e6cf",
+        "createdAt": "2026-10-29T10:02:09.000Z",
+        "reason": "Specified verbatim in the user-supplied design handoff design_handoff_midnight_macau/README.md; the user approved it"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#fde9d6",
+        "createdAt": "2026-10-29T10:02:09.000Z",
+        "reason": "Specified verbatim in the user-supplied design handoff design_handoff_midnight_macau/README.md; the user approved it"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#ffe3a3",
+        "createdAt": "2026-10-29T10:02:09.000Z",
+        "reason": "Specified verbatim in the user-supplied design handoff design_handoff_midnight_macau/README.md; the user approved it"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "var(--font-poster), \"Noto Serif TC\", \"PingFang TC\", \"Microsoft JhengHei\", serif",
+        "createdAt": "2026-10-29T10:02:09.000Z",
+        "reason": "Specified verbatim in the user-supplied design handoff design_handoff_midnight_macau/README.md; the user approved it"
       }
     ]
   }

@@ -157,6 +157,8 @@
 .mk-cards .print-back:last-child { rotate: 7deg; translate: -18% 4%; }
 .mk-chips .chip-icon + .chip-icon { margin-left: -12%; }
 .mk-chips .chip-icon { filter: none; }
+/* Drawn chip sets have their own edge and shadow, so they need less overlap to read. */
+.mk-chips .chip-art + .chip-art { margin-left: -6%; }
 
 /* Tier edges and frames */
 .mk-edge { flex: none; height: 3px; }
@@ -283,6 +285,12 @@
   --motif: linear-gradient(180deg, transparent 0 58%, #136f6f 58%), radial-gradient(circle at 50% 58%, #ff7a3d 0 30%, transparent 30.5%),
     repeating-linear-gradient(90deg, #ff7a3d 0 12px, #f6eee4 12px 24px) 0 0 / 100% 16% no-repeat;
 }
+/* Midnight Macau is a full illustration (450 × 200): the art fills both halves, notches included. */
+.mk-ticket-macau { --tp: #0b0608; aspect-ratio: 2.25; }
+.mk-ticket-macau .mk-ticket-main, .mk-ticket-macau .mk-ticket-stub { border: 0; border-radius: 0; background: none; overflow: visible; }
+.mk-ticket-macau .mk-ticket-stub { width: 24.444%; }
+.mk-ticket-art { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.mk-ticket-macau .mk-ticket-perf { width: 0.5cqw; background: repeating-linear-gradient(180deg, #e8b84a 0 1.2cqw, transparent 1.2cqw 2.2cqw); }
 @keyframes mk-sway { 0%, 100% { transform: rotate(-1deg); } 50% { transform: rotate(1deg); } }
 
 /* The reel */

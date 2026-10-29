@@ -2,6 +2,7 @@
 
 import { Avatar } from "@/components/Avatar";
 import { ChipIcon } from "@/components/ChipIcon";
+import { TitlePill } from "@/components/TitlePill";
 import type { Me } from "@/lib/api";
 
 export type Kind = "border" | "banner" | "title" | "cardback" | "chipset";
@@ -87,9 +88,7 @@ export function ItemArt({ item, me, size, fill = false }: { item: Pick<ItemInfo,
     case "title":
       return (
         <span className="mk-art">
-          <span className="mk-title-pill" style={{ fontSize: titleSize(size) }}>
-            {item.name}
-          </span>
+          <TitlePill id={item.id} name={item.name} className="mk-title-pill" style={{ fontSize: titleSize(size) }} />
         </span>
       );
     case "cardback": {

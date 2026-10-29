@@ -8,6 +8,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { Avatar } from "@/components/Avatar";
 import { FriendButton } from "@/components/FriendMenu";
 import { SignInPrompt } from "@/components/SignInPrompt";
+import { TitlePill } from "@/components/TitlePill";
 import {
   type AchievementEntry,
   ApiError,
@@ -298,7 +299,7 @@ export function ProfileView({ id }: { id: string }) {
             {self ? <PictureButton /> : null}
           </div>
           <div className="profile-copy">
-            {p.title ? <span className="profile-title">{p.title}</span> : null}
+            {p.title ? <TitlePill id={p.titleId} name={p.title} className="profile-title" /> : null}
             {editingName && p.nameChange ? (
               <NameEditor name={p.name} change={p.nameChange} onDone={() => setEditingName(false)} />
             ) : (

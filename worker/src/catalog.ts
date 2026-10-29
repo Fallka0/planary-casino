@@ -107,6 +107,41 @@ export const CATALOG: Item[] = [
   { id: "border-ferris", kind: "border", name: "Ferris wheel", tier: "epic", price: 6000, blurb: "Spokes all the way round." },
   { id: "title-pier-king", kind: "title", name: "Pier King", tier: "epic", price: 6000, blurb: "Runs the boardwalk." },
   { id: "banner-fireworks", kind: "banner", name: "Fireworks", tier: "legendary", price: 24000, blurb: "The last night of summer." },
+
+  // Midnight Macau: case-only, with rings, card backs and chips of its own, so
+  // every table that draws those needs to know these ids too.
+  { id: "banner-seigaiha", kind: "banner", name: "Seigaiha", tier: "common", price: 700, blurb: "Waves on waves, the old pattern." },
+  { id: "banner-lattice", kind: "banner", name: "Window lattice", tier: "common", price: 700, blurb: "Light through a teahouse window." },
+  { id: "banner-strawberry-matcha", kind: "banner", name: "Strawberry matcha", tier: "rare", price: 2000, blurb: "Pink at the bottom, green on top." },
+  { id: "banner-lanterns", kind: "banner", name: "Lanterns", tier: "rare", price: 2500, blurb: "Five lanterns on one wire." },
+  { id: "banner-pagoda-mist", kind: "banner", name: "Pagoda mist", tier: "epic", price: 6500, blurb: "Fog rolling under a full moon." },
+  { id: "banner-torii", kind: "banner", name: "Torii sunset", tier: "epic", price: 7000, blurb: "The gate, the sea and a sky on fire." },
+  { id: "banner-ink-wave", kind: "banner", name: "Ink wave", tier: "epic", price: 7500, blurb: "Brush, ink and a rising sea." },
+  { id: "banner-yozakura", kind: "banner", name: "Yozakura", tier: "legendary", price: 24000, blurb: "Cherry blossom by moonlight." },
+  { id: "border-bamboo", kind: "border", name: "Bamboo", tier: "common", price: 600, blurb: "Green, jointed, unbreakable." },
+  { id: "border-porcelain", kind: "border", name: "Porcelain", tier: "common", price: 600, blurb: "Blue on cream, glazed." },
+  { id: "border-sakura", kind: "border", name: "Sakura", tier: "rare", price: 2000, blurb: "A ring of blossom." },
+  { id: "border-onsen", kind: "border", name: "Onsen", tier: "rare", price: 2500, blurb: "Someone is already in the bath." },
+  { id: "border-lacquer", kind: "border", name: "Lacquer cloud", tier: "epic", price: 6000, blurb: "Red lacquer, gold clouds." },
+  { id: "border-rising-tide", kind: "border", name: "Rising tide", tier: "epic", price: 6000, blurb: "The ink wave, on a ring." },
+  { id: "border-night-sakura", kind: "border", name: "Night sakura", tier: "epic", price: 6500, blurb: "Blossom glowing after dark." },
+  { id: "border-mother-of-pearl", kind: "border", name: "Mother of pearl", tier: "legendary", price: 20000, blurb: "Black lacquer, pearl inlay." },
+  { id: "chips-mochi", kind: "chipset", name: "Mochi", tier: "common", price: 800, blurb: "Soft pastels, like dango." },
+  { id: "chips-tea", kind: "chipset", name: "Tea ceremony", tier: "common", price: 800, blurb: "White, matcha, oolong, black." },
+  { id: "chips-jade", kind: "chipset", name: "Jade", tier: "rare", price: 2000, blurb: "Carved stone, veined." },
+  { id: "chips-lucky-cat", kind: "chipset", name: "Lucky cat", tier: "legendary", price: 20000, blurb: "The cat waves from behind the 500." },
+  { id: "cardback-matcha", kind: "cardback", name: "Matcha", tier: "common", price: 1000, blurb: "Bowl and whisk on faded green." },
+  { id: "cardback-mahjong", kind: "cardback", name: "Mahjong", tier: "common", price: 1000, blurb: "Like the back of a tile." },
+  { id: "cardback-fan", kind: "cardback", name: "Folding fan", tier: "rare", price: 2000, blurb: "Open, and a little flirtatious." },
+  { id: "cardback-hongbao", kind: "cardback", name: "Hongbao", tier: "rare", price: 2000, blurb: "A red envelope with something inside." },
+  { id: "cardback-koi", kind: "cardback", name: "Golden koi", tier: "epic", price: 6000, blurb: "One carp on black lacquer." },
+  { id: "cardback-red-dragon", kind: "cardback", name: "Red dragon", tier: "legendary", price: 18000, blurb: "Cut from red paper, ready to bite." },
+  { id: "title-lucky-eight", kind: "title", name: "Lucky Eight", tier: "common", price: 500, blurb: "The luckiest number there is." },
+  { id: "title-dim-sum", kind: "title", name: "Dim Sum", tier: "common", price: 500, blurb: "A little of everything." },
+  { id: "title-golden-koi", kind: "title", name: "Golden Koi", tier: "rare", price: 2500, blurb: "Swims against the current." },
+  { id: "title-red-envelope", kind: "title", name: "Red Envelope", tier: "rare", price: 2500, blurb: "Always brings something." },
+  { id: "title-night-emperor", kind: "title", name: "Night Emperor", tier: "epic", price: 6000, blurb: "Rules until sunrise." },
+  { id: "title-risk-for-riches", kind: "title", name: "Risk for Riches", tier: "legendary", price: 18000, blurb: "险中求: fortune is found in risk." },
 ];
 
 export const ITEMS = new Map(CATALOG.map((item) => [item.id, item]));
@@ -162,8 +197,44 @@ const BOARDWALK = [
   "banner-fireworks",
 ];
 
+/** The items in the Midnight Macau case, all new, and only in it. */
+const MACAU = [
+  "banner-seigaiha",
+  "banner-lattice",
+  "banner-strawberry-matcha",
+  "banner-lanterns",
+  "banner-pagoda-mist",
+  "banner-torii",
+  "banner-ink-wave",
+  "banner-yozakura",
+  "border-bamboo",
+  "border-porcelain",
+  "border-sakura",
+  "border-onsen",
+  "border-lacquer",
+  "border-rising-tide",
+  "border-night-sakura",
+  "border-mother-of-pearl",
+  "chips-mochi",
+  "chips-tea",
+  "chips-jade",
+  "chips-lucky-cat",
+  "cardback-matcha",
+  "cardback-mahjong",
+  "cardback-fan",
+  "cardback-hongbao",
+  "cardback-koi",
+  "cardback-red-dragon",
+  "title-lucky-eight",
+  "title-dim-sum",
+  "title-golden-koi",
+  "title-red-envelope",
+  "title-night-emperor",
+  "title-risk-for-riches",
+];
+
 /** Items a newer case introduced; the Classic case keeps to what the shop used to sell. */
-const CASE_ONLY = new Set([...AFTERHOURS_NEW, ...BOARDWALK]);
+const CASE_ONLY = new Set([...AFTERHOURS_NEW, ...BOARDWALK, ...MACAU]);
 
 export const CASES: Case[] = [
   {
@@ -192,6 +263,13 @@ export const CASES: Case[] = [
     price: 2000,
     blurb: "Seaside banners, rings, card backs and chips.",
     items: BOARDWALK,
+  },
+  {
+    id: "macau",
+    name: "Midnight Macau",
+    price: 5000,
+    blurb: "One night in Macau: red lacquer, lanterns and neon over the harbour.",
+    items: MACAU,
   },
 ];
 

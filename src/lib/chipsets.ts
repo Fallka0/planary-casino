@@ -41,6 +41,32 @@ export const CHIPSETS: Record<string, Record<number, ChipInks>> = {
     100: { fill: "#ff7a3d", ink: "#fff1e6" },
     500: { fill: "#136f6f", ink: "#ffd9c4" },
   },
+  // Midnight Macau. The casino draws these from their own art (src/lib/chipArt.ts);
+  // these two-ink versions are what the game tables mirror.
+  "chips-mochi": {
+    10: { fill: "#f2a7b8", ink: "#8e2c48" },
+    50: { fill: "#f6efe6", ink: "#6b5a48" },
+    100: { fill: "#9cc48a", ink: "#2f4a22" },
+    500: { fill: "#ecc77a", ink: "#6b4a12" },
+  },
+  "chips-tea": {
+    10: { fill: "#efe6d2", ink: "#6b5a3e" },
+    50: { fill: "#5f8f3a", ink: "#eef4df" },
+    100: { fill: "#a8642a", ink: "#fbeedb" },
+    500: { fill: "#17100f", ink: "#f3e6cf" },
+  },
+  "chips-jade": {
+    10: { fill: "#b8c9ad", ink: "#3f5a35" },
+    50: { fill: "#7d68b6", ink: "#f6f0ff" },
+    100: { fill: "#1f5e4b", ink: "#effbe8" },
+    500: { fill: "#0c3a2d", ink: "#e9c46a" },
+  },
+  "chips-lucky-cat": {
+    10: { fill: "#efe5cf", ink: "#8e1420" },
+    50: { fill: "#8e1420", ink: "#efe5cf" },
+    100: { fill: "#141014", ink: "#e8b84a" },
+    500: { fill: "#e8b84a", ink: "#141014" },
+  },
 };
 
 export function chipInks(set: string | null | undefined, value: number): ChipInks {

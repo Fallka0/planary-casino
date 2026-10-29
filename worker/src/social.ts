@@ -96,6 +96,7 @@ social.get("/profile/:id", async (c) => {
     ...badge(p),
     // Only you need to know whether your name is your own pick, and what the next one costs.
     nameChange: rel === "self" ? { custom: Boolean(p.name_custom), price: nameChangePrice(p) } : undefined,
+    titleId: p.title,
     bio: p.bio,
     banner: p.banner,
     joinedAt: p.created_at,
