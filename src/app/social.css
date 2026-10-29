@@ -407,14 +407,6 @@ a.notif-main:hover { background: var(--layer-3); }
   border-radius: var(--r-lg);
   border: 1px solid var(--line);
 }
-.profile-head::before {
-  content: "";
-  position: absolute;
-  inset: 40% 0 0;
-  z-index: 0;
-  background: linear-gradient(transparent, rgba(20, 3, 9, 0.75));
-  pointer-events: none;
-}
 .profile-id { position: relative; z-index: 1; display: flex; align-items: flex-end; gap: 22px; width: 100%; flex-wrap: wrap; }
 .profile-avatar { position: relative; }
 .profile-avatar .avatar { box-shadow: 0 0 0 5px rgba(20, 3, 9, 0.35); font-size: 2.4rem !important; }
@@ -799,6 +791,9 @@ a.person-name:hover { text-decoration: underline; text-underline-offset: 3px; }
 .avatar.border-mother-of-pearl::before { inset: -30.0%; background-image: url(/cosmetics/macau/border-mother-of-pearl.svg); }
 /* The capybara sits on top of the ring, so the onsen art reaches well above the picture. */
 .avatar.border-onsen::before { inset: -66% -30% -26%; background-image: url(/cosmetics/macau/border-onsen.svg); }
+/* On the profile the drawn rings reach about a third of the picture past its edge: give them room
+   from the banner's edge and from the name. */
+.profile-avatar:has(.border-bamboo, .border-porcelain, .border-sakura, .border-onsen, .border-lacquer, .border-rising-tide, .border-night-sakura, .border-mother-of-pearl) { margin: 0 14px 12px; }
 
 /* Banners. Most are animated inside the SVG, so reduced motion swaps in a still copy. */
 .banner-seigaiha { background: #1b0b14 url(/cosmetics/macau/banner-seigaiha.svg) center / cover no-repeat; }

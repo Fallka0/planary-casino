@@ -6,6 +6,7 @@ import { ApiError, callCasino, type Me, type PlayerBadge, useCasino, useCasinoAc
 import { opens, roll } from "../../../shared/fair";
 import { CaseArt, reducedMotion } from "./CaseArt";
 import { type CaseInfo, type CaseItem, caseLabel, type Equipped, fmt, type ItemInfo, ItemArt, KIND_LABEL, type Tier, TIER_LABEL, TIERS } from "./cosmetics";
+import { ProfilePreview } from "./ProfilePreview";
 import { useMarketSound } from "./sound";
 
 interface Proof {
@@ -350,6 +351,7 @@ export function CasesPanel({
   const [fairOpen, setFairOpen] = useState(false);
   const [opened, setOpened] = useState<Opened | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [trying, setTrying] = useState<CaseItem | null>(null);
   const timers = useRef<number[]>([]);
 
   const box = data?.cases.find((c) => c.id === (caseId ?? data.cases[0]?.id)) ?? null;
@@ -627,23 +629,30 @@ export function CasesPanel({
             </div>
             <div className="mk-contents">
               {t.items.map((item) => (
-                <div key={item.id} className={`mk-content frame-${item.tier}`} title={item.blurb}>
-                  <div className="mk-content-in">
-                    <div className="mk-content-art">
+                <button
+                  key={item.id}
+                  className={`mk-content mk-content-btn frame-${item.tier}`}
+                  title={item.blurb}
+                  onClick={() => setTrying(item)}
+                  aria-label={`${item.name}, try it on`}
+                >
+                  <span className="mk-content-in">
+                    <span className="mk-content-art">
                       <ItemArt item={item} me={me} size={60} />
-                    </div>
-                    <div className="mk-content-copy">
-                      <div className="mk-strong">{item.name}</div>
-                      <div className="mk-quiet mk-small">{KIND_LABEL[item.kind]}</div>
-                    </div>
-                    <div className={`mk-edge edge-${item.tier}`} />
-                  </div>
-                </div>
+                    </span>
+                    <span className="mk-content-copy">
+                      <span className="mk-strong">{item.name}</span>
+                      <span className="mk-quiet mk-small">{KIND_LABEL[item.kind]}</span>
+                    </span>
+                    <span className={`mk-edge edge-${item.tier}`} />
+                  </span>
+                </button>
               ))}
             </div>
           </div>
         ))}
       </section>
+      {trying ? <ProfilePreview item={trying} me={me} equipped={equipped} from={box.name} onClose={() => setTrying(null)} /> : null}
     </div>
   );
 }

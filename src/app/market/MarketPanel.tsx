@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Avatar } from "@/components/Avatar";
 import { ApiError, type Me, type PlayerBadge, useCasino, useCasinoAction } from "@/lib/api";
+import { ProfilePreview } from "./ProfilePreview";
 import { ago, type CaseInfo, caseLabel, fmt, type ItemInfo, ItemArt, type Kind, KIND_FILTERS, KIND_LABEL, KIND_PLURAL, TIER_LABEL } from "./cosmetics";
 
 interface MarketItem extends ItemInfo {
@@ -43,6 +44,7 @@ function Detail({
   const { data, reload } = useCasino<ItemMarket>(`/v1/market/${itemId}`, 20_000);
   const [confirm, setConfirm] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  const [trying, setTrying] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
 
   async function buy(listing: Listing) {
@@ -95,6 +97,25 @@ function Detail({
         </div>
         <div className={`mk-edge is-thick edge-${item.tier}`} />
       </div>
+      <button className="mk-btn mk-btn-quiet mk-btn-sm mk-try-open" onClick={() => setTrying(true)}>
+        Try it on your profile
+      </button>
+      {trying ? (
+        <ProfilePreview
+          item={item}
+          me={me}
+          equipped={{
+            border: me.border,
+            banner: me.banner,
+            cardback: me.cardback,
+            chipset: me.chipset,
+            // The profile only names your title; the cases say which item that is.
+            title: cases?.flatMap((c) => c.items).find((i) => i.kind === "title" && i.name === me.title)?.id ?? null,
+          }}
+          from={from}
+          onClose={() => setTrying(false)}
+        />
+      ) : null}
       <div>
         <div className="mk-meta">
           <span className={`mk-tier tier-${item.tier}`}>{TIER_LABEL[item.tier]}</span>
