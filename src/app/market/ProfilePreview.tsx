@@ -50,6 +50,8 @@ export function ProfilePreview({
   const titleName = item.kind === "title" ? item.name : me.title;
   const player = { ...me, border };
   const on = (kind: ItemInfo["kind"]) => (item.kind === kind ? " is-on" : "");
+  // A soft light that pulses round whatever this item changes, so the eye goes there first.
+  const glow = (...kinds: ItemInfo["kind"][]) => (kinds.includes(item.kind) ? <span className="mk-try-glow" aria-hidden="true" /> : null);
 
   useEffect(() => {
     close.current?.focus();
@@ -90,6 +92,7 @@ export function ProfilePreview({
           {/* Your profile */}
           <div className="mk-try-page" aria-label="Your profile, with this item">
             <div className={`mk-try-banner banner ${banner ?? "banner-default"}${on("banner")}`}>
+              {glow("banner")}
               <div className={`mk-try-who${on("border")}`}>
                 <Avatar player={player} size={84} />
                 <div className="mk-try-id">
@@ -125,6 +128,7 @@ export function ProfilePreview({
             <div className="mk-try-mini">
               <span className="mk-try-label">Friends list</span>
               <div className={`mk-try-friend${on("border")}${on("title")}`}>
+                {glow("border", "title")}
                 <Avatar player={player} size={40} status="online" />
                 <div className="mk-try-id is-small">
                   <strong>{me.name}</strong>
@@ -143,10 +147,12 @@ export function ProfilePreview({
               <span className="mk-try-label">At the table</span>
               <div className="mk-try-felt">
                 <span className={`mk-art mk-cards mk-try-cards${on("cardback")}`}>
+                  {glow("cardback")}
                   <span className={`print-back ${cardback ?? "cardback-classic"}`} />
                   <span className={`print-back ${cardback ?? "cardback-classic"}`} />
                 </span>
                 <span className={`mk-chips mk-try-chips${on("chipset")}`}>
+                  {glow("chipset")}
                   {[10, 50, 100, 500].map((v) => (
                     <ChipIcon key={v} size={30} value={v} set={chipset} />
                   ))}
