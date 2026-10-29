@@ -59,7 +59,7 @@ a{display:inline-block;margin:0 8px 8px 0;padding:10px 16px;border-radius:12px;b
 <h1>Preview test controls</h1><p>Keep this tab next to the market. Turn the sound on with the Sound button by Open. Your next opening lands on the tier you pick here; the browser's fairness check still passes.</p>
 <section><h2>Your next opening</h2>${["common", "rare", "epic", "legendary"].map((t) => `<a class="${t}${force === t && !stickyForce ? " on" : ""}" href="/test/next/${t}">${t}</a>`).join("")}</section>
 <section><h2>Every opening, until you stop it</h2>${["common", "rare", "epic", "legendary"].map((t) => `<a class="${t}${force === t && stickyForce ? " on" : ""}" href="/test/always/${t}">always ${t}</a>`).join("")}<a href="/test/off">back to the real odds</a></section>
-<section><h2>A friend's drop (shows as a toast within 15 s)</h2><a class="epic" href="/test/friend/epic">friend pulls an epic</a><a class="legendary" href="/test/friend/legendary">friend pulls a legendary</a></section>
+<section><h2>A friend's drop (shows as a toast within 15 s)</h2><a class="epic" href="/test/friend/epic">friend pulls an epic (feed only, no toast)</a><a class="legendary" href="/test/friend/legendary">friend pulls a legendary</a></section>
 <p>${force ? `Set: ${stickyForce ? "every opening" : "the next opening"} lands on <b>${force}</b>.` : "Set: real odds."}</p>`;
 const pending = new Map();
 

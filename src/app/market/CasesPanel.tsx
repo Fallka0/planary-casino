@@ -8,7 +8,7 @@ import { CaseArt, reducedMotion } from "./CaseArt";
 import { type CaseInfo, type CaseItem, caseLabel, type Equipped, fmt, type ItemInfo, ItemArt, KIND_LABEL, type Tier, TIER_LABEL, TIERS } from "./cosmetics";
 import { MacauFinale } from "./MacauFinale";
 import { ProfilePreview } from "./ProfilePreview";
-import { useMarketSound } from "./sound";
+import { unlockSound, useMarketSound } from "./sound";
 
 interface Proof {
   hash: string;
@@ -436,6 +436,8 @@ export function CasesPanel({
     if (!box || !commitment || !accessToken || busy || funds < box.price) return;
     const started = performance.now();
     const still = reducedMotion();
+    // Still inside the click: start the page's audio now, so the cues later on are heard.
+    if (sound.on) unlockSound();
     clearTimers();
     setOpened(null);
     setError(null);

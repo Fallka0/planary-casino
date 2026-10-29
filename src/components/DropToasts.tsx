@@ -17,12 +17,12 @@ interface Drop {
   mine: boolean;
 }
 
-/** Only the big ones are worth interrupting anyone for. */
-const LOUD = new Set(["epic", "legendary"]);
+/** Only a legendary is worth interrupting anyone for. */
+const LOUD = new Set(["legendary"]);
 const EVERY = 15_000;
 
 /**
- * When someone else pulls an epic or a legendary out of a case, everyone signed in hears about
+ * When someone else pulls a legendary out of a case, everyone signed in hears about
  * it: a card drops in at the top with what they got, legendary in holo. Drops from before the
  * page opened aren't news, and your own you've just watched.
  */
