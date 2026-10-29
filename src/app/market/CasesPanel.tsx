@@ -33,14 +33,15 @@ interface Drop {
 }
 type Phase = "idle" | "anticipation" | "reel" | "hold" | "result" | "error";
 
-// The reel: 40 tiles, the winner at 34. Everything else on it is drawn from the case's own odds.
-const REEL_TILES = 40;
-const WINNER = 34;
+// The reel: 72 tiles, the winner at 64. Everything else on it is drawn from the case's own odds.
+// It starts flat out, the tiles a blur, and spends a long while slowing down.
+const REEL_TILES = 72;
+const WINNER = 64;
 const GAP = 8;
 /** When the ticket has torn and the reel takes over. */
 const REEL_IN = 1300;
-const ACCELERATE = 600;
-const DECELERATE = 3600;
+const ACCELERATE = 140;
+const DECELERATE = 5200;
 /** After the stop: the strip runs a little past where it lands and springs back. */
 const SETTLE = 280;
 const HOLD: Record<Tier, number> = { common: 400, rare: 600, epic: 600, legendary: 900 };
@@ -113,7 +114,7 @@ function Reel({
     // The pointer rests at `rest.at` of a tile from the winner's centre; the run goes `rest.over` further.
     const distance = WINNER * pitch + tile.w / 2 + rest.at * tile.w - width / 2;
     const past = rest.over * tile.w;
-    const k = 4;
+    const k = 5;
     const decel = (distance + past) / (1 + (k * ACCELERATE) / (2 * DECELERATE));
     const speed = (decel * k) / DECELERATE;
     const accel = (speed * ACCELERATE) / 2;
@@ -124,6 +125,27 @@ function Reel({
     let prevX = 0;
     let prevT = 0;
     const top = speed; // px per ms at full speed
+    // The flap is a little spring on a pin. The moving strip drags its tip along (it leans with the
+    // motion, more the faster), every tile edge kicks it, and when the strip stops or springs back
+    // it swings across and wobbles out. Angles in degrees, time in seconds.
+    let angle = 0;
+    let spin = 0;
+    let kick = 0;
+    let lean = 0;
+    let lastFrame = t0;
+    let landedAt = 0;
+    let reversed = false;
+    const flapStep = (now: number) => {
+      const dt = Math.min(0.033, (now - lastFrame) / 1000);
+      lastFrame = now;
+      spin += kick;
+      kick = 0;
+      const stiffness = 900;
+      const damping = 13;
+      spin += (-stiffness * (angle - lean) - damping * spin) * dt;
+      angle = Math.max(-38, Math.min(38, angle + spin * dt));
+      if (flap.current) flap.current.style.rotate = `${angle.toFixed(2)}deg`;
+    };
     const step = (now: number) => {
       const t = now - t0;
       const x =
@@ -136,25 +158,43 @@ function Reel({
                 distance + past * Math.exp(-6 * ((t - run) / SETTLE)) * Math.cos(Math.PI * ((t - run) / SETTLE))
               : distance;
       s.style.transform = `translateX(${-x}px)`;
-      const pace = t > prevT ? Math.min(1, Math.abs(x - prevX) / (t - prevT) / top) : 0;
+      const velocity = t > prevT ? (x - prevX) / (t - prevT) : 0; // px per ms, + while running on
+      const pace = Math.min(1, Math.abs(velocity) / top);
       prevX = x;
       prevT = t;
+      // Lean grows quickly at low speed and saturates at high, so slow motion still shows.
+      lean = Math.sign(velocity) * Math.min(18, 26 * Math.sqrt(Math.abs(velocity) / top));
+      // Flat out, the tiles blur.
+      s.style.filter = pace > 0.3 ? `blur(${((pace - 0.3) * 4).toFixed(1)}px)` : "";
+      // The moment the strip stops running on and springs back, it knocks the flap the other way.
+      if (!reversed && t >= run) {
+        reversed = true;
+        kick -= 420;
+      }
       const under = Math.floor((x + width / 2) / pitch);
       if (under !== last) {
         // The pointer is a flap: each tile edge knocks it over, harder the faster the strip runs,
         // and it springs back. Moving back the other way knocks it the other way.
         const dir = under > last ? 1 : -1;
-        if (last !== -1) {
-          flap.current?.animate([{ rotate: "0deg" }, { rotate: `${dir * (10 + 22 * pace)}deg`, offset: 0.25 }, { rotate: "0deg" }], {
-            duration: 90 + 110 * (1 - pace),
-            easing: "cubic-bezier(.3,1.6,.5,1)",
-          });
-        }
+        // Flat out the edges come too fast to kick it each time: it just rides on them.
+        if (last !== -1 && pace < 0.7) kick += dir * (260 + 520 * (1 - pace));
         last = under;
         cues.current.onTick(pace);
       }
+      flapStep(now);
       if (t < run + SETTLE) frame = requestAnimationFrame(step);
-      else cues.current.onLanded();
+      else {
+        lean = 0;
+        landedAt = now;
+        cues.current.onLanded();
+        frame = requestAnimationFrame(settle);
+      }
+    };
+    // After the stop the flap keeps swinging on its own until it comes to rest.
+    const settle = (now: number) => {
+      flapStep(now);
+      if (now - landedAt < 1500 && (Math.abs(angle) > 0.05 || Math.abs(spin) > 0.5)) frame = requestAnimationFrame(settle);
+      else if (flap.current) flap.current.style.rotate = "0deg";
     };
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
@@ -461,7 +501,17 @@ export function CasesPanel({
     later(reveal, HOLD[opened.item.tier]);
   }, [opened, sound, later, reveal]);
 
-  const tick = useCallback((pace: number) => sound.play("tick", "common", pace), [sound]);
+  // At full speed tiles pass faster than clicks can be told apart: no more than one every 40 ms.
+  const lastTick = useRef(0);
+  const tick = useCallback(
+    (pace: number) => {
+      const t = performance.now();
+      if (t - lastTick.current < 40) return;
+      lastTick.current = t;
+      sound.play("tick", "common", pace);
+    },
+    [sound],
+  );
 
   if (!data || !box) return <CasesSkeleton />;
 
