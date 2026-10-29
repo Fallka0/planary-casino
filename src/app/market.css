@@ -533,10 +533,10 @@
   position: absolute;
   inset: 0;
   background: radial-gradient(ellipse 70% 65% at 50% 45%, transparent 35%, rgba(12, 2, 6, 0.38) 70%, rgba(12, 2, 6, 0.62) 100%);
-  animation: mk-sky-dim 9s ease both;
+  animation: mk-sky-dim 6.5s ease both;
 }
-@keyframes mk-sky-dim { 0% { opacity: 0; } 10%, 78% { opacity: 1; } 100% { opacity: 0; } }
-.mk-sky-lantern { position: absolute; bottom: 0; opacity: 0; animation: mk-sky-rise linear both; will-change: transform, opacity; }
+@keyframes mk-sky-dim { 0% { opacity: 0; } 4%, 80% { opacity: 1; } 100% { opacity: 0; } }
+.mk-sky-lantern { position: absolute; bottom: 0; opacity: 0; animation: mk-sky-rise cubic-bezier(0.25, 0, 0.75, 1) both; will-change: transform, opacity; }
 .mk-sky-sway { display: block; width: 100%; height: 100%; animation: mk-sky-sway ease-in-out infinite alternate; transform-origin: 50% 0; }
 .mk-sky-body {
   position: relative;
@@ -603,11 +603,12 @@
   55% { opacity: 1; transform: translate(var(--dx), var(--dy)) rotate(calc(var(--r) * 0.6)) scale(1); }
   100% { opacity: 0; transform: translate(calc(var(--dx) * 1.15), calc(var(--dy) + 70px)) rotate(var(--r)) scale(0.9); }
 }
+/* From fully below the bottom edge (its own height and a bit) to fully above the top; no fade in,
+   they come up out of the bottom of the screen, and only thin out as they leave at the top. */
 @keyframes mk-sky-rise {
-  0% { opacity: 0; transform: translate(0, 12vh); }
-  8% { opacity: var(--o); }
-  70% { opacity: var(--o); }
-  100% { opacity: 0; transform: translate(var(--dx), -118vh); }
+  0% { opacity: var(--o); transform: translate(0, calc(100% + 30px)); }
+  80% { opacity: var(--o); }
+  100% { opacity: 0; transform: translate(var(--dx), calc(-100vh - 20px)); }
 }
 @keyframes mk-sky-sway { from { transform: translateX(calc(var(--sway) * -1)) rotate(calc(var(--tilt) * -1)); } to { transform: translateX(var(--sway)) rotate(var(--tilt)); } }
 @keyframes mk-sky-flicker { 0% { opacity: 0.65; } 35% { opacity: 1; } 60% { opacity: 0.8; } 100% { opacity: 0.95; } }

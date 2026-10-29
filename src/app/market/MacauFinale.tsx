@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Tier } from "./cosmetics";
 import { crackAt } from "./sound";
@@ -35,10 +35,21 @@ export function MacauFinale({ tier, phone }: { tier: Tier; phone: boolean }) {
         duration: Math.round(3400 + r() * 1400),
         sway: Math.round(8 + r() * 14),
       })),
-      sky: tier === "legendary" ? sky(phone) : [],
+      sky: [] as ReturnType<typeof sky>,
       crackers: tier === "legendary" ? crackers(phone) : [],
     };
   });
+  // The legendary sky is laid out once the card is on screen: lanterns fill the room either side of it.
+  const [lanterns, setLanterns] = useState<ReturnType<typeof sky>>([]);
+  useLayoutEffect(() => {
+    if (tier !== "legendary") return;
+    const card = document.querySelector(".mk-result-card")?.getBoundingClientRect();
+    const w = window.innerWidth;
+    const free = card ? { left: (card.left / w) * 100, right: (card.right / w) * 100 } : { left: 40, right: 60 };
+    // Laid out from the card's real place on screen, which only exists after the first paint.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLanterns(sky(phone, free));
+  }, [tier, phone]);
   // Each firecracker cracks as it hits the bottom and bursts.
   useEffect(() => {
     if (bits.crackers.length) crackAt(bits.crackers.map((c) => c.delay + c.fall));
@@ -51,7 +62,7 @@ export function MacauFinale({ tier, phone }: { tier: Tier; phone: boolean }) {
     return createPortal(
       <div className="mk-sky" aria-hidden="true">
         <div className="mk-sky-dim" />
-        {bits.sky.map((l, i) => (
+        {lanterns.map((l, i) => (
           <span
             key={i}
             className="mk-sky-lantern"
@@ -141,24 +152,24 @@ export function MacauFinale({ tier, phone }: { tier: Tier; phone: boolean }) {
  * card is. Three depths, so it doesn't look like one sheet sliding up: far ones small, soft and
  * slow, near ones big, bright and quicker. Released over a few seconds, the near ones a beat late.
  */
-function sky(phone: boolean) {
+function sky(phone: boolean, card: { left: number; right: number }) {
   const r = Math.random;
   const depths = [
-    { n: phone ? 4 : 6, size: [70, 100], blur: 2, opacity: 0.6, rise: [6400, 7800] },
-    { n: phone ? 3 : 6, size: [140, 190], blur: 0.6, opacity: 0.9, rise: [5200, 6400] },
-    { n: phone ? 2 : 4, size: [230, 320], blur: 0, opacity: 1, rise: [4300, 5300] },
+    { n: phone ? 4 : 10, size: [70, 100], blur: 2, opacity: 0.6, rise: [4600, 5600] },
+    { n: phone ? 3 : 8, size: [140, 190], blur: 0.6, opacity: 0.9, rise: [3800, 4600] },
+    { n: phone ? 2 : 4, size: [230, 320], blur: 0, opacity: 1, rise: [3100, 3800] },
   ];
   const out: { left: number; size: number; blur: number; opacity: number; rise: number; delay: number; dx: number; sway: number; tilt: number; swayFor: number; swayAt: number }[] = [];
   const scale = phone ? 0.55 : 1;
   depths.forEach((d, depth) => {
     for (let i = 0; i < d.n; i++) {
       const leftSide = i % 2 === 0;
-      // Within the outer quarter of each side; far ones can sit a little further in.
-      // `left` is the lantern's centre. They keep close to the edges; the nearest ones are centred
-      // right on the edge or past it, so they hang half off the screen as they pass by close.
-      const band = depth === 0 ? 16 : depth === 1 ? 11 : 6;
-      const inset = depth === 2 ? -3 : depth === 1 ? 1 : 3;
-      const off = inset + r() * band;
+      // `left` is the lantern's centre, in % of the screen. The nearest, biggest ones keep to the
+      // very edges and hang half off them, passing by close; the middle and far ones spread over all
+      // the room between the edge and the card, kept clear of it by half their own width.
+      const halfW = ((d.size[1] * scale) / 2 / window.innerWidth) * 100;
+      const room = Math.max(0, (leftSide ? card.left : 100 - card.right) - halfW - 4);
+      const off = depth === 2 ? -3 + r() * 7 : 2 + r() * Math.max(4, room - 2);
       const left = leftSide ? off : 100 - off;
       out.push({
         left,
@@ -166,9 +177,9 @@ function sky(phone: boolean) {
         blur: d.blur,
         opacity: d.opacity,
         rise: Math.round(d.rise[0] + r() * (d.rise[1] - d.rise[0])),
-        delay: Math.round(depth * 300 + r() * 2000),
-        // Drifting a touch towards the middle as they climb, as warm air does.
-        dx: Math.round((leftSide ? 1 : -1) * (20 + r() * 60)),
+        delay: Math.round(depth * 150 + r() * 1600),
+        // A little drift as they climb, never far enough to reach the card.
+        dx: Math.round((r() * 2 - 1) * 30),
         sway: Math.round(6 + r() * 14),
         tilt: Math.round(3 + r() * 5),
         swayFor: Math.round(1800 + r() * 1600),

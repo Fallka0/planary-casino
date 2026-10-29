@@ -34,7 +34,7 @@ interface Drop {
 type Phase = "idle" | "anticipation" | "reel" | "hold" | "result" | "error";
 
 // The reel: 72 tiles, the winner at 64. Everything else on it is drawn from the case's own odds.
-// It starts flat out, the tiles a blur, and spends a long while slowing down.
+// It starts flat out and spends a long while slowing down.
 const REEL_TILES = 72;
 const WINNER = 64;
 const GAP = 8;
@@ -164,8 +164,6 @@ function Reel({
       prevT = t;
       // Lean grows quickly at low speed and saturates at high, so slow motion still shows.
       lean = Math.sign(velocity) * Math.min(18, 26 * Math.sqrt(Math.abs(velocity) / top));
-      // Flat out, the tiles blur.
-      s.style.filter = pace > 0.3 ? `blur(${((pace - 0.3) * 4).toFixed(1)}px)` : "";
       // The moment the strip stops running on and springs back, it knocks the flap the other way.
       if (!reversed && t >= run) {
         reversed = true;
@@ -425,6 +423,9 @@ export function CasesPanel({
   const [error, setError] = useState<string | null>(null);
   const [trying, setTrying] = useState<CaseItem | null>(null);
   const timers = useRef<number[]>([]);
+  // The legendary sound opens with a 0.7 s riser; it starts during the hold so its impact lands
+  // with the card.
+  const legendaryCued = useRef(false);
 
   const box = data?.cases.find((c) => c.id === (caseId ?? data.cases[0]?.id)) ?? null;
   const funds = opened?.balance ?? balance;
@@ -463,7 +464,9 @@ export function CasesPanel({
   }, [clearTimers]);
 
   useEffect(() => {
-    if (phase === "result" && opened) sound.play("reveal", opened.item.tier);
+    // A legendary's sound has already started while the reel held, unless the reel was skipped.
+    if (phase === "result" && opened && !(opened.item.tier === "legendary" && legendaryCued.current)) sound.play("reveal", opened.item.tier);
+    legendaryCued.current = false;
     // Only when the result first appears.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, opened]);
@@ -498,6 +501,12 @@ export function CasesPanel({
     if (!opened) return;
     sound.play("land");
     setPhase("hold");
+    if (opened.item.tier === "legendary") {
+      later(() => {
+        legendaryCued.current = true;
+        sound.play("reveal", "legendary");
+      }, HOLD.legendary - 650);
+    }
     later(reveal, HOLD[opened.item.tier]);
   }, [opened, sound, later, reveal]);
 
