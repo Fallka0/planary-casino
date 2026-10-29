@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useMemo, useRef } from "react";
+import { MACAU_TICKET } from "./macauTicket";
 
 /**
  * A case as an admit-one ticket: three inks, a motif on the left, the stub on
@@ -11,12 +12,40 @@ const TICKETS: Record<string, { word: string; no: string; glyph: string }> = {
   classic: { word: "Classic", no: "No.01", glyph: "7" },
   afterhours: { word: "After hours", no: "No.02", glyph: "" },
   boardwalk: { word: "Boardwalk", no: "No.03", glyph: "" },
+  macau: { word: "Midnight Macau", no: "No.04", glyph: "" },
 };
+
+/** Tickets drawn as a full illustration rather than three inks and a motif. */
+const ILLUSTRATED: Record<string, string> = { macau: MACAU_TICKET };
+
+/** One half of an illustrated ticket: the same drawing, cropped to the main part or the stub. */
+function TicketArt({ art, part, uid }: { art: string; part: "main" | "stub"; uid: string }) {
+  const ref = useRef<SVGSVGElement>(null);
+  // Every ticket on the page draws the same art, so its ids are made unique per copy and half.
+  const html = useMemo(() => {
+    const p = `${uid}${part[0]}`;
+    return art.replace(/id="([^"]+)"/g, `id="${p}-$1"`).replace(/url\(#([^)]+)\)/g, `url(#${p}-$1)`);
+  }, [art, part, uid]);
+  useEffect(() => {
+    if (reducedMotion()) ref.current?.pauseAnimations();
+  }, [html]);
+  return (
+    <svg
+      ref={ref}
+      className="mk-ticket-art"
+      viewBox={part === "main" ? "0 0 340 200" : "340 0 110 200"}
+      preserveAspectRatio="none"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
+}
 
 export const reducedMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 export function CaseArt({ caseId, play = 0, idle = true, small = false }: { caseId: string; play?: number; idle?: boolean; small?: boolean }) {
   const ticket = TICKETS[caseId] ?? TICKETS.classic;
+  const art = ILLUSTRATED[caseId];
+  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const shake = useRef<HTMLDivElement>(null);
   const main = useRef<HTMLDivElement>(null);
   const stub = useRef<HTMLDivElement>(null);
@@ -53,19 +82,30 @@ export function CaseArt({ caseId, play = 0, idle = true, small = false }: { case
       <div ref={shake} className={`mk-ticket-sway${idle && !play ? " is-idle" : ""}`}>
         <div className={`mk-ticket mk-ticket-${TICKETS[caseId] ? caseId : "classic"}`}>
           <div ref={main} className="mk-ticket-main">
-            <div className="mk-ticket-motif" />
-            {ticket.glyph ? <div className="mk-ticket-glyph">{ticket.glyph}</div> : null}
-            <div className="mk-ticket-no">Planary · {ticket.no}</div>
-            <div className={`mk-ticket-word${ticket.word.length > 8 ? " is-long" : ""}`}>{ticket.word}</div>
-            <div className="mk-ticket-rule" />
-            <span className="mk-notch is-tr" />
-            <span className="mk-notch is-br" />
+            {art ? (
+              <TicketArt art={art} part="main" uid={uid} />
+            ) : (
+              <>
+                <div className="mk-ticket-motif" />
+                {ticket.glyph ? <div className="mk-ticket-glyph">{ticket.glyph}</div> : null}
+                <div className="mk-ticket-no">Planary · {ticket.no}</div>
+                <div className={`mk-ticket-word${ticket.word.length > 8 ? " is-long" : ""}`}>{ticket.word}</div>
+                <div className="mk-ticket-rule" />
+                <span className="mk-notch is-tr" />
+                <span className="mk-notch is-br" />
+              </>
+            )}
           </div>
           <div ref={stub} className="mk-ticket-stub">
+            {art ? <TicketArt art={art} part="stub" uid={uid} /> : null}
             <div ref={perf} className="mk-ticket-perf" />
-            <div className="mk-ticket-admit">Admit one</div>
-            <span className="mk-notch is-tl" />
-            <span className="mk-notch is-bl" />
+            {art ? null : (
+              <>
+                <div className="mk-ticket-admit">Admit one</div>
+                <span className="mk-notch is-tl" />
+                <span className="mk-notch is-bl" />
+              </>
+            )}
           </div>
         </div>
       </div>

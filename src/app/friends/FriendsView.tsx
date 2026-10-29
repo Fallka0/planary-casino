@@ -8,6 +8,7 @@ import { SignInPrompt } from "@/components/SignInPrompt";
 import { ApiError, describePresence, type FriendsData, tableUrl, useCasino, useCasinoAction } from "@/lib/api";
 import { Avatar } from "@/components/Avatar";
 import { FriendButton } from "@/components/FriendMenu";
+import { TitleText } from "@/components/TitlePill";
 
 type Relation = "none" | "requested" | "incoming" | "friend";
 interface Found {
@@ -143,7 +144,15 @@ export function FriendsView() {
                         <Avatar player={f} size={42} status={f.presence.online ? "online" : null} />
                         <span className="person-copy">
                           <span className="person-name">{f.name}</span>
-                          <span className="person-status">{f.title ? `${f.title} · ` : ""}{describePresence(f.presence)}</span>
+                          <span className="person-status">
+                            {f.title ? (
+                              <>
+                                <TitleText id={f.titleId} name={f.title} />
+                                {" · "}
+                              </>
+                            ) : null}
+                            {describePresence(f.presence)}
+                          </span>
                         </span>
                       </FriendButton>
                       {tableUrl(f.presence) ? (

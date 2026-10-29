@@ -18,6 +18,8 @@ export interface PlayerBadge {
   avatar: string | null;
   border: string | null;
   title: string | null;
+  /** The equipped title's item id, for titles with a look of their own. */
+  titleId?: string | null;
 }
 export interface Me extends PlayerBadge {
   balance: number;

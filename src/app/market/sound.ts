@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Tier } from "./cosmetics";
 
 const KEY = "planary-market-sound";
-const REVEAL: Record<Tier, number[]> = { common: [523], rare: [523, 659], epic: [523, 659, 784], legendary: [523, 659, 784, 1047, 1319] };
 
 function stored() {
   try {
@@ -14,49 +13,202 @@ function stored() {
   }
 }
 
-/** The opening's sound cues. Off until the player turns them on; the choice is remembered on this device. */
+type Cue = "tick" | "tear" | "land" | "reveal" | "pops" | "drop" | "hello";
+
+// One audio context for the whole page. Browsers only let it play once it has been started from a
+// click, so `unlock` runs inside the click handlers (the sound switch, the Open button); a context
+// first made later, from a timer, can stay silent.
+let shared: { ac: AudioContext; out: AudioNode } | null = null;
+function audio() {
+  if (typeof window === "undefined") return null;
+  const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!Ctx) return null;
+  if (!shared) {
+    const ac = new Ctx();
+    // A limiter at the end, so stacked notes never clip, and a master gain after it.
+    const limit = ac.createDynamicsCompressor();
+    limit.threshold.value = -10;
+    limit.ratio.value = 5;
+    const master = ac.createGain();
+    master.gain.value = 1.8;
+    limit.connect(master).connect(ac.destination);
+    shared = { ac, out: limit };
+  }
+  if (shared.ac.state !== "running") void shared.ac.resume().catch(() => {});
+  return shared;
+}
+/** Call from inside a click: starts the page's audio so later cues are heard. */
+export function unlockSound() {
+  const a = audio();
+  if (!a) return;
+  // A silent blip, which some browsers need before they'll play anything.
+  const osc = a.ac.createOscillator();
+  const amp = a.ac.createGain();
+  amp.gain.value = 0;
+  osc.connect(amp).connect(a.out);
+  osc.start();
+  osc.stop(a.ac.currentTime + 0.01);
+}
+
+/**
+ * The opening's sound cues, all synthesised, nothing to download. Off until the player turns
+ * them on; the choice is remembered on this device.
+ *
+ * The reveal grows with the tier: a pluck for common, a rising arpeggio for rare, a bass note
+ * under a fuller one for epic, and for legendary a gong, a fanfare and a shower of sparkles.
+ */
 export function useMarketSound() {
   const [on, setOn] = useState(() => typeof window !== "undefined" && stored());
-  const context = useRef<AudioContext | null>(null);
+  const out = useRef<AudioNode | null>(null);
+  const noise = useRef<AudioBuffer | null>(null);
 
-  const blip = useCallback((frequency: number, duration: number, gain: number, type: OscillatorType = "triangle", delay = 0) => {
-    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!Ctx) return;
-    context.current ??= new Ctx();
-    const ac = context.current;
-    const osc = ac.createOscillator();
-    const amp = ac.createGain();
-    const t = ac.currentTime + delay;
-    osc.type = type;
-    osc.frequency.value = frequency;
-    amp.gain.setValueAtTime(gain, t);
-    amp.gain.exponentialRampToValueAtTime(0.0001, t + duration);
-    osc.connect(amp).connect(ac.destination);
-    osc.start(t);
-    osc.stop(t + duration + 0.02);
+  // Every part of the page that makes a sound follows the same switch.
+  useEffect(() => {
+    const sync = () => setOn(stored());
+    window.addEventListener("market-sound", sync);
+    return () => window.removeEventListener("market-sound", sync);
   }, []);
 
-  const play = useCallback(
-    (cue: "tick" | "tear" | "land" | "reveal", tier: Tier = "common") => {
-      if (!on) return;
-      if (cue === "tick") blip(1600, 0.03, 0.04);
-      if (cue === "tear") blip(220, 0.12, 0.08, "square");
-      if (cue === "land") blip(880, 0.08, 0.06);
-      if (cue === "reveal") REVEAL[tier].forEach((f, i) => blip(f, 0.6, 0.06, "triangle", i * 0.09));
+  const ctx = useCallback(() => {
+    const a = audio();
+    if (!a) return null;
+    out.current = a.out;
+    return a.ac;
+  }, []);
+
+  const tone = useCallback(
+    (frequency: number, duration: number, gain: number, type: OscillatorType = "triangle", delay = 0, attack = 0.004) => {
+      const ac = ctx();
+      if (!ac || !out.current) return;
+      const osc = ac.createOscillator();
+      const amp = ac.createGain();
+      const t = ac.currentTime + delay;
+      osc.type = type;
+      osc.frequency.value = frequency;
+      amp.gain.setValueAtTime(0.0001, t);
+      amp.gain.exponentialRampToValueAtTime(gain, t + attack);
+      amp.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+      osc.connect(amp).connect(out.current);
+      osc.start(t);
+      osc.stop(t + duration + 0.05);
     },
-    [on, blip],
+    [ctx],
+  );
+
+  /** A burst of filtered noise: the crack of a firecracker. */
+  const crack = useCallback(
+    (delay: number, gain: number, pitch: number) => {
+      const ac = ctx();
+      if (!ac || !out.current) return;
+      if (!noise.current) {
+        const buffer = ac.createBuffer(1, ac.sampleRate * 0.3, ac.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+        noise.current = buffer;
+      }
+      const src = ac.createBufferSource();
+      src.buffer = noise.current;
+      const band = ac.createBiquadFilter();
+      band.type = "bandpass";
+      band.frequency.value = pitch;
+      band.Q.value = 0.9;
+      const amp = ac.createGain();
+      const t = ac.currentTime + delay;
+      amp.gain.setValueAtTime(gain, t);
+      amp.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+      src.connect(band).connect(amp).connect(out.current);
+      src.start(t);
+      src.stop(t + 0.12);
+    },
+    [ctx],
+  );
+
+  const play = useCallback(
+    (cue: Cue, tier: Tier = "common", pace = 1) => {
+      if (!on) return;
+      switch (cue) {
+        case "tick":
+          // A click that climbs and firms up as the strip slows: the last few count.
+          tone(900 + (1 - pace) * 1100, 0.04, 0.06 + (1 - pace) * 0.08, "square");
+          break;
+        case "hello":
+          // Sound just switched on: a short two-note chime, so you know it works.
+          tone(784, 0.25, 0.12, "triangle");
+          tone(1175, 0.35, 0.1, "triangle", 0.1);
+          break;
+        case "tear":
+          tone(220, 0.12, 0.08, "square");
+          break;
+        case "land":
+          tone(160, 0.18, 0.16, "sine");
+          tone(1320, 0.05, 0.05, "triangle");
+          break;
+        case "reveal":
+          if (tier === "common") {
+            tone(523, 0.35, 0.09);
+            tone(659, 0.4, 0.07, "triangle", 0.07);
+          } else if (tier === "rare") {
+            [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.6, 0.08, "triangle", i * 0.07));
+            tone(2093, 0.5, 0.025, "sine", 0.3);
+          } else if (tier === "epic") {
+            tone(131, 1.1, 0.16, "sine");
+            [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.8, 0.08, "triangle", 0.05 + i * 0.07));
+            [2637, 3136].forEach((f, i) => tone(f, 0.5, 0.025, "sine", 0.45 + i * 0.08));
+          } else {
+            // A gong: a few inharmonic partials with a long tail.
+            [110, 163, 232, 311, 424].forEach((f, i) => tone(f, 2.8 - i * 0.3, 0.14 / (i + 1), "sine", 0, 0.01));
+            // The fanfare over it.
+            [392, 523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.9, 0.08, "sawtooth", 0.22 + i * 0.08, 0.01));
+            tone(1568, 1.4, 0.06, "triangle", 0.75);
+            // Sparkles.
+            for (let i = 0; i < 12; i++) tone(2400 + Math.random() * 2200, 0.25, 0.02, "sine", 0.6 + i * 0.09);
+          }
+          break;
+        case "pops":
+          // A string of firecrackers: quick cracks, irregular, fading out.
+          for (let i = 0, t = 0; i < 16; i++, t += 0.05 + Math.random() * 0.09) crack(t, 0.5 * (1 - i / 22), 1800 + Math.random() * 2400);
+          break;
+        case "drop":
+          // Someone else pulled something big: a short bright chime, quieter than your own.
+          [784, 1175].forEach((f, i) => tone(f, 0.4, tier === "legendary" ? 0.06 : 0.04, "triangle", i * 0.09));
+          break;
+      }
+    },
+    [on, tone, crack],
   );
 
   const toggle = useCallback(() => {
-    setOn((was) => {
-      try {
-        window.localStorage.setItem(KEY, was ? "off" : "on");
-      } catch {
-        // Private mode: the choice just doesn't outlive the page.
-      }
-      return !was;
-    });
-  }, []);
+    const next = !on;
+    try {
+      window.localStorage.setItem(KEY, next ? "on" : "off");
+    } catch {
+      // Private mode: the choice just doesn't outlive the page.
+    }
+    setOn(next);
+    if (next) {
+      // We're inside the click: start the audio now and say hello.
+      unlockSound();
+      window.setTimeout(() => {
+        const a = audio();
+        if (!a) return;
+        out.current = a.out;
+        const t = a.ac.currentTime;
+        [784, 1175].forEach((f, i) => {
+          const osc = a.ac.createOscillator();
+          const amp = a.ac.createGain();
+          osc.type = "triangle";
+          osc.frequency.value = f;
+          amp.gain.setValueAtTime(0.0001, t + i * 0.1);
+          amp.gain.exponentialRampToValueAtTime(0.12, t + i * 0.1 + 0.01);
+          amp.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.1 + 0.35);
+          osc.connect(amp).connect(a.out);
+          osc.start(t + i * 0.1);
+          osc.stop(t + i * 0.1 + 0.4);
+        });
+      }, 30);
+    }
+    window.setTimeout(() => window.dispatchEvent(new Event("market-sound")), 0);
+  }, [on]);
 
   return { on, toggle, play };
 }

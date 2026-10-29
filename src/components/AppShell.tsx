@@ -14,6 +14,7 @@ import { ChipIcon } from "./ChipIcon";
 import { FriendButton } from "./FriendMenu";
 import { NotificationBell } from "./NotificationBell";
 import { SocialProvider, useSocial } from "./Social";
+import { TitleText } from "./TitlePill";
 
 const NAV = [
   { href: "/", label: "Lobby", icon: LayoutGrid },
@@ -229,7 +230,7 @@ function AccountButton({ name, email }: { name: string; email: string }) {
         <Avatar player={me ?? { name, avatar: null, border: null }} size={36} />
         <span className="account-copy">
           <span className="account-name">{me?.name ?? name}</span>
-          <span className="account-mail">{me?.title ?? email}</span>
+          <span className="account-mail">{me?.title ? <TitleText id={me.titleId} name={me.title} /> : email}</span>
         </span>
       </button>
       {open ? (

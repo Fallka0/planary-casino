@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Avatar } from "@/components/Avatar";
 import { ChipIcon } from "@/components/ChipIcon";
+import { TitlePill } from "@/components/TitlePill";
 import { ApiError, type Me, useCasino, useCasinoAction } from "@/lib/api";
 import {
   type Copy,
@@ -59,6 +60,7 @@ function FittingRoom({ me, equipped, preview }: { me: Me; equipped: Equipped; pr
   const slot = (kind: Kind) => (preview?.kind === kind ? preview.id : equipped[kind]);
   const previewing = preview && equipped[preview.kind] !== preview.id;
   const title = preview?.kind === "title" ? preview.name : me.title;
+  const titleId = preview?.kind === "title" ? preview.id : equipped.title;
   return (
     <section className="mk-panel is-tight" aria-label="Fitting room">
       <div className="mk-panel-head">
@@ -71,7 +73,7 @@ function FittingRoom({ me, equipped, preview }: { me: Me; equipped: Equipped; pr
           <Avatar player={{ ...me, border: slot("border") }} size={88} />
           <div className="mk-fit-name">
             <span>{me.name}</span>
-            {title ? <span className="mk-title-pill">{title}</span> : null}
+            {title ? <TitlePill id={titleId} name={title} className="mk-title-pill" /> : null}
           </div>
         </div>
         <div className="mk-fit-table">

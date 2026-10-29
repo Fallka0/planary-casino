@@ -31,6 +31,8 @@ export function badge(row: BadgeRow) {
     avatar: row.avatar_version ? `/avatars/${row.user_id}?v=${row.avatar_version}` : null,
     border: row.border,
     title: row.title ? (ITEMS.get(row.title)?.name ?? null) : null,
+    // The item behind the title, for titles with a look of their own (险中求 in holo, say).
+    titleId: row.title && ITEMS.has(row.title) ? row.title : null,
   };
 }
 
