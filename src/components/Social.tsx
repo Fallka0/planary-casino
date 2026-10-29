@@ -4,7 +4,6 @@ import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { callCasino } from "@/lib/api";
 import { formatChips } from "@/lib/games";
-import { DropToasts } from "./DropToasts";
 import { AchievementBadge } from "./AchievementBadge";
 import { useAuth } from "./AuthProvider";
 
@@ -131,7 +130,6 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         </div>
       ) : null}
       {children}
-      <DropToasts />
       <div className="toasts" aria-live="polite">
         {toasts.slice(0, 1).map((t) => (
           <Link key={t.key} href="/achievements" className="unlock-toast" onClick={() => setToasts((list) => list.slice(1))}>

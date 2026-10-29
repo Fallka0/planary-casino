@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 190">
+  <defs>
+    <radialGradient id="body" cx=".42" cy=".5" r=".62">
+      <stop offset="0" stop-color="#fff0b3"/>
+      <stop offset=".22" stop-color="#ffb347"/>
+      <stop offset=".5" stop-color="#ef3b2f"/>
+      <stop offset=".82" stop-color="#b3121f"/>
+      <stop offset="1" stop-color="#6b0711"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" x2="1">
+      <stop offset="0" stop-color="#8a5a12"/><stop offset=".3" stop-color="#ffe08a"/><stop offset=".55" stop-color="#d9a032"/><stop offset="1" stop-color="#6e430b"/>
+    </linearGradient>
+    <linearGradient id="shade" x1="0" x2="1">
+      <stop offset="0" stop-color="#000" stop-opacity=".35"/><stop offset=".35" stop-color="#000" stop-opacity="0"/><stop offset=".7" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".45"/>
+    </linearGradient>
+    <radialGradient id="spec" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <clipPath id="b"><ellipse cx="60" cy="88" rx="54" ry="56"/></clipPath>
+  </defs>
+  <path d="M60 0V18" stroke="#2a1206" stroke-width="2"/>
+  <rect x="34" y="16" width="52" height="12" rx="3" fill="url(#gold)"/>
+  <rect x="38" y="13" width="44" height="5" rx="2" fill="url(#gold)" opacity=".85"/>
+  <ellipse cx="60" cy="88" rx="54" ry="56" fill="url(#body)"/>
+  <g clip-path="url(#b)" fill="none" stroke="#7a0a14" stroke-width="1.6" opacity=".75">
+    <path d="M60 32V144"/>
+    <path d="M60 32C40 50 40 126 60 144M60 32C80 50 80 126 60 144"/>
+    <path d="M60 32C22 50 22 126 60 144M60 32C98 50 98 126 60 144"/>
+    <path d="M60 32C6 50 6 126 60 144M60 32C114 50 114 126 60 144"/>
+  </g>
+  <g clip-path="url(#b)" stroke="#5a0610" stroke-width="1" opacity=".35">
+    <path d="M8 64Q60 72 112 64M4 88Q60 97 116 88M8 112Q60 121 112 112"/>
+  </g>
+  <ellipse cx="60" cy="88" rx="54" ry="56" fill="url(#shade)"/>
+  <ellipse cx="40" cy="64" rx="12" ry="22" fill="url(#spec)" transform="rotate(-14 40 64)"/>
+  <rect x="34" y="140" width="52" height="12" rx="3" fill="url(#gold)"/>
+  <rect x="40" y="151" width="40" height="5" rx="2" fill="url(#gold)" opacity=".85"/>
+  <circle cx="60" cy="160" r="4" fill="#ffd166"/>
+  <g stroke="#e8343a" stroke-width="2.2" stroke-linecap="round"><path d="M60 162V188"/><path d="M55 162L52 186"/><path d="M65 162L68 186"/><path d="M57 162V187"/><path d="M63 162V187"/></g>
+  <rect x="51" y="160" width="18" height="6" rx="2" fill="url(#gold)"/>
+</svg>

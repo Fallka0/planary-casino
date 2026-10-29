@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 70">
+  <defs>
+    <linearGradient id="r" x1="0" x2="1">
+      <stop offset="0" stop-color="#6b0711"/><stop offset=".25" stop-color="#e8343a"/><stop offset=".42" stop-color="#ff8a7a"/><stop offset=".6" stop-color="#d6232f"/><stop offset="1" stop-color="#5a0610"/>
+    </linearGradient>
+    <linearGradient id="g" x1="0" x2="1">
+      <stop offset="0" stop-color="#7a4a0c"/><stop offset=".35" stop-color="#ffe08a"/><stop offset=".6" stop-color="#d9a032"/><stop offset="1" stop-color="#6e430b"/>
+    </linearGradient>
+    <radialGradient id="s"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="#ffd166"/><stop offset="1" stop-color="#ff7a3d" stop-opacity="0"/></radialGradient>
+  </defs>
+  <path d="M15 14C13 10 17 7 15 3" stroke="#3a1a08" stroke-width="1.4" fill="none"/>
+  <circle cx="15" cy="3.5" r="3.5" fill="url(#s)"/>
+  <rect x="5" y="14" width="20" height="52" rx="4" fill="url(#r)"/>
+  <rect x="5" y="14" width="20" height="6" rx="2" fill="url(#g)"/>
+  <rect x="5" y="60" width="20" height="6" rx="2" fill="url(#g)"/>
+  <rect x="5" y="36" width="20" height="3" fill="url(#g)" opacity=".85"/>
+  <ellipse cx="15" cy="14.5" rx="10" ry="2.2" fill="#ff9a8a" opacity=".5"/>
+</svg>

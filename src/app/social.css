@@ -378,40 +378,6 @@ a.notif-main:hover { background: var(--layer-3); }
 .notif-done { color: var(--text-3); font-size: 0.82rem; }
 .notif-error { flex-basis: 100%; margin-top: 2px; font-size: 0.82rem; }
 
-/* Someone else's big pull: a card that drops in at the top, legendary in holo. */
-.drop-toasts { position: fixed; top: 14px; left: 50%; z-index: 95; translate: -50% 0; pointer-events: none; }
-.drop-toast {
-  pointer-events: auto;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 280px;
-  max-width: calc(100vw - 32px);
-  padding: 10px 20px 10px 10px;
-  border-radius: 18px;
-  background: var(--shell);
-  border: 2px solid var(--tier-epic);
-  box-shadow: 0 18px 40px -14px rgba(0, 0, 0, 0.7), 0 0 26px -6px var(--tier-epic);
-  color: var(--text);
-  text-decoration: none;
-  animation: drop-in 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) both;
-}
-.drop-toast.is-legendary {
-  border-color: transparent;
-  background: linear-gradient(var(--shell), var(--shell)) padding-box, linear-gradient(110deg, #ff5a78, #fff3c4, #8ee6ff, #c58bff, #ff5a78) border-box;
-  background-size: auto, 300% 100%;
-  box-shadow: 0 18px 40px -14px rgba(0, 0, 0, 0.7), 0 0 34px -4px rgba(247, 198, 92, 0.7);
-  animation: drop-in 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) both, holo-pan 5s linear infinite;
-}
-.drop-toast-art { position: relative; flex: none; width: 72px; height: 56px; border-radius: 12px; background: var(--layer-1); overflow: hidden; }
-.drop-toast-copy { display: grid; gap: 3px; min-width: 0; }
-.drop-toast-kicker { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); font-size: 12px; font-weight: 600; }
-.drop-toast-kicker .avatar { flex: none; }
-.drop-toast-copy strong { font-family: var(--font-poster); font-size: 1.35rem; font-weight: 900; line-height: 1; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@keyframes drop-in { from { opacity: 0; transform: translateY(-40px) scale(0.92); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) {
-  .drop-toast, .drop-toast.is-legendary { animation: none; }
-}
 .toasts { position: fixed; right: 20px; bottom: 20px; z-index: 90; pointer-events: none; }
 .unlock-toast {
   pointer-events: auto;

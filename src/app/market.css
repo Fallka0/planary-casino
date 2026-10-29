@@ -543,19 +543,65 @@
   display: block;
   width: 100%;
   height: 100%;
-  background: url(/cosmetics/macau/fx-lantern.svg) center / contain no-repeat;
+  background: url(/cosmetics/macau/fx-lantern-big.svg) center / contain no-repeat;
 }
 .mk-sky-body::after {
   content: "";
   position: absolute;
   left: 50%;
-  top: 45%;
-  width: 150%;
+  top: 46%;
+  width: 170%;
   height: 120%;
+  z-index: -1;
   translate: -50% -50%;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(255, 190, 90, 0.55), rgba(255, 120, 60, 0.18) 45%, transparent 70%);
   animation: mk-sky-flicker 1.7s ease-in-out infinite alternate;
+}
+/* Firecrackers: fall from the top, faster and faster, and burst at the bottom of the screen. */
+.mk-cr { position: absolute; top: 0; width: var(--size); height: calc(var(--size) * 2.33); margin-left: calc(var(--size) / -2); }
+.mk-cr-stick {
+  position: absolute;
+  inset: 0;
+  background: url(/cosmetics/macau/fx-firecracker.svg) center / contain no-repeat;
+  filter: drop-shadow(0 0 6px rgba(255, 190, 90, 0.6));
+  opacity: 0;
+  animation: mk-cr-fall var(--fall) cubic-bezier(0.5, 0, 0.9, 0.6) var(--at) both;
+}
+@keyframes mk-cr-fall {
+  0% { opacity: 1; transform: translateY(-20vh) rotate(0deg); }
+  97% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(calc(100vh - var(--size) * 2.33)) rotate(var(--spin)); }
+}
+.mk-cr-boom { position: absolute; left: 50%; top: calc(100vh - var(--size) * 0.6); width: 0; height: 0; }
+.mk-cr-flash {
+  position: absolute;
+  width: calc(var(--size) * 4);
+  height: calc(var(--size) * 4);
+  margin: calc(var(--size) * -2) 0 0 calc(var(--size) * -2);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #fff 0 8%, #ffe08a 16%, rgba(255, 140, 60, 0.75) 32%, transparent 62%),
+    repeating-conic-gradient(from 8deg, rgba(255, 220, 120, 0.9) 0 5deg, transparent 5deg 30deg);
+  -webkit-mask: radial-gradient(circle, #000 50%, transparent 70%);
+  mask: radial-gradient(circle, #000 50%, transparent 70%);
+  opacity: 0;
+  animation: mk-cr-flash 0.42s ease-out calc(var(--at) + var(--fall)) both;
+}
+@keyframes mk-cr-flash { 0% { opacity: 0; transform: scale(0.15); } 25% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.5) rotate(25deg); } }
+.mk-cr-shred {
+  position: absolute;
+  width: 7px;
+  height: 11px;
+  margin: -5px 0 0 -3px;
+  border-radius: 1px;
+  opacity: 0;
+  animation: mk-cr-shred 1.1s cubic-bezier(0.2, 0.7, 0.4, 1) calc(var(--at) + var(--fall)) both;
+}
+@keyframes mk-cr-shred {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0deg) scale(0.6); }
+  55% { opacity: 1; transform: translate(var(--dx), var(--dy)) rotate(calc(var(--r) * 0.6)) scale(1); }
+  100% { opacity: 0; transform: translate(calc(var(--dx) * 1.15), calc(var(--dy) + 70px)) rotate(var(--r)) scale(0.9); }
 }
 @keyframes mk-sky-rise {
   0% { opacity: 0; transform: translate(0, 12vh); }

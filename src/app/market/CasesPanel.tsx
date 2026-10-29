@@ -42,7 +42,7 @@ const REEL_IN = 1300;
 const ACCELERATE = 600;
 const DECELERATE = 3600;
 /** After the stop: the strip runs a little past where it lands and springs back. */
-const SETTLE = 560;
+const SETTLE = 280;
 const HOLD: Record<Tier, number> = { common: 400, rare: 600, epic: 600, legendary: 900 };
 const PARTICLES: Record<Tier, number> = { common: 0, rare: 14, epic: 22, legendary: 34 };
 const RAYS: Record<Tier, number> = { common: 0, rare: 0.18, epic: 0.26, legendary: 0.34 };
@@ -92,7 +92,7 @@ function Reel({
   // Where in the winning tile the pointer comes to rest, and how far the strip runs past it first.
   // Both stay well inside that tile: the run past never reaches the next one, so what you see
   // land is what you got.
-  const [rest] = useState(() => ({ at: -0.26 + Math.random() * 0.36, over: 0.15 }));
+  const [rest] = useState(() => ({ at: -0.26 + Math.random() * 0.36, over: 0.08 }));
   const tile = phone ? { w: 96, h: 124 } : { w: 132, h: 156 };
   // The run reads these live, so turning the sound on mid-reel is heard at once.
   const cues = useRef({ onLanded, onTick });
@@ -132,8 +132,8 @@ function Reel({
           : t < run
             ? accel + decel * (1 - Math.pow(1 - (t - ACCELERATE) / DECELERATE, k))
             : t < run + SETTLE
-              ? // Ran past: spring back onto the resting point with one small bounce, no seam at either end.
-                distance + past * Math.exp(-5 * ((t - run) / SETTLE)) * Math.cos(3 * Math.PI * ((t - run) / SETTLE))
+              ? // Ran past: a quick spring straight back onto the resting point.
+                distance + past * Math.exp(-6 * ((t - run) / SETTLE)) * Math.cos(Math.PI * ((t - run) / SETTLE))
               : distance;
       s.style.transform = `translateX(${-x}px)`;
       const pace = t > prevT ? Math.min(1, Math.abs(x - prevX) / (t - prevT) / top) : 0;
@@ -146,7 +146,7 @@ function Reel({
         const dir = under > last ? 1 : -1;
         if (last !== -1) {
           flap.current?.animate([{ rotate: "0deg" }, { rotate: `${dir * (10 + 22 * pace)}deg`, offset: 0.25 }, { rotate: "0deg" }], {
-            duration: 120 + 220 * (1 - pace),
+            duration: 90 + 110 * (1 - pace),
             easing: "cubic-bezier(.3,1.6,.5,1)",
           });
         }
