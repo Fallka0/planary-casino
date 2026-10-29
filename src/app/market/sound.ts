@@ -15,10 +15,26 @@ function stored() {
 
 type Cue = "tick" | "tear" | "land" | "reveal" | "pops" | "drop" | "hello";
 
+/** A hall: a reverb made from decaying noise, for the cues that should sound big. */
+export function makeHall(ac: BaseAudioContext, out: AudioNode) {
+  const hall = ac.createConvolver();
+  const len = Math.round(ac.sampleRate * 3.2);
+  const ir = ac.createBuffer(2, len, ac.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = ir.getChannelData(ch);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6);
+  }
+  hall.buffer = ir;
+  const wet = ac.createGain();
+  wet.gain.value = 0.55;
+  hall.connect(wet).connect(out);
+  return hall;
+}
+
 // One audio context for the whole page. Browsers only let it play once it has been started from a
 // click, so `unlock` runs inside the click handlers (the sound switch, the Open button); a context
 // first made later, from a timer, can stay silent.
-let shared: { ac: AudioContext; out: AudioNode } | null = null;
+let shared: { ac: AudioContext; out: AudioNode; hall: AudioNode } | null = null;
 function audio() {
   if (typeof window === "undefined") return null;
   const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -32,11 +48,90 @@ function audio() {
     const master = ac.createGain();
     master.gain.value = 1.8;
     limit.connect(master).connect(ac.destination);
-    shared = { ac, out: limit };
+    shared = { ac, out: limit, hall: makeHall(ac, limit) };
   }
   if (shared.ac.state !== "running") void shared.ac.resume().catch(() => {});
   return shared;
 }
+/**
+ * The legendary fanfare, about four seconds in a hall: a deep boom and a gong, a brass chord
+ * that swells open, a pentatonic run climbing two octaves on bells, then the full chord again,
+ * brighter, with a timpani roll under it and bells glittering down through the tail.
+ */
+export function fanfare(ac: BaseAudioContext, toDry: AudioNode, toHall: AudioNode) {
+  const now = ac.currentTime + 0.02;
+  // Its own level: many voices at once, so the whole fanfare sits lower than a single cue.
+  const dry = ac.createGain();
+  dry.gain.value = 0.42;
+  dry.connect(toDry);
+  const hall = ac.createGain();
+  hall.gain.value = 0.42;
+  hall.connect(toHall);
+  const voice = (
+    f: number,
+    at: number,
+    dur: number,
+    gain: number,
+    { type = "sine" as OscillatorType, attack = 0.01, wet = 0.4, open = 0, detune = 0, glide = 0 } = {},
+  ) => {
+    const t = now + at;
+    const osc = ac.createOscillator();
+    osc.type = type;
+    osc.frequency.setValueAtTime(f, t);
+    if (glide) osc.frequency.exponentialRampToValueAtTime(f * glide, t + dur * 0.6);
+    osc.detune.value = detune;
+    const amp = ac.createGain();
+    amp.gain.setValueAtTime(0.0001, t);
+    amp.gain.exponentialRampToValueAtTime(gain, t + attack);
+    amp.gain.setTargetAtTime(0.0001, t + attack + dur * 0.35, dur / 3.2);
+    let node: AudioNode = osc;
+    if (open) {
+      // Brass: a low-pass that opens as the note swells.
+      const lp = ac.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.Q.value = 1.2;
+      lp.frequency.setValueAtTime(300, t);
+      lp.frequency.exponentialRampToValueAtTime(open, t + attack + 0.25);
+      lp.frequency.setTargetAtTime(open * 0.4, t + attack + 0.4, dur / 2);
+      node = osc.connect(lp);
+    }
+    node.connect(amp);
+    amp.connect(dry);
+    const send = ac.createGain();
+    send.gain.value = wet;
+    amp.connect(send).connect(hall);
+    osc.start(t);
+    osc.stop(t + dur + 1.5);
+  };
+  const bell = (f: number, at: number, gain: number, dur = 1.6) => {
+    voice(f, at, dur, gain, { attack: 0.004, wet: 0.6 });
+    voice(f * 2.76, at, dur * 0.4, gain * 0.35, { attack: 0.003, wet: 0.6 });
+    voice(f * 5.4, at, dur * 0.2, gain * 0.15, { attack: 0.002, wet: 0.6 });
+  };
+  const brass = (notes: number[], at: number, dur: number, gain: number, open: number) =>
+    notes.forEach((f) => {
+      voice(f, at, dur, gain, { type: "sawtooth", attack: 0.16, open, wet: 0.45, detune: -7 });
+      voice(f, at, dur, gain, { type: "sawtooth", attack: 0.16, open, wet: 0.45, detune: 7 });
+    });
+
+  // 1. The boom: a sub drop and a gong.
+  voice(92, 0, 1.6, 0.5, { glide: 0.5, attack: 0.008, wet: 0.3 });
+  [98, 147, 209, 280, 381].forEach((f, i) => voice(f, 0.02, 3.4 - i * 0.4, 0.16 / (i + 1), { attack: 0.012, wet: 0.7 }));
+  // 2. The first chord swells open (C major with the ninth, voiced wide).
+  brass([131, 196, 262, 330, 392, 587], 0.12, 1.3, 0.045, 2600);
+  // 3. A pentatonic run up two octaves on bells: C D E G A.
+  [523, 587, 659, 784, 880, 1047, 1175, 1319, 1568, 1760, 2093].forEach((f, i) => bell(f, 0.55 + i * 0.055, 0.05, 0.9));
+  // 4. Timpani roll into the arrival.
+  for (let i = 0; i < 10; i++) voice(98, 0.95 + i * 0.045, 0.25, 0.05 + i * 0.012, { glide: 0.8, attack: 0.004, wet: 0.35 });
+  // 5. The arrival: the full chord, higher and brighter, with the root deep under it.
+  brass([65, 131, 196, 262, 330, 392, 523, 659, 784], 1.42, 2.6, 0.05, 5200);
+  voice(1047, 1.42, 2.4, 0.07, { type: "triangle", attack: 0.03, wet: 0.6 });
+  voice(65, 1.42, 1.4, 0.35, { glide: 0.7, attack: 0.006, wet: 0.3 });
+  // 6. Bells glittering down through the tail, pentatonic, so every one belongs.
+  const glitter = [2093, 1760, 2349, 1568, 2637, 1319, 2093, 1760, 3136, 2637, 2349, 1568];
+  glitter.forEach((f, i) => bell(f, 1.75 + i * 0.13 + Math.random() * 0.05, 0.03 + Math.random() * 0.015, 1.2));
+}
+
 /** Call from inside a click: starts the page's audio so later cues are heard. */
 export function unlockSound() {
   const a = audio();
@@ -123,6 +218,11 @@ export function useMarketSound() {
     [ctx],
   );
 
+  const legendary = useCallback(() => {
+    const a = audio();
+    if (a) fanfare(a.ac, a.out, a.hall);
+  }, []);
+
   const play = useCallback(
     (cue: Cue, tier: Tier = "common", pace = 1) => {
       if (!on) return;
@@ -155,13 +255,7 @@ export function useMarketSound() {
             [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.8, 0.08, "triangle", 0.05 + i * 0.07));
             [2637, 3136].forEach((f, i) => tone(f, 0.5, 0.025, "sine", 0.45 + i * 0.08));
           } else {
-            // A gong: a few inharmonic partials with a long tail.
-            [110, 163, 232, 311, 424].forEach((f, i) => tone(f, 2.8 - i * 0.3, 0.14 / (i + 1), "sine", 0, 0.01));
-            // The fanfare over it.
-            [392, 523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.9, 0.08, "sawtooth", 0.22 + i * 0.08, 0.01));
-            tone(1568, 1.4, 0.06, "triangle", 0.75);
-            // Sparkles.
-            for (let i = 0; i < 12; i++) tone(2400 + Math.random() * 2200, 0.25, 0.02, "sine", 0.6 + i * 0.09);
+            legendary();
           }
           break;
         case "pops":
@@ -174,7 +268,7 @@ export function useMarketSound() {
           break;
       }
     },
-    [on, tone, crack],
+    [on, tone, crack, legendary],
   );
 
   const toggle = useCallback(() => {

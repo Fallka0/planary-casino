@@ -423,11 +423,7 @@ export function CasesPanel({
   }, [clearTimers]);
 
   useEffect(() => {
-    if (phase === "result" && opened) {
-      sound.play("reveal", opened.item.tier);
-      // A Midnight Macau legendary gets the firecrackers its finale shows.
-      if (box?.id === "macau" && opened.item.tier === "legendary") later(() => sound.play("pops"), 650);
-    }
+    if (phase === "result" && opened) sound.play("reveal", opened.item.tier);
     // Only when the result first appears.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, opened]);

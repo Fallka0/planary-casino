@@ -329,13 +329,15 @@
 
 /* The result */
 .mk-result { position: relative; display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 8px 0; }
+/* The result doesn't anchor its rays and finale: the stage does, so they fill the whole box. */
+.mk-result { position: static; }
 .mk-rays {
   position: absolute;
   left: 50%;
-  top: 230px;
-  width: 820px;
-  height: 820px;
-  margin: -410px 0 0 -410px;
+  top: 42%;
+  width: 2400px;
+  height: 2400px;
+  margin: -1200px 0 0 -1200px;
   border-radius: 50%;
   pointer-events: none;
   opacity: var(--ray-op);
@@ -501,13 +503,12 @@
 /* The Midnight Macau finale: lanterns rise behind the card, petals and red envelopes fall in
    front of it, firecrackers go off at the sides. Decoration only: it never takes a click. */
 .mk-result-card-wrap, .mk-result-foot { position: relative; z-index: 1; }
-.mk-finale { position: absolute; inset: -28px; pointer-events: none; }
+.mk-finale { position: absolute; inset: 0; pointer-events: none; }
 .mk-finale-back, .mk-finale-front { position: absolute; inset: 0; overflow: hidden; }
 .mk-finale-front { z-index: 2; }
-.mk-fx-lantern, .mk-fx-petal, .mk-fx-hongbao { position: absolute; background: center / contain no-repeat; opacity: 0; animation-fill-mode: both; animation-timing-function: linear; }
+.mk-fx-lantern, .mk-fx-petal { position: absolute; background: center / contain no-repeat; opacity: 0; animation-fill-mode: both; animation-timing-function: linear; }
 .mk-fx-lantern { bottom: -70px; background-image: url(/cosmetics/macau/fx-lantern.svg); filter: drop-shadow(0 0 10px rgba(255, 170, 80, 0.75)); animation-name: mk-lantern; animation-timing-function: cubic-bezier(0.3, 0, 0.6, 1); }
 .mk-fx-petal { top: -30px; background-image: url(/cosmetics/macau/fx-petal.svg); animation-name: mk-petal; }
-.mk-fx-hongbao { top: -50px; background-image: url(/cosmetics/macau/fx-hongbao.svg); filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.35)); animation-name: mk-hongbao; animation-timing-function: cubic-bezier(0.45, 0, 0.9, 0.6); }
 @keyframes mk-lantern {
   0% { opacity: 0; transform: translate(0, 0); }
   12% { opacity: 1; }
@@ -523,46 +524,47 @@
   90% { opacity: 1; }
   100% { opacity: 0; transform: translate(var(--drift), 90vh) rotate(var(--turn)); }
 }
-@keyframes mk-hongbao {
-  0% { opacity: 0; transform: translateY(0) rotate(0deg) scaleX(1); }
-  8% { opacity: 1; }
-  50% { transform: translateY(45vh) rotate(calc(var(--turn) * 0.5)) scaleX(calc(var(--flip) * -1)); }
-  92% { opacity: 1; }
-  100% { opacity: 0; transform: translateY(95vh) rotate(var(--turn)) scaleX(var(--flip)); }
+/* A Midnight Macau legendary: the whole screen dims at the edges and red lanterns rise up both
+   sides of it. Each lantern is three layers: the rise (slow, a little faster as it warms), the sway
+   and tilt (out of step with the rise), and the flicker of the flame inside. Nearer lanterns are
+   bigger, brighter and quicker; far ones small, soft and slow, so the sky has depth. */
+.mk-sky { position: fixed; inset: 0; z-index: 80; overflow: hidden; pointer-events: none; }
+.mk-sky-dim {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 65% at 50% 45%, transparent 35%, rgba(12, 2, 6, 0.38) 70%, rgba(12, 2, 6, 0.62) 100%);
+  animation: mk-sky-dim 9s ease both;
 }
-.mk-fx-cracker { position: absolute; top: -10px; width: 46px; height: 74%; background: url(/cosmetics/macau/fx-cracker.svg) top center / 100% 100% no-repeat; transform-origin: 50% 0; animation: mk-cracker 1.9s ease-out 0.5s both; }
-.mk-fx-cracker.is-left { left: 4%; }
-.mk-fx-cracker.is-right { right: 4%; }
-@keyframes mk-cracker {
-  0% { opacity: 0; transform: translateY(-40px); }
-  15% { opacity: 1; transform: none; }
-  20%, 30%, 40%, 50%, 60% { transform: rotate(3deg); }
-  25%, 35%, 45%, 55%, 65% { transform: rotate(-3deg); }
-  80% { opacity: 1; transform: none; }
-  100% { opacity: 0; }
+@keyframes mk-sky-dim { 0% { opacity: 0; } 10%, 78% { opacity: 1; } 100% { opacity: 0; } }
+.mk-sky-lantern { position: absolute; bottom: 0; opacity: 0; animation: mk-sky-rise linear both; will-change: transform, opacity; }
+.mk-sky-sway { display: block; width: 100%; height: 100%; animation: mk-sky-sway ease-in-out infinite alternate; transform-origin: 50% 0; }
+.mk-sky-body {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: url(/cosmetics/macau/fx-lantern.svg) center / contain no-repeat;
 }
-/* Each pop: a gold flash with spokes, gone in a blink. */
-.mk-fx-pop {
+.mk-sky-body::after {
+  content: "";
   position: absolute;
   left: 50%;
-  width: 54px;
-  height: 54px;
-  margin-left: -27px;
+  top: 45%;
+  width: 150%;
+  height: 120%;
+  translate: -50% -50%;
   border-radius: 50%;
-  background:
-    radial-gradient(circle, #fff7d6 0 12%, #ffd27a 22%, rgba(255, 140, 60, 0.6) 38%, transparent 60%),
-    repeating-conic-gradient(from 10deg, rgba(255, 220, 120, 0.95) 0 6deg, transparent 6deg 40deg);
-  -webkit-mask: radial-gradient(circle, #000 55%, transparent 70%);
-  mask: radial-gradient(circle, #000 55%, transparent 70%);
-  opacity: 0;
-  transform: scale(0.2);
-  animation: mk-pop 0.32s ease-out both;
+  background: radial-gradient(circle, rgba(255, 190, 90, 0.55), rgba(255, 120, 60, 0.18) 45%, transparent 70%);
+  animation: mk-sky-flicker 1.7s ease-in-out infinite alternate;
 }
-@keyframes mk-pop {
-  0% { opacity: 0; transform: scale(0.2) rotate(0deg); }
-  30% { opacity: 1; transform: scale(1.1) rotate(20deg); }
-  100% { opacity: 0; transform: scale(1.5) rotate(40deg); }
+@keyframes mk-sky-rise {
+  0% { opacity: 0; transform: translate(0, 12vh); }
+  8% { opacity: var(--o); }
+  70% { opacity: var(--o); }
+  100% { opacity: 0; transform: translate(var(--dx), -118vh); }
 }
+@keyframes mk-sky-sway { from { transform: translateX(calc(var(--sway) * -1)) rotate(calc(var(--tilt) * -1)); } to { transform: translateX(var(--sway)) rotate(var(--tilt)); } }
+@keyframes mk-sky-flicker { 0% { opacity: 0.65; } 35% { opacity: 1; } 60% { opacity: 0.8; } 100% { opacity: 0.95; } }
 
 /* Market */
 .mk-market { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; }
@@ -676,7 +678,7 @@
   .mk-stage { min-height: 360px; padding: 16px; }
   .mk-panel { padding: 16px; }
   .mk-reel-name { font-size: 12px; }
-  .mk-rays { top: 190px; width: 560px; height: 560px; margin: -280px 0 0 -280px; }
+  .mk-rays { top: 36%; width: 1500px; height: 1500px; margin: -750px 0 0 -750px; }
   .mk-result-card-wrap { width: 280px; }
   .mk-result-art { height: 150px; }
   .mk-contents { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
