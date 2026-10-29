@@ -400,13 +400,16 @@ a.notif-main:hover { background: var(--layer-3); }
 
 .profile { gap: 16px; }
 .profile-head {
-  min-height: 260px;
   display: flex;
   align-items: flex-end;
-  padding: 28px;
+  padding: 28px 28px 36px;
   border-radius: var(--r-lg);
   border: 1px solid var(--line);
 }
+/* The banner's own shape (240 × 64), so a banner shows whole: a zero-width spacer as tall as the
+   width allows sets the height, and the name block makes it taller when it needs the room. (An
+   aspect-ratio would clip it: overflow is hidden, and its min-height would turn into a min-width.) */
+.profile-head::before { content: ""; flex: none; width: 0; padding-bottom: calc(26.667% - 64px); }
 .profile-id { position: relative; z-index: 1; display: flex; align-items: flex-end; gap: 22px; width: 100%; flex-wrap: wrap; }
 .profile-avatar { position: relative; }
 .profile-avatar .avatar { box-shadow: 0 0 0 5px rgba(20, 3, 9, 0.35); font-size: 2.4rem !important; }
@@ -773,7 +776,11 @@ a.person-name:hover { text-decoration: underline; text-underline-offset: 3px; }
   .search { min-width: 0; flex: 1 1 0; }
   .bell-btn { width: 40px; height: 40px; }
   .profile-avatar .avatar { width: 92px !important; height: 92px !important; font-size: 1.8rem !important; }
-  .profile-head { min-height: 220px; padding: 18px; }
+  .profile-head { padding: 18px; }
+  .profile-head::before { padding-bottom: calc(26.667% - 36px); }
+  /* On a phone the name block takes the room beside the picture and its status line may wrap. */
+  .profile-copy { flex: 1 1 140px; }
+  .profile-copy .profile-meta { border-radius: 10px; }
   .profile-id { gap: 14px; }
   .profile-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .inbox { grid-template-columns: 1fr; height: calc(100vh - 230px); }
@@ -809,17 +816,16 @@ a.person-name:hover { text-decoration: underline; text-underline-offset: 3px; }
 .avatar.border-onsen::before { inset: -66% -30% -26%; background-image: url(/cosmetics/macau/border-onsen.svg); }
 /* On the profile the drawn rings reach about a third of the picture past its edge: give them room
    from the banner's edge and from the name. */
-.profile-avatar:has(.border-bamboo, .border-porcelain, .border-sakura, .border-onsen, .border-lacquer, .border-rising-tide, .border-night-sakura, .border-mother-of-pearl) { margin: 20px 14px 12px; }
+.profile-avatar:has(.border-bamboo, .border-porcelain, .border-sakura, .border-onsen, .border-lacquer, .border-rising-tide, .border-night-sakura, .border-mother-of-pearl) { margin: 20px 14px 22px; }
 /* In a row (friends, leaderboard, account button) a drawn ring needs a little room from the name. */
 :is(.person-main, .friend-menu-head, .rank, .account-btn, .mk-try-friend) > .avatar:is(.border-bamboo, .border-porcelain, .border-sakura, .border-onsen, .border-lacquer, .border-rising-tide, .border-night-sakura, .border-mother-of-pearl) { margin-inline: 6px; }
 :is(.mk-fit-who, .mk-try-who) > .avatar:is(.border-bamboo, .border-porcelain, .border-sakura, .border-onsen, .border-lacquer, .border-rising-tide, .border-night-sakura, .border-mother-of-pearl) { margin: 0 12px 0 14px; }
 /* The capybara sits well above the onsen ring; on a phone the picture is at the top of the banner. */
 .profile-avatar:has(.border-onsen) { margin-top: 64px; }
 
-/* Banners. The art is drawn whole (contain), never cropped; whatever room is left around it,
-   since a profile is wider than the 240 × 64 art, is filled with a soft, blurred copy of the
-   same art, like a widescreen film on a tall screen. Most are animated inside the SVG, so
-   reduced motion swaps in a still copy. */
+/* Banners. The places a banner is shown (the profile, the fitting room, the try-on preview) have
+   the art's own shape, 240 × 64, so the art fills them whole. Most are animated inside the SVG,
+   so reduced motion swaps in a still copy. */
 .banner-seigaiha { --art: url(/cosmetics/macau/banner-seigaiha.svg); }
 .banner-lattice { --art: url(/cosmetics/macau/banner-lattice.svg); }
 .banner-strawberry-matcha { --art: url(/cosmetics/macau/banner-strawberry-matcha.svg); }
@@ -828,15 +834,7 @@ a.person-name:hover { text-decoration: underline; text-underline-offset: 3px; }
 .banner-torii { --art: url(/cosmetics/macau/banner-torii.svg); }
 .banner-ink-wave { --art: url(/cosmetics/macau/banner-ink-wave.svg); }
 .banner-yozakura { --art: url(/cosmetics/macau/banner-yozakura.svg); }
-.banner.banner-seigaiha, .banner.banner-lattice, .banner.banner-strawberry-matcha, .banner.banner-lanterns, .banner.banner-pagoda-mist, .banner.banner-torii, .banner.banner-ink-wave, .banner.banner-yozakura { background: #1b0b14; }
-.banner.banner-seigaiha::before, .banner.banner-lattice::before, .banner.banner-strawberry-matcha::before, .banner.banner-lanterns::before, .banner.banner-pagoda-mist::before, .banner.banner-torii::before, .banner.banner-ink-wave::before, .banner.banner-yozakura::before, .banner.banner-seigaiha::after, .banner.banner-lattice::after, .banner.banner-strawberry-matcha::after, .banner.banner-lanterns::after, .banner.banner-pagoda-mist::after, .banner.banner-torii::after, .banner.banner-ink-wave::after, .banner.banner-yozakura::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  pointer-events: none;
-}
-.banner.banner-seigaiha::before, .banner.banner-lattice::before, .banner.banner-strawberry-matcha::before, .banner.banner-lanterns::before, .banner.banner-pagoda-mist::before, .banner.banner-torii::before, .banner.banner-ink-wave::before, .banner.banner-yozakura::before { inset: -24px; background: var(--art) center / cover no-repeat; filter: blur(16px) brightness(0.75) saturate(1.1); }
-.banner.banner-seigaiha::after, .banner.banner-lattice::after, .banner.banner-strawberry-matcha::after, .banner.banner-lanterns::after, .banner.banner-pagoda-mist::after, .banner.banner-torii::after, .banner.banner-ink-wave::after, .banner.banner-yozakura::after { inset: 0; background: var(--art) center / contain no-repeat; }
+.banner.banner-seigaiha, .banner.banner-lattice, .banner.banner-strawberry-matcha, .banner.banner-lanterns, .banner.banner-pagoda-mist, .banner.banner-torii, .banner.banner-ink-wave, .banner.banner-yozakura { background: #1b0b14 var(--art) center / cover no-repeat; }
 
 /* Card backs: each file is the whole card, edge included. */
 .print-back.cardback-matcha, .print-back.cardback-mahjong, .print-back.cardback-fan, .print-back.cardback-hongbao, .print-back.cardback-koi, .print-back.cardback-red-dragon { border: 0; border-radius: 4px; background: center / 100% 100% no-repeat; }

@@ -94,7 +94,7 @@ export function ProfilePreview({
             <div className={`mk-try-banner banner ${banner ?? "banner-default"}${on("banner")}`}>
               {glow("banner")}
               <div className={`mk-try-who${on("border")}`}>
-                <Avatar player={player} size={84} />
+                <Avatar player={player} size={72} />
                 <div className="mk-try-id">
                   {titleName ? <TitlePill id={titleId} name={titleName} className={`profile-title${on("title")}`} /> : null}
                   <strong>{me.name}</strong>
