@@ -426,21 +426,22 @@ a.notif-main:hover { background: var(--layer-3); }
 }
 .avatar-edit:hover { background: #fff; }
 .profile-pic-error { position: absolute; top: calc(100% + 8px); left: 0; width: 280px; }
-/* The name sits on a nameplate: tinted glass in the shell's burgundy, so it reads over any banner
-   while the banner still shows through. */
-.profile-copy {
-  display: grid;
-  justify-items: start;
-  gap: 4px;
-  margin-right: auto;
-  min-width: 0;
-  padding: 12px 20px 14px;
-  border-radius: 18px;
-  background: rgba(42, 9, 21, 0.62);
-  border: 1px solid rgba(255, 214, 224, 0.14);
-  box-shadow: 0 14px 34px -16px rgba(0, 0, 0, 0.7);
-  -webkit-backdrop-filter: blur(12px) saturate(1.3);
-  backdrop-filter: blur(12px) saturate(1.3);
+/* No plate over the banner: the name carries its own dark outline and a short poster shadow,
+   and the status line sits on a small chip, so it reads on a light banner and the banner stays whole. */
+.profile-copy { display: grid; justify-items: start; gap: 4px; margin-right: auto; min-width: 0; }
+.profile-copy h1, .mk-try-who > .mk-try-id strong {
+  -webkit-text-stroke: 0.09em rgba(42, 9, 21, 0.9);
+  paint-order: stroke fill;
+  text-shadow: 0 0.06em 0 rgba(42, 9, 21, 0.85), 0 0 0.5em rgba(20, 3, 9, 0.35);
+}
+.profile-copy .profile-meta, .mk-try-who > .mk-try-id > span:not(.title-pill) {
+  justify-self: start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(42, 9, 21, 0.6);
+  color: var(--paper);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
 }
 .profile-copy h1 { font-family: var(--font-poster); font-size: clamp(2.4rem, 5vw, 3.6rem); font-weight: 900; line-height: 0.95; text-transform: uppercase; overflow-wrap: anywhere; }
 .profile-name-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
@@ -809,6 +810,8 @@ a.person-name:hover { text-decoration: underline; text-underline-offset: 3px; }
 /* On the profile the drawn rings reach about a third of the picture past its edge: give them room
    from the banner's edge and from the name. */
 .profile-avatar:has(.border-bamboo, .border-porcelain, .border-sakura, .border-onsen, .border-lacquer, .border-rising-tide, .border-night-sakura, .border-mother-of-pearl) { margin: 20px 14px 12px; }
+/* In a row (friends, leaderboard, account button) a drawn ring needs a little room from the name. */
+:is(.person-main, .friend-menu-head, .rank, .account-btn, .mk-try-friend) > .avatar:is(.border-bamboo, .border-porcelain, .border-sakura, .border-onsen, .border-lacquer, .border-rising-tide, .border-night-sakura, .border-mother-of-pearl) { margin-inline: 6px; }
 /* The capybara sits well above the onsen ring; on a phone the picture is at the top of the banner. */
 .profile-avatar:has(.border-onsen) { margin-top: 64px; }
 
@@ -890,6 +893,26 @@ a.person-name:hover { text-decoration: underline; text-underline-offset: 3px; }
   .print-back.cardback-koi { background-image: url(/cosmetics/macau/cardback-koi.static.svg); }
   .print-back.cardback-red-dragon { background-image: url(/cosmetics/macau/cardback-red-dragon.static.svg); }
   .title-pill.title-risk-for-riches { animation: none; }
+}
+
+/* Risk for Riches in a line of text (friends list, leaderboard, account menu): the same holo 险中求. */
+.title-text.title-risk-for-riches {
+  font-family: var(--font-poster), "Noto Serif TC", "PingFang TC", "Microsoft JhengHei", serif;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  color: #fff3c4;
+}
+@supports (background-clip: text) {
+  .title-text.title-risk-for-riches {
+    background: linear-gradient(110deg, #ff5a78, #fff3c4, #8ee6ff, #c58bff, #ff5a78) 0 0 / 300% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: holo-pan 6s linear infinite;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .title-text.title-risk-for-riches { animation: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

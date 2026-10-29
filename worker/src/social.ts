@@ -31,6 +31,8 @@ export function badge(row: BadgeRow) {
     avatar: row.avatar_version ? `/avatars/${row.user_id}?v=${row.avatar_version}` : null,
     border: row.border,
     title: row.title ? (ITEMS.get(row.title)?.name ?? null) : null,
+    // The item behind the title, for titles with a look of their own (险中求 in holo, say).
+    titleId: row.title && ITEMS.has(row.title) ? row.title : null,
   };
 }
 
@@ -96,7 +98,6 @@ social.get("/profile/:id", async (c) => {
     ...badge(p),
     // Only you need to know whether your name is your own pick, and what the next one costs.
     nameChange: rel === "self" ? { custom: Boolean(p.name_custom), price: nameChangePrice(p) } : undefined,
-    titleId: p.title,
     bio: p.bio,
     banner: p.banner,
     joinedAt: p.created_at,

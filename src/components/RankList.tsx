@@ -3,6 +3,7 @@ import type { BoardRow } from "@/lib/api";
 import { formatChips } from "@/lib/games";
 import { Avatar } from "./Avatar";
 import { ChipIcon } from "./ChipIcon";
+import { TitleText } from "./TitlePill";
 
 /** One decimal while the return is small, whole numbers once it isn't. */
 function formatPct(pct: number) {
@@ -21,7 +22,11 @@ export function RankList({ rows }: { rows: BoardRow[] }) {
           <Avatar player={row} size={36} />
           <Link href={`/u/${row.id}`} className="rank-name">
             {row.isMe ? `${row.name} (you)` : row.name}
-            {row.title ? <span className="rank-title">{row.title}</span> : null}
+            {row.title ? (
+              <span className="rank-title">
+                <TitleText id={row.titleId} name={row.title} />
+              </span>
+            ) : null}
           </Link>
           <span className={`rank-chips${row.net < 0 ? " is-down" : ""}`}>
             {formatPct(row.pct)}

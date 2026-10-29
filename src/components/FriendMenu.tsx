@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { Coins, DoorOpen, MessageCircle, Send, UserRound, UserX } from "lucide-react";
 import { ApiError, describePresence, type Friend, tableUrl, useCasinoAction } from "@/lib/api";
 import { Avatar } from "./Avatar";
+import { TitleText } from "./TitlePill";
 
 const GAME_HOSTS = { blackjack: "https://21.planary.ch", roulette: "https://roulette.planary.ch" } as const;
 
@@ -105,7 +106,7 @@ export function FriendMenu({ friend, anchor, onClose }: { friend: Friend; anchor
         <Avatar player={friend} size={44} status={friend.presence.online ? "online" : null} />
         <span className="friend-copy">
           <strong>{friend.name}</strong>
-          <span className="friend-status">{friend.title ?? describePresence(friend.presence)}</span>
+          <span className="friend-status">{friend.title ? <TitleText id={friend.titleId} name={friend.title} /> : describePresence(friend.presence)}</span>
         </span>
       </div>
       <div className="friend-menu-list">

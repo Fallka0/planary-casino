@@ -33,7 +33,7 @@ const drops = [];
 const pending = new Map();
 
 const PLAYER = { id: "preview", name: "Preview", avatar: null };
-const badge = () => ({ ...PLAYER, border: equipped.border, title: equipped.title ? ITEMS.get(equipped.title).name : null });
+const badge = () => ({ ...PLAYER, border: equipped.border, title: equipped.title ? ITEMS.get(equipped.title).name : null, titleId: equipped.title });
 const me = () => ({
   ...badge(),
   balance,
@@ -86,7 +86,15 @@ const routes = {
     recent: [],
   }),
   "GET /v1/market": () => ({ balance, fee: 0.05, items: CATALOG.filter((i) => !i.reward).map((i) => ({ ...view(i), lowest: null, listings: 0, lastSale: null })) }),
-  "GET /v1/friends": () => ({ friends: [], incoming: [], outgoing: [] }),
+  // One friend wearing Midnight Macau, so the friends list shows a ring and a title too.
+  "GET /v1/friends": () => ({
+    friends: [
+      { id: "mei", name: "Mei", avatar: null, border: "border-lacquer", title: "Risk for Riches", titleId: "title-risk-for-riches", presence: { online: true, where: "lobby", table: null } },
+      { id: "kai", name: "Kai", avatar: null, border: "border-sakura", title: "Night Emperor", titleId: "title-night-emperor", presence: { online: false, where: null, table: null } },
+    ],
+    incoming: [],
+    outgoing: [],
+  }),
   "GET /v1/notifications": () => ({ notifications: [] }),
   "GET /v1/messages": () => ({ conversations: [] }),
   "GET /v1/achievements": () => ({ achievements: [] }),

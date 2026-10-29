@@ -18,6 +18,8 @@ export interface PlayerBadge {
   avatar: string | null;
   border: string | null;
   title: string | null;
+  /** The equipped title's item id, for titles with a look of their own. */
+  titleId?: string | null;
 }
 export interface Me extends PlayerBadge {
   balance: number;
@@ -185,8 +187,6 @@ export interface AchievementEntry {
 }
 
 export interface Profile extends PlayerBadge {
-  /** The equipped title's item id, for titles with a look of their own. */
-  titleId?: string | null;
   /** Your own profile only: whether the name is your own pick, and what picking a new one costs. */
   nameChange?: { custom: boolean; price: number };
   bio: string | null;

@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { Avatar } from "@/components/Avatar";
 import { ChipIcon } from "@/components/ChipIcon";
-import { TitlePill } from "@/components/TitlePill";
+import { TitlePill, TitleText } from "@/components/TitlePill";
 import type { Me } from "@/lib/api";
 import { type Equipped, type ItemInfo, KIND_LABEL, TIER_LABEL } from "./cosmetics";
 
@@ -128,7 +128,7 @@ export function ProfilePreview({
                 <Avatar player={player} size={40} status="online" />
                 <div className="mk-try-id is-small">
                   <strong>{me.name}</strong>
-                  <span>{titleName ?? "In the lobby"}</span>
+                  <span>{titleName ? <TitleText id={titleId} name={titleName} /> : "In the lobby"}</span>
                 </div>
               </div>
               <div className="mk-try-friend is-ghost" aria-hidden="true">
