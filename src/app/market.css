@@ -154,7 +154,7 @@
 }
 .mk-cards .print-back { box-shadow: none; }
 .mk-cards .print-back:first-child { rotate: -9deg; translate: 18% 0; }
-.mk-cards .print-back:last-child { rotate: 7deg; translate: -18% 4%; }
+.mk-cards .print-back + .print-back { rotate: 7deg; translate: -18% 4%; }
 .mk-chips .chip-icon + .chip-icon { margin-left: -12%; }
 .mk-chips .chip-icon { filter: none; }
 
@@ -448,13 +448,15 @@
 .mk-try-glow {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 0;
   border-radius: inherit;
   pointer-events: none;
   box-shadow: inset 0 0 0 3px rgba(247, 198, 92, 0.95), inset 0 0 26px rgba(247, 198, 92, 0.45), 0 0 18px rgba(247, 198, 92, 0.4);
   animation: mk-try-blink 1.1s ease-in-out infinite alternate;
 }
 @keyframes mk-try-blink { from { opacity: 0.15; } to { opacity: 1; } }
+/* The light sits under what it marks: the ring, the capybara, the cards and the chips stay on top. */
+.mk-try-friend > :not(.mk-try-glow), .mk-try-cards > .print-back, .mk-try-chips > .chip-icon { position: relative; z-index: 1; }
 /* Inside the banner the light can only shine inwards, so it is a touch stronger there. */
 .mk-try-banner > .mk-try-glow { box-shadow: inset 0 0 0 4px rgba(247, 198, 92, 1), inset 0 0 34px rgba(247, 198, 92, 0.6); }
 /* Card backs keep their shape: they don't shrink to fit the well. */

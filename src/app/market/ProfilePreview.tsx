@@ -147,9 +147,10 @@ export function ProfilePreview({
               <span className="mk-try-label">At the table</span>
               <div className="mk-try-felt">
                 <span className={`mk-art mk-cards mk-try-cards${on("cardback")}`}>
+                  {/* The cards come first: the fan's tilt is keyed on first and last card. */}
+                  <span className={`print-back ${cardback ?? "cardback-classic"}`} />
+                  <span className={`print-back ${cardback ?? "cardback-classic"}`} />
                   {glow("cardback")}
-                  <span className={`print-back ${cardback ?? "cardback-classic"}`} />
-                  <span className={`print-back ${cardback ?? "cardback-classic"}`} />
                 </span>
                 <span className={`mk-chips mk-try-chips${on("chipset")}`}>
                   {glow("chipset")}
