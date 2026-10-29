@@ -426,7 +426,22 @@ a.notif-main:hover { background: var(--layer-3); }
 }
 .avatar-edit:hover { background: #fff; }
 .profile-pic-error { position: absolute; top: calc(100% + 8px); left: 0; width: 280px; }
-.profile-copy { display: grid; gap: 2px; margin-right: auto; min-width: 0; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45); }
+/* The name sits on a nameplate: tinted glass in the shell's burgundy, so it reads over any banner
+   while the banner still shows through. */
+.profile-copy {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  margin-right: auto;
+  min-width: 0;
+  padding: 12px 20px 14px;
+  border-radius: 18px;
+  background: rgba(42, 9, 21, 0.62);
+  border: 1px solid rgba(255, 214, 224, 0.14);
+  box-shadow: 0 14px 34px -16px rgba(0, 0, 0, 0.7);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  backdrop-filter: blur(12px) saturate(1.3);
+}
 .profile-copy h1 { font-family: var(--font-poster); font-size: clamp(2.4rem, 5vw, 3.6rem); font-weight: 900; line-height: 0.95; text-transform: uppercase; overflow-wrap: anywhere; }
 .profile-name-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .profile-name-edit { flex: none; opacity: 0.7; text-shadow: none; }
@@ -793,7 +808,9 @@ a.person-name:hover { text-decoration: underline; text-underline-offset: 3px; }
 .avatar.border-onsen::before { inset: -66% -30% -26%; background-image: url(/cosmetics/macau/border-onsen.svg); }
 /* On the profile the drawn rings reach about a third of the picture past its edge: give them room
    from the banner's edge and from the name. */
-.profile-avatar:has(.border-bamboo, .border-porcelain, .border-sakura, .border-onsen, .border-lacquer, .border-rising-tide, .border-night-sakura, .border-mother-of-pearl) { margin: 0 14px 12px; }
+.profile-avatar:has(.border-bamboo, .border-porcelain, .border-sakura, .border-onsen, .border-lacquer, .border-rising-tide, .border-night-sakura, .border-mother-of-pearl) { margin: 20px 14px 12px; }
+/* The capybara sits well above the onsen ring; on a phone the picture is at the top of the banner. */
+.profile-avatar:has(.border-onsen) { margin-top: 64px; }
 
 /* Banners. Most are animated inside the SVG, so reduced motion swaps in a still copy. */
 .banner-seigaiha { background: #1b0b14 url(/cosmetics/macau/banner-seigaiha.svg) center / cover no-repeat; }
