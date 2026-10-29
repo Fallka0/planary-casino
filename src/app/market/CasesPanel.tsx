@@ -6,6 +6,7 @@ import { ApiError, callCasino, type Me, type PlayerBadge, useCasino, useCasinoAc
 import { opens, roll } from "../../../shared/fair";
 import { CaseArt, reducedMotion } from "./CaseArt";
 import { type CaseInfo, type CaseItem, caseLabel, type Equipped, fmt, type ItemInfo, ItemArt, KIND_LABEL, type Tier, TIER_LABEL, TIERS } from "./cosmetics";
+import { MacauFinale } from "./MacauFinale";
 import { ProfilePreview } from "./ProfilePreview";
 import { useMarketSound } from "./sound";
 
@@ -40,6 +41,8 @@ const GAP = 8;
 const REEL_IN = 1300;
 const ACCELERATE = 600;
 const DECELERATE = 3600;
+/** After the stop: the strip runs a little past where it lands and springs back. */
+const SETTLE = 560;
 const HOLD: Record<Tier, number> = { common: 400, rare: 600, epic: 600, legendary: 900 };
 const PARTICLES: Record<Tier, number> = { common: 0, rare: 14, epic: 22, legendary: 34 };
 const RAYS: Record<Tier, number> = { common: 0, rare: 0.18, epic: 0.26, legendary: 0.34 };
@@ -74,7 +77,8 @@ function Reel({
   me: Me;
   hold: boolean;
   onLanded: () => void;
-  onTick: () => void;
+  /** Each tile under the pointer; `pace` is the strip's speed now, 1 at full speed and 0 stopped. */
+  onTick: (pace: number) => void;
 }) {
   const [tiles] = useState(() => {
     const strip: (CaseItem | ItemInfo)[] = Array.from({ length: REEL_TILES }, () => draw(box));
@@ -84,6 +88,11 @@ function Reel({
   const [phone] = useState(isPhone);
   const view = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLDivElement>(null);
+  const flap = useRef<HTMLSpanElement>(null);
+  // Where in the winning tile the pointer comes to rest, and how far the strip runs past it first.
+  // Both stay well inside that tile: the run past never reaches the next one, so what you see
+  // land is what you got.
+  const [rest] = useState(() => ({ at: -0.26 + Math.random() * 0.36, over: 0.15 }));
   const tile = phone ? { w: 96, h: 124 } : { w: 132, h: 156 };
   // The run reads these live, so turning the sound on mid-reel is heard at once.
   const cues = useRef({ onLanded, onTick });
@@ -101,29 +110,50 @@ function Reel({
     // starts at exactly the speed the acceleration ended on, so there's no seam.
     const width = v.clientWidth;
     const pitch = tile.w + GAP;
-    const distance = WINNER * pitch + tile.w / 2 - width / 2;
+    // The pointer rests at `rest.at` of a tile from the winner's centre; the run goes `rest.over` further.
+    const distance = WINNER * pitch + tile.w / 2 + rest.at * tile.w - width / 2;
+    const past = rest.over * tile.w;
     const k = 4;
-    const decel = distance / (1 + (k * ACCELERATE) / (2 * DECELERATE));
+    const decel = (distance + past) / (1 + (k * ACCELERATE) / (2 * DECELERATE));
     const speed = (decel * k) / DECELERATE;
     const accel = (speed * ACCELERATE) / 2;
     const t0 = performance.now();
+    const run = ACCELERATE + DECELERATE;
     let frame = 0;
     let last = -1;
+    let prevX = 0;
+    let prevT = 0;
+    const top = speed; // px per ms at full speed
     const step = (now: number) => {
       const t = now - t0;
       const x =
         t < ACCELERATE
           ? (speed * t * t) / (2 * ACCELERATE)
-          : t < ACCELERATE + DECELERATE
+          : t < run
             ? accel + decel * (1 - Math.pow(1 - (t - ACCELERATE) / DECELERATE, k))
-            : distance;
+            : t < run + SETTLE
+              ? // Ran past: spring back onto the resting point with one small bounce, no seam at either end.
+                distance + past * Math.exp(-5 * ((t - run) / SETTLE)) * Math.cos(3 * Math.PI * ((t - run) / SETTLE))
+              : distance;
       s.style.transform = `translateX(${-x}px)`;
+      const pace = t > prevT ? Math.min(1, Math.abs(x - prevX) / (t - prevT) / top) : 0;
+      prevX = x;
+      prevT = t;
       const under = Math.floor((x + width / 2) / pitch);
       if (under !== last) {
+        // The pointer is a flap: each tile edge knocks it over, harder the faster the strip runs,
+        // and it springs back. Moving back the other way knocks it the other way.
+        const dir = under > last ? 1 : -1;
+        if (last !== -1) {
+          flap.current?.animate([{ rotate: "0deg" }, { rotate: `${dir * (10 + 22 * pace)}deg`, offset: 0.25 }, { rotate: "0deg" }], {
+            duration: 120 + 220 * (1 - pace),
+            easing: "cubic-bezier(.3,1.6,.5,1)",
+          });
+        }
         last = under;
-        cues.current.onTick();
+        cues.current.onTick(pace);
       }
-      if (t < ACCELERATE + DECELERATE) frame = requestAnimationFrame(step);
+      if (t < run + SETTLE) frame = requestAnimationFrame(step);
       else cues.current.onLanded();
     };
     frame = requestAnimationFrame(step);
@@ -152,8 +182,9 @@ function Reel({
         ))}
       </div>
       <span className="mk-marker" />
-      <span className="mk-notch-top" />
-      <span className="mk-notch-bottom" />
+      <span className="mk-flap" ref={flap}>
+        <span className="mk-flap-pin" />
+      </span>
     </div>
   );
 }
@@ -240,6 +271,7 @@ function Result({
   return (
     <div className={`mk-result tier-${item.tier}${still ? " is-still" : ""}`} role="status">
       {RAYS[item.tier] && !still ? <div className={`mk-rays rays-${item.tier}`} style={{ "--ray-op": RAYS[item.tier] } as React.CSSProperties} /> : null}
+      {box.id === "macau" && !still ? <MacauFinale tier={item.tier} phone={phone} /> : null}
       <div className="mk-result-card-wrap">
         <div className="mk-burst">
           {bits.map((b, i) => (
@@ -391,7 +423,11 @@ export function CasesPanel({
   }, [clearTimers]);
 
   useEffect(() => {
-    if (phase === "result" && opened) sound.play("reveal", opened.item.tier);
+    if (phase === "result" && opened) {
+      sound.play("reveal", opened.item.tier);
+      // A Midnight Macau legendary gets the firecrackers its finale shows.
+      if (box?.id === "macau" && opened.item.tier === "legendary") later(() => sound.play("pops"), 650);
+    }
     // Only when the result first appears.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, opened]);
@@ -427,7 +463,7 @@ export function CasesPanel({
     later(reveal, HOLD[opened.item.tier]);
   }, [opened, sound, later, reveal]);
 
-  const tick = useCallback(() => sound.play("tick"), [sound]);
+  const tick = useCallback((pace: number) => sound.play("tick", "common", pace), [sound]);
 
   if (!data || !box) return <CasesSkeleton />;
 
@@ -524,6 +560,9 @@ export function CasesPanel({
                     <span className="mk-strong">You need {fmt(box.price - funds)} more chips.</span>
                   </>
                 )}
+                <button className="mk-btn mk-btn-quiet mk-btn-sm mk-sound" onClick={sound.toggle} aria-pressed={sound.on}>
+                  {sound.on ? "Sound on" : "Sound off"}
+                </button>
               </div>
               <div className="mk-fair">
                 <button className="mk-fair-toggle" onClick={() => setFairOpen((v) => !v)} aria-expanded={fairOpen}>

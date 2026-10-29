@@ -304,10 +304,28 @@
 .mk-reel-in { display: flex; flex-direction: column; height: 100%; overflow: hidden; border-radius: 12px; background: var(--layer-1); }
 .mk-reel-art { position: relative; flex: 1; min-height: 0; margin: 8px 6px 4px; }
 .mk-reel-name { padding: 0 10px 8px; font-size: 13px; font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mk-marker { position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; margin-left: -1.5px; background: var(--cherry); }
-.mk-notch-top, .mk-notch-bottom { position: absolute; left: 50%; margin-left: -9px; width: 0; height: 0; border-left: 9px solid transparent; border-right: 9px solid transparent; }
-.mk-notch-top { top: 0; border-top: 12px solid var(--cherry); }
-.mk-notch-bottom { bottom: 0; border-bottom: 12px solid var(--cherry); }
+.mk-marker { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: var(--cherry); opacity: 0.7; }
+/* The pointer is a flap on a pin, like the clicker on a prize wheel: each tile knocks it over
+   and it springs back. The script turns it; the shape and the pin are drawn here. */
+.mk-flap {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: -4px;
+  width: 22px;
+  height: 40px;
+  margin-left: -11px;
+  transform-origin: 50% 8px;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.45));
+}
+.mk-flap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--cherry);
+  clip-path: polygon(50% 100%, 6% 34%, 0 18%, 14% 4%, 50% 0, 86% 4%, 100% 18%, 94% 34%);
+}
+.mk-flap-pin { position: absolute; left: 50%; top: 8px; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: var(--paper); box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.3); }
 
 /* The result */
 .mk-result { position: relative; display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 8px 0; }
@@ -478,6 +496,72 @@
   .mk-try-friend.is-ghost { display: none; }
   .mk-try-friend { gap: 10px; padding: 8px; }
   .mk-try-felt { flex-direction: column; justify-content: center; height: auto; padding: 10px 6px; }
+}
+
+/* The Midnight Macau finale: lanterns rise behind the card, petals and red envelopes fall in
+   front of it, firecrackers go off at the sides. Decoration only: it never takes a click. */
+.mk-result-card-wrap, .mk-result-foot { position: relative; z-index: 1; }
+.mk-finale { position: absolute; inset: -28px; pointer-events: none; }
+.mk-finale-back, .mk-finale-front { position: absolute; inset: 0; overflow: hidden; }
+.mk-finale-front { z-index: 2; }
+.mk-fx-lantern, .mk-fx-petal, .mk-fx-hongbao { position: absolute; background: center / contain no-repeat; opacity: 0; animation-fill-mode: both; animation-timing-function: linear; }
+.mk-fx-lantern { bottom: -70px; background-image: url(/cosmetics/macau/fx-lantern.svg); filter: drop-shadow(0 0 10px rgba(255, 170, 80, 0.75)); animation-name: mk-lantern; animation-timing-function: cubic-bezier(0.3, 0, 0.6, 1); }
+.mk-fx-petal { top: -30px; background-image: url(/cosmetics/macau/fx-petal.svg); animation-name: mk-petal; }
+.mk-fx-hongbao { top: -50px; background-image: url(/cosmetics/macau/fx-hongbao.svg); filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.35)); animation-name: mk-hongbao; animation-timing-function: cubic-bezier(0.45, 0, 0.9, 0.6); }
+@keyframes mk-lantern {
+  0% { opacity: 0; transform: translate(0, 0); }
+  12% { opacity: 1; }
+  30% { transform: translate(var(--sway), -30vh); }
+  60% { transform: translate(calc(var(--sway) * -1), -62vh); }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translate(0, -95vh); }
+}
+@keyframes mk-petal {
+  0% { opacity: 0; transform: translate(0, 0) rotate(0deg); }
+  10% { opacity: 1; }
+  50% { transform: translate(calc(var(--drift) * 0.6), 45vh) rotate(calc(var(--turn) * 0.5)); }
+  90% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--drift), 90vh) rotate(var(--turn)); }
+}
+@keyframes mk-hongbao {
+  0% { opacity: 0; transform: translateY(0) rotate(0deg) scaleX(1); }
+  8% { opacity: 1; }
+  50% { transform: translateY(45vh) rotate(calc(var(--turn) * 0.5)) scaleX(calc(var(--flip) * -1)); }
+  92% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(95vh) rotate(var(--turn)) scaleX(var(--flip)); }
+}
+.mk-fx-cracker { position: absolute; top: -10px; width: 46px; height: 74%; background: url(/cosmetics/macau/fx-cracker.svg) top center / 100% 100% no-repeat; transform-origin: 50% 0; animation: mk-cracker 1.9s ease-out 0.5s both; }
+.mk-fx-cracker.is-left { left: 4%; }
+.mk-fx-cracker.is-right { right: 4%; }
+@keyframes mk-cracker {
+  0% { opacity: 0; transform: translateY(-40px); }
+  15% { opacity: 1; transform: none; }
+  20%, 30%, 40%, 50%, 60% { transform: rotate(3deg); }
+  25%, 35%, 45%, 55%, 65% { transform: rotate(-3deg); }
+  80% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+/* Each pop: a gold flash with spokes, gone in a blink. */
+.mk-fx-pop {
+  position: absolute;
+  left: 50%;
+  width: 54px;
+  height: 54px;
+  margin-left: -27px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #fff7d6 0 12%, #ffd27a 22%, rgba(255, 140, 60, 0.6) 38%, transparent 60%),
+    repeating-conic-gradient(from 10deg, rgba(255, 220, 120, 0.95) 0 6deg, transparent 6deg 40deg);
+  -webkit-mask: radial-gradient(circle, #000 55%, transparent 70%);
+  mask: radial-gradient(circle, #000 55%, transparent 70%);
+  opacity: 0;
+  transform: scale(0.2);
+  animation: mk-pop 0.32s ease-out both;
+}
+@keyframes mk-pop {
+  0% { opacity: 0; transform: scale(0.2) rotate(0deg); }
+  30% { opacity: 1; transform: scale(1.1) rotate(20deg); }
+  100% { opacity: 0; transform: scale(1.5) rotate(40deg); }
 }
 
 /* Market */
