@@ -54,34 +54,37 @@ function audio() {
   return shared;
 }
 /**
- * The legendary fanfare, under three seconds, in the traditional manner: no Western chords, one
- * melody line and the luogu, the gongs and drum of Chinese opera. The clapper calls it in, the
- * small gong answers with its rising "tai", the big gong lands with its falling "kuang", cymbals
- * on the strong beats; a dizi flute plays a short phrase in the G gong mode (G A C D E) with its
- * grace notes and vibrato, a pipa trembling on the same notes an octave below, and the big gong
- * closes it.
+ * The legendary sound, "golden reveal", four seconds: a riser sweeps up into an impact and a
+ * tam-tam, a warm drone opens under it, bronze bells climb a pentatonic arpeggio (D E G A) and
+ * ring out on a high one, with a glitter of small bells in the hall. From 3.5 s everything,
+ * the hall's tail included, fades out, silent by 4 s.
  */
-export function fanfare(ac: BaseAudioContext, toDry: AudioNode, toHall: AudioNode) {
-  const now = ac.currentTime + 0.02;
-  // Its own level: many voices at once, so the whole fanfare sits lower than a single cue.
+export function fanfare(ac: BaseAudioContext, toOut: AudioNode) {
+  const t0 = ac.currentTime + 0.03;
+  // The fade sits after a hall of its own, so the reverb's tail ends at 4 s too.
+  const fade = ac.createGain();
+  fade.gain.setValueAtTime(1, t0 + 3.5);
+  fade.gain.linearRampToValueAtTime(0, t0 + 4);
+  fade.connect(toOut);
   const dry = ac.createGain();
-  dry.gain.value = 0.45;
-  dry.connect(toDry);
-  const hall = ac.createGain();
-  hall.gain.value = 0.45;
-  hall.connect(toHall);
-  const send = (node: AudioNode, wet: number) => {
+  dry.gain.value = 0.34;
+  dry.connect(fade);
+  const hallIn = ac.createGain();
+  hallIn.gain.value = 0.28;
+  hallIn.connect(makeHall(ac, fade));
+
+  const nb = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
+  const nd = nb.getChannelData(0);
+  for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+  const send = (node: AudioNode, wet = 0.4) => {
     node.connect(dry);
     const g = ac.createGain();
     g.gain.value = wet;
-    node.connect(g).connect(hall);
+    node.connect(g).connect(hallIn);
   };
-  const noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
-  const nd = noiseBuf.getChannelData(0);
-  for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
   const noise = (t: number, len: number) => {
     const n = ac.createBufferSource();
-    n.buffer = noiseBuf;
+    n.buffer = nb;
     n.loop = true;
     n.start(t);
     n.stop(t + len);
@@ -92,123 +95,126 @@ export function fanfare(ac: BaseAudioContext, toDry: AudioNode, toHall: AudioNod
     o.type = type;
     o.frequency.setValueAtTime(f, t);
     o.start(t);
-    o.stop(t + len);
+    o.stop(Math.min(t + len, t0 + 4.1));
     return o;
   };
-  const filter = (type: BiquadFilterType, f: number, q = 0.7) => {
+  const filt = (type: BiquadFilterType, f: number, q = 0.7) => {
     const b = ac.createBiquadFilter();
     b.type = type;
     b.frequency.value = f;
     b.Q.value = q;
     return b;
   };
-  const decay = (t: number, peak: number, tau: number, attack = 0.003) => {
+  const env = (t: number, peak: number, tau: number, attack = 0.004) => {
     const g = ac.createGain();
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(peak, t + attack);
     g.gain.setTargetAtTime(0.0001, t + attack, tau);
     return g;
   };
+  const drive = (amount: number) => {
+    const w = ac.createWaveShaper();
+    const curve = new Float32Array(1024);
+    for (let i = 0; i < 1024; i++) curve[i] = Math.tanh((i / 511.5 - 1) * amount) / Math.tanh(amount);
+    w.curve = curve;
+    return w;
+  };
 
-  /** Bangu: the hardwood clapper that leads the band, a dry "da". */
-  const clap = (at: number, gain: number) => {
-    const t = now + at;
-    send(noise(t, 0.06).connect(filter("bandpass", 2600, 3)).connect(decay(t, gain, 0.012)), 0.15);
-    send(osc("sine", 1850, t, 0.08).connect(decay(t, gain * 0.5, 0.015)), 0.15);
-  };
-  /** A gong: metal partials whose pitch glides, up for the small gong, down for the big one. */
-  const gong = (at: number, base: number, glide: number, gain: number, tau: number) => {
-    const t = now + at;
-    [1, 1.41, 1.93, 2.48, 3.2].forEach((m, i) => {
-      const o = osc("sine", base * m, t, tau * 6);
-      o.frequency.setTargetAtTime(base * m * glide, t + 0.02, 0.12);
-      send(o.connect(decay(t, gain / (1 + i * 0.7), tau * (1 - i * 0.12), 0.004)), 0.4);
-    });
-    send(noise(t, 0.3).connect(filter("bandpass", base * 4, 1.2)).connect(decay(t, gain * 0.1, 0.04)), 0.15);
-  };
-  const xiaoluo = (at: number, gain = 0.16) => gong(at, 690, 1.08, gain, 0.22);
-  const daluo = (at: number, gain = 0.3) => gong(at, 170, 0.88, gain, 0.6);
-  /** Bo: a pair of cymbals clashed, bright and short. */
-  const bo = (at: number, gain: number) => {
-    const t = now + at;
-    const pk = filter("peaking", 7000, 1);
-    pk.gain.value = 6;
-    send(noise(t, 0.6).connect(filter("highpass", 4500)).connect(pk).connect(decay(t, gain, 0.1)), 0.12);
-  };
-  /** Dizi: a bamboo flute, breathy, with vibrato; each note can start from a grace note above. */
-  const dizi = (f: number, at: number, len: number, gain: number, grace = 0) => {
-    const t = now + at;
-    const o = osc("sine", grace || f, t, len + 0.3);
-    if (grace) o.frequency.setValueAtTime(f, t + 0.045);
-    const o2 = osc("sine", (grace || f) * 2, t, len + 0.3);
-    if (grace) o2.frequency.setValueAtTime(f * 2, t + 0.045);
-    const vib = osc("sine", 5.8, t, len + 0.3);
-    const depth = ac.createGain();
-    depth.gain.setValueAtTime(0, t);
-    depth.gain.linearRampToValueAtTime(len > 0.3 ? f * 0.014 : f * 0.004, t + Math.min(0.2, len));
-    vib.connect(depth);
-    depth.connect(o.frequency);
+  /** A noise sweep and a rising detuned tone, up into the hit. */
+  const riser = (at: number, len: number, gain: number) => {
+    const t = t0 + at;
+    const bp = filt("bandpass", 300, 1.5);
+    bp.frequency.setValueAtTime(300, t);
+    bp.frequency.exponentialRampToValueAtTime(7000, t + len);
     const g = ac.createGain();
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(gain, t + 0.03);
-    g.gain.setValueAtTime(gain, t + len - 0.03);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + len + 0.12);
-    const g2 = ac.createGain();
-    g2.gain.value = 0.18;
-    o.connect(g);
-    o2.connect(g2).connect(g);
-    // The breath: a little filtered noise riding on the note.
-    const breath = ac.createGain();
-    breath.gain.value = 0.05;
-    noise(t, len + 0.2).connect(filter("bandpass", f * 2, 2)).connect(breath).connect(g);
-    send(g, 0.35);
+    g.gain.exponentialRampToValueAtTime(0.25 * gain, t + len);
+    g.gain.linearRampToValueAtTime(0, t + len + 0.02);
+    send(noise(t, len + 0.05).connect(bp).connect(g), 0.6);
+    [-15, 0, 15].forEach((cents) => {
+      const o = osc("sawtooth", 90, t, len + 0.05);
+      o.detune.value = cents;
+      o.frequency.exponentialRampToValueAtTime(720, t + len);
+      const lp = filt("lowpass", 400);
+      lp.frequency.exponentialRampToValueAtTime(5000, t + len);
+      const og = ac.createGain();
+      og.gain.setValueAtTime(0.0001, t);
+      og.gain.exponentialRampToValueAtTime(0.04 * gain, t + len);
+      og.gain.linearRampToValueAtTime(0, t + len + 0.02);
+      send(o.connect(lp).connect(og), 0.5);
+    });
   };
-  /** Pipa: tremolo, the same note plucked over and over, very fast. */
-  const pipa = (f: number, at: number, len: number, gain: number) => {
-    for (let x = 0; x < len; x += 1 / 17) {
-      const t = now + at + x;
-      const o = osc("triangle", f, t, 0.12);
-      send(o.connect(filter("lowpass", 2600)).connect(decay(t, gain * (0.8 + Math.random() * 0.2), 0.03, 0.002)), 0.3);
+  /** The impact: a sub drop, a gritty mid thump and the click of the hit. */
+  const impact = (at: number, gain: number) => {
+    const t = t0 + at;
+    const sub = osc("sine", 62, t, 3);
+    sub.frequency.exponentialRampToValueAtTime(28, t + 1.4);
+    send(sub.connect(env(t, 0.75 * gain, 0.35)), 0.2);
+    const mid = osc("sine", 120, t, 1.2);
+    mid.frequency.exponentialRampToValueAtTime(55, t + 0.4);
+    send(mid.connect(drive(4)).connect(filt("lowpass", 900)).connect(env(t, 0.35 * gain, 0.18)), 0.4);
+    send(noise(t, 0.3).connect(filt("lowpass", 4500)).connect(env(t, 0.5 * gain, 0.03, 0.001)), 0.5);
+  };
+  /** A tam-tam, blooming slowly. */
+  const gong = (at: number, gain: number, base: number) => {
+    const t = t0 + at;
+    [1, 1.52, 2.03, 2.61, 3.27, 4.1].forEach((m, i) => {
+      const o = osc("sine", base * m, t, 8);
+      o.frequency.exponentialRampToValueAtTime(base * m * 0.99, t + 5);
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime((0.22 * gain) / (1 + i * 0.3), t + 0.12 + i * 0.06);
+      g.gain.setTargetAtTime(0.0001, t + 0.3, 1.5 - i * 0.18);
+      send(o.connect(g), 0.9);
+    });
+    send(noise(t, 2).connect(filt("bandpass", 1200, 0.6)).connect(env(t, 0.05 * gain, 0.5, 0.15)), 0.9);
+  };
+  /** A bronze bell: inharmonic partials, struck. */
+  const bell = (f: number, at: number, gain: number) => {
+    const t = t0 + at;
+    ([
+      [0.5, 0.35, 3],
+      [1, 1, 2.4],
+      [2, 0.5, 1.4],
+      [2.76, 0.4, 1],
+      [5.4, 0.2, 0.5],
+      [8.9, 0.1, 0.25],
+    ] as const).forEach(([m, a, tau]) => send(osc("sine", f * m, t, tau * 6).connect(env(t, 0.13 * gain * a, tau, 0.002)), 0.7));
+    send(noise(t, 0.05).connect(filt("bandpass", f * 3, 2)).connect(env(t, 0.06 * gain, 0.01, 0.001)), 0.5);
+  };
+  /** A warm drone of detuned saws opening from dark to bright. */
+  const pad = (notes: number[], at: number, len: number, gain: number, bright: number) =>
+    notes.forEach((f) =>
+      [-12, 0, 12].forEach((cents) => {
+        const t = t0 + at;
+        const o = osc("sawtooth", f, t, len + 3);
+        o.detune.value = cents;
+        const lp = filt("lowpass", 250, 0.5);
+        lp.frequency.setValueAtTime(250, t);
+        lp.frequency.exponentialRampToValueAtTime(bright, t + 0.6);
+        const g = ac.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(gain, t + 0.5);
+        g.gain.setTargetAtTime(0.0001, t + len * 0.6, len / 3);
+        send(o.connect(lp).connect(g), 0.6);
+      }),
+    );
+  /** Small bells glittering high in the hall. */
+  const shimmer = (at: number, len: number, notes: number[], gain: number) => {
+    for (let i = 0; i < len * 10; i++) {
+      const f = notes[Math.floor(Math.random() * notes.length)] * (Math.random() > 0.5 ? 2 : 4);
+      const t = t0 + at + i * 0.1 + Math.random() * 0.05;
+      send(osc("sine", f, t, 1.5).connect(env(t, gain * (1 - i / (len * 10)), 0.35, 0.003)), 0.9);
     }
   };
 
-  // G gong mode: G A C D E.
-  const G4 = 392, A4 = 440, C5 = 523.3, D5 = 587.3, E5 = 659.3, G5 = 784, A5 = 880, C6 = 1046.5;
-
-  // 1. The clapper calls the band in: da, da-da.
-  clap(0, 0.3);
-  clap(0.13, 0.22);
-  clap(0.2, 0.3);
-  // 2. Small gong answers, tai, tai, then the big gong lands, kuang, with the cymbals.
-  xiaoluo(0.3);
-  xiaoluo(0.45, 0.12);
-  daluo(0.6);
-  bo(0.6, 0.045);
-  // 3. The dizi's phrase, the pipa trembling under it an octave down.
-  const tune: [number, number, number, number][] = [
-    // [note, start, length, grace note above]
-    [G5, 0.62, 0.17, A5],
-    [A5, 0.8, 0.14, 0],
-    [C6, 0.95, 0.22, 0],
-    [A5, 1.18, 0.12, C6],
-    [G5, 1.31, 0.12, 0],
-    [E5, 1.44, 0.18, G5],
-    [G5, 1.64, 0.7, A5],
-  ];
-  tune.forEach(([f, at, len, grace]) => {
-    dizi(f, at, len, 0.17, grace);
-    pipa(f / 2, at, len, 0.045);
-  });
-  // The luogu keeps time under the tune.
-  [0.95, 1.31].forEach((t) => xiaoluo(t, 0.08));
-  [0.8, 1.18, 1.44].forEach((t) => clap(t, 0.14));
-  // 4. The big gong and cymbals close it.
-  daluo(1.64, 0.34);
-  bo(1.64, 0.05);
-  clap(2.22, 0.2);
-  daluo(2.3, 0.22);
-  // A pipa sweep down to the root to end on.
-  [G5, E5, D5, C5, A4, G4].forEach((f, i) => pipa(f, 2.3 + i * 0.03, 0.03, 0.05));
+  riser(0, 0.7, 0.7);
+  impact(0.7, 0.9);
+  gong(0.72, 0.7, 60);
+  pad([73.4, 110, 146.8, 220], 0.7, 2.6, 0.016, 1800);
+  [587, 659, 784, 880, 1175, 1319, 1568].forEach((f, i) => bell(f, 0.85 + i * 0.12, 0.55));
+  bell(1760, 1.75, 0.9);
+  shimmer(1.9, 1.6, [1175, 1319, 1568, 1760], 0.015);
 }
 
 /**
@@ -344,7 +350,7 @@ export function useMarketSound() {
 
   const legendary = useCallback(() => {
     const a = audio();
-    if (a) fanfare(a.ac, a.out, a.hall);
+    if (a) fanfare(a.ac, a.out);
   }, []);
 
   const play = useCallback(
