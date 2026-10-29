@@ -18,7 +18,8 @@ import { commit, newServerSeed, roll } from "../shared/fair.ts";
 
 const API_PORT = 8790;
 const SITE_PORT = 3000;
-const API = `http://localhost:${API_PORT}`;
+// 127.0.0.1, not localhost: on Windows localhost can resolve to IPv6 first and miss the server.
+const API = `http://127.0.0.1:${API_PORT}`;
 
 // ── The preview player ──────────────────────────────
 
@@ -170,7 +171,7 @@ const server = http.createServer(async (req, res) => {
   res.end(JSON.stringify(data));
 });
 
-server.listen(API_PORT, () => {
+server.listen(API_PORT, "127.0.0.1", () => {
   console.log(`\n  Preview API on ${API}`);
   console.log(`  Site on http://localhost:${SITE_PORT}/market — sign in with the button, no password needed.\n`);
   // Plain `next dev`, pointed at the stand-in for both the casino API and planary-auth.
