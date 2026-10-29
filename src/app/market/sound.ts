@@ -54,20 +54,21 @@ function audio() {
   return shared;
 }
 /**
- * The legendary fanfare, about five seconds in a hall, scored like a film's big moment rather
- * than a toy: a cymbal swells up out of nothing into a taiko hit, a tam-tam and a wide chord of
- * low brass and strings in open fifths; an erhu sings a slow phrase over it, one legato line
- * sliding between its notes, in the D gong mode (D E F# A B); a second hit lifts the chord an
- * octave into D major, and a soft guzheng falls away through the tail.
+ * The legendary fanfare, under three seconds, in the traditional manner: no Western chords, one
+ * melody line and the luogu, the gongs and drum of Chinese opera. The clapper calls it in, the
+ * small gong answers with its rising "tai", the big gong lands with its falling "kuang", cymbals
+ * on the strong beats; a dizi flute plays a short phrase in the G gong mode (G A C D E) with its
+ * grace notes and vibrato, a pipa trembling on the same notes an octave below, and the big gong
+ * closes it.
  */
 export function fanfare(ac: BaseAudioContext, toDry: AudioNode, toHall: AudioNode) {
   const now = ac.currentTime + 0.02;
   // Its own level: many voices at once, so the whole fanfare sits lower than a single cue.
   const dry = ac.createGain();
-  dry.gain.value = 0.5;
+  dry.gain.value = 0.45;
   dry.connect(toDry);
   const hall = ac.createGain();
-  hall.gain.value = 0.5;
+  hall.gain.value = 0.45;
   hall.connect(toHall);
   const send = (node: AudioNode, wet: number) => {
     node.connect(dry);
@@ -75,7 +76,7 @@ export function fanfare(ac: BaseAudioContext, toDry: AudioNode, toHall: AudioNod
     g.gain.value = wet;
     node.connect(g).connect(hall);
   };
-  const noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
+  const noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
   const nd = noiseBuf.getChannelData(0);
   for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
   const noise = (t: number, len: number) => {
@@ -101,141 +102,113 @@ export function fanfare(ac: BaseAudioContext, toDry: AudioNode, toHall: AudioNod
     b.Q.value = q;
     return b;
   };
-
-  const D2 = 73.4, A2 = 110, D3 = 146.8, A3 = 220, D4 = 293.7, Fs4 = 370, A4 = 440, B4 = 493.9, D5 = 587.3, E5 = 659.3, Fs5 = 740, A5 = 880;
-
-  /** A cymbal swelling up out of silence, cut off by the hit: the classic lead-in. */
-  const swell = (at: number, len: number) => {
-    const t = now + at;
+  const decay = (t: number, peak: number, tau: number, attack = 0.003) => {
     const g = ac.createGain();
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.07, t + len);
-    g.gain.linearRampToValueAtTime(0, t + len + 0.02);
-    send(noise(t, len + 0.05).connect(filter("highpass", 3500)).connect(g), 0.6);
+    g.gain.exponentialRampToValueAtTime(peak, t + attack);
+    g.gain.setTargetAtTime(0.0001, t + attack, tau);
+    return g;
   };
-  /** Taiko: a deep, heavy drum, its pitch sagging, with the thud of the stick. */
-  const taiko = (at: number, gain: number) => {
+
+  /** Bangu: the hardwood clapper that leads the band, a dry "da". */
+  const clap = (at: number, gain: number) => {
     const t = now + at;
-    const o = osc("sine", 68, t, 1.4);
-    o.frequency.exponentialRampToValueAtTime(38, t + 0.5);
-    const g = ac.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(gain, t + 0.006);
-    g.gain.setTargetAtTime(0.0001, t + 0.02, 0.28);
-    send(o.connect(g), 0.35);
-    const ng = ac.createGain();
-    ng.gain.setValueAtTime(gain * 0.5, t);
-    ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
-    send(noise(t, 0.15).connect(filter("lowpass", 520)).connect(ng), 0.3);
+    send(noise(t, 0.06).connect(filter("bandpass", 2600, 3)).connect(decay(t, gain, 0.012)), 0.15);
+    send(osc("sine", 1850, t, 0.08).connect(decay(t, gain * 0.5, 0.015)), 0.15);
   };
-  /** Tam-tam: dark partials that bloom slowly and hang in the hall. */
-  const gong = (at: number, gain: number) => {
+  /** A gong: metal partials whose pitch glides, up for the small gong, down for the big one. */
+  const gong = (at: number, base: number, glide: number, gain: number, tau: number) => {
     const t = now + at;
-    [1, 1.52, 2.03, 2.61, 3.27].forEach((m, i) => {
-      const o = osc("sine", 58 * m, t, 9);
-      o.frequency.exponentialRampToValueAtTime(58 * m * 0.99, t + 4);
-      const g = ac.createGain();
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(gain / (1 + i * 0.8), t + 0.08 + i * 0.05);
-      g.gain.setTargetAtTime(0.0001, t + 0.2, 1.3 - i * 0.15);
-      send(o.connect(g), 0.9);
+    [1, 1.41, 1.93, 2.48, 3.2].forEach((m, i) => {
+      const o = osc("sine", base * m, t, tau * 6);
+      o.frequency.setTargetAtTime(base * m * glide, t + 0.02, 0.12);
+      send(o.connect(decay(t, gain / (1 + i * 0.7), tau * (1 - i * 0.12), 0.004)), 0.4);
     });
+    send(noise(t, 0.3).connect(filter("bandpass", base * 4, 1.2)).connect(decay(t, gain * 0.1, 0.04)), 0.15);
   };
-  /** An ensemble chord: each note three detuned saws, low brass and strings swelling in together. */
-  const ensemble = (notes: number[], at: number, len: number, gain: number, bright: number) =>
-    notes.forEach((f) =>
-      [-11, 0, 11].forEach((cents) => {
-        const t = now + at;
-        const o = osc("sawtooth", f, t, len + 2);
-        o.detune.value = cents;
-        const lp = filter("lowpass", 300, 0.5);
-        lp.frequency.setValueAtTime(260, t);
-        lp.frequency.exponentialRampToValueAtTime(bright, t + 0.45);
-        const g = ac.createGain();
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(gain, t + 0.35);
-        g.gain.setTargetAtTime(0.0001, t + len * 0.55, len / 3);
-        send(o.connect(lp).connect(g), 0.55);
-      }),
-    );
-  /** Erhu: one bowed line, sliding between notes, with a vibrato that blooms on long ones. */
-  const erhu = (phrase: [number, number][], at: number, end: number, gain: number) => {
+  const xiaoluo = (at: number, gain = 0.16) => gong(at, 690, 1.08, gain, 0.22);
+  const daluo = (at: number, gain = 0.3) => gong(at, 170, 0.88, gain, 0.6);
+  /** Bo: a pair of cymbals clashed, bright and short. */
+  const bo = (at: number, gain: number) => {
     const t = now + at;
-    const o = osc("sawtooth", phrase[0][0], t, end - at + 0.6);
-    const o2 = osc("triangle", phrase[0][0], t, end - at + 0.6);
-    const vib = osc("sine", 5.4, t, end - at + 0.6);
+    const pk = filter("peaking", 7000, 1);
+    pk.gain.value = 6;
+    send(noise(t, 0.6).connect(filter("highpass", 4500)).connect(pk).connect(decay(t, gain, 0.1)), 0.12);
+  };
+  /** Dizi: a bamboo flute, breathy, with vibrato; each note can start from a grace note above. */
+  const dizi = (f: number, at: number, len: number, gain: number, grace = 0) => {
+    const t = now + at;
+    const o = osc("sine", grace || f, t, len + 0.3);
+    if (grace) o.frequency.setValueAtTime(f, t + 0.045);
+    const o2 = osc("sine", (grace || f) * 2, t, len + 0.3);
+    if (grace) o2.frequency.setValueAtTime(f * 2, t + 0.045);
+    const vib = osc("sine", 5.8, t, len + 0.3);
     const depth = ac.createGain();
-    depth.gain.value = 0;
+    depth.gain.setValueAtTime(0, t);
+    depth.gain.linearRampToValueAtTime(len > 0.3 ? f * 0.014 : f * 0.004, t + Math.min(0.2, len));
     vib.connect(depth);
     depth.connect(o.frequency);
-    depth.connect(o2.frequency);
-    phrase.forEach(([f, when], i) => {
-      const w = now + when;
-      if (i) {
-        // A slide into the note, as a finger moves along the string.
-        o.frequency.setTargetAtTime(f, w, 0.045);
-        o2.frequency.setTargetAtTime(f, w, 0.045);
-      }
-      depth.gain.setValueAtTime(0, w);
-      depth.gain.setTargetAtTime(f * 0.011, w + 0.18, 0.15);
-    });
-    const body = filter("bandpass", 1150, 0.8);
-    const soft = filter("lowpass", 2800, 0.6);
-    const mix = ac.createGain();
-    mix.gain.value = 0.7;
-    o.connect(body).connect(soft).connect(mix);
-    o2.connect(mix);
     const g = ac.createGain();
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(gain, t + 0.12);
-    g.gain.setValueAtTime(gain, now + end - 0.4);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + end + 0.5);
-    send(mix.connect(g), 0.5);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.03);
+    g.gain.setValueAtTime(gain, t + len - 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + len + 0.12);
+    const g2 = ac.createGain();
+    g2.gain.value = 0.18;
+    o.connect(g);
+    o2.connect(g2).connect(g);
+    // The breath: a little filtered noise riding on the note.
+    const breath = ac.createGain();
+    breath.gain.value = 0.05;
+    noise(t, len + 0.2).connect(filter("bandpass", f * 2, 2)).connect(breath).connect(g);
+    send(g, 0.35);
   };
-  /** Guzheng, softly: a warm plucked string. */
-  const pluck = (f: number, at: number, gain: number) => {
-    const t = now + at;
-    const o = osc("sine", f, t, 2);
-    const h = osc("triangle", f * 2, t, 1);
-    const g = ac.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(gain, t + 0.004);
-    g.gain.setTargetAtTime(0.0001, t + 0.01, 0.45);
-    const gh = ac.createGain();
-    gh.gain.setValueAtTime(gain * 0.25, t);
-    gh.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
-    send(o.connect(g), 0.7);
-    send(h.connect(gh), 0.7);
+  /** Pipa: tremolo, the same note plucked over and over, very fast. */
+  const pipa = (f: number, at: number, len: number, gain: number) => {
+    for (let x = 0; x < len; x += 1 / 17) {
+      const t = now + at + x;
+      const o = osc("triangle", f, t, 0.12);
+      send(o.connect(filter("lowpass", 2600)).connect(decay(t, gain * (0.8 + Math.random() * 0.2), 0.03, 0.002)), 0.3);
+    }
   };
 
-  // 1. Out of nothing, a cymbal swells up…
-  swell(0, 0.62);
-  // 2. …into the hit: taiko, tam-tam, and a wide chord in open fifths.
-  taiko(0.62, 0.75);
-  gong(0.62, 0.2);
-  ensemble([D2, A2, D3, A3, D4], 0.62, 2.1, 0.022, 1500);
-  taiko(1.05, 0.4);
-  // 3. The erhu sings over it.
-  erhu(
-    [
-      [A4, 0.95],
-      [B4, 1.3],
-      [D5, 1.5],
-      [E5, 2.05],
-      [D5, 2.3],
-      [A5, 2.75],
-    ],
-    0.95,
-    4.1,
-    0.07,
-  );
-  // 4. The lift: a second hit, the chord an octave up into D major.
-  taiko(2.7, 0.7);
-  taiko(2.9, 0.35);
-  gong(2.72, 0.14);
-  ensemble([D3, A3, D4, Fs4, A4, D5, Fs5], 2.72, 2.4, 0.018, 2600);
-  // 5. A soft guzheng falls away through the tail.
-  [A5, Fs5, E5, D5, B4, A4, Fs4].forEach((f, i) => pluck(f, 3.5 + i * 0.16, 0.05 - i * 0.004));
+  // G gong mode: G A C D E.
+  const G4 = 392, A4 = 440, C5 = 523.3, D5 = 587.3, E5 = 659.3, G5 = 784, A5 = 880, C6 = 1046.5;
+
+  // 1. The clapper calls the band in: da, da-da.
+  clap(0, 0.3);
+  clap(0.13, 0.22);
+  clap(0.2, 0.3);
+  // 2. Small gong answers, tai, tai, then the big gong lands, kuang, with the cymbals.
+  xiaoluo(0.3);
+  xiaoluo(0.45, 0.12);
+  daluo(0.6);
+  bo(0.6, 0.045);
+  // 3. The dizi's phrase, the pipa trembling under it an octave down.
+  const tune: [number, number, number, number][] = [
+    // [note, start, length, grace note above]
+    [G5, 0.62, 0.17, A5],
+    [A5, 0.8, 0.14, 0],
+    [C6, 0.95, 0.22, 0],
+    [A5, 1.18, 0.12, C6],
+    [G5, 1.31, 0.12, 0],
+    [E5, 1.44, 0.18, G5],
+    [G5, 1.64, 0.7, A5],
+  ];
+  tune.forEach(([f, at, len, grace]) => {
+    dizi(f, at, len, 0.17, grace);
+    pipa(f / 2, at, len, 0.045);
+  });
+  // The luogu keeps time under the tune.
+  [0.95, 1.31].forEach((t) => xiaoluo(t, 0.08));
+  [0.8, 1.18, 1.44].forEach((t) => clap(t, 0.14));
+  // 4. The big gong and cymbals close it.
+  daluo(1.64, 0.34);
+  bo(1.64, 0.05);
+  clap(2.22, 0.2);
+  daluo(2.3, 0.22);
+  // A pipa sweep down to the root to end on.
+  [G5, E5, D5, C5, A4, G4].forEach((f, i) => pipa(f, 2.3 + i * 0.03, 0.03, 0.05));
 }
 
 /**
