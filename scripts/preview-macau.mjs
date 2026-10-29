@@ -178,13 +178,27 @@ server.listen(API_PORT, "127.0.0.1", () => {
   const site = spawn("npx", ["next", "dev", "-p", String(SITE_PORT)], {
     stdio: "inherit",
     shell: process.platform === "win32",
+    // Its own process group elsewhere, so stopping can end Next and everything it started.
+    detached: process.platform !== "win32",
     env: { ...process.env, NEXT_PUBLIC_CASINO_API: API, NEXT_PUBLIC_AUTH_BASE_URL: API, AUTH_API_URL: API },
   });
+  let stopping = false;
   const stop = () => {
-    site.kill();
+    if (stopping) return;
+    stopping = true;
+    console.log("\n  Stopping the preview…");
+    // On Windows the site runs under a shell, and killing the shell leaves Next running: end the whole tree.
+    if (process.platform === "win32" && site.pid) spawn("taskkill", ["/pid", String(site.pid), "/T", "/F"], { stdio: "ignore" }).on("exit", () => process.exit(0));
+    else {
+      try {
+        process.kill(-site.pid, "SIGTERM");
+      } catch {
+        // Already gone.
+      }
+      process.exit(0);
+    }
     server.close();
-    process.exit(0);
   };
   site.on("exit", stop);
-  process.on("SIGINT", stop);
+  for (const signal of ["SIGINT", "SIGTERM", "SIGBREAK", "SIGHUP"]) process.on(signal, stop);
 });
