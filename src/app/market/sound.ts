@@ -54,20 +54,20 @@ function audio() {
   return shared;
 }
 /**
- * The legendary fanfare, about four and a half seconds in a hall, in the Chinese festival manner
- * and the D gong mode (D E F# A B): a tam-tam, a big drum and a cymbal crash; a guzheng sweep up
- * two and a half octaves; the drums and small cymbals stepping in; a suona singing the tune over
- * a brass chord, sliding into its notes with vibrato; then the gong, a drum roll and the crash
- * again for the arrival, and the guzheng shimmering back down through the tail.
+ * The legendary fanfare, about five seconds in a hall, scored like a film's big moment rather
+ * than a toy: a cymbal swells up out of nothing into a taiko hit, a tam-tam and a wide chord of
+ * low brass and strings in open fifths; an erhu sings a slow phrase over it, one legato line
+ * sliding between its notes, in the D gong mode (D E F# A B); a second hit lifts the chord an
+ * octave into D major, and a soft guzheng falls away through the tail.
  */
 export function fanfare(ac: BaseAudioContext, toDry: AudioNode, toHall: AudioNode) {
   const now = ac.currentTime + 0.02;
   // Its own level: many voices at once, so the whole fanfare sits lower than a single cue.
   const dry = ac.createGain();
-  dry.gain.value = 0.42;
+  dry.gain.value = 0.5;
   dry.connect(toDry);
   const hall = ac.createGain();
-  hall.gain.value = 0.42;
+  hall.gain.value = 0.5;
   hall.connect(toHall);
   const send = (node: AudioNode, wet: number) => {
     node.connect(dry);
@@ -75,169 +75,167 @@ export function fanfare(ac: BaseAudioContext, toDry: AudioNode, toHall: AudioNod
     g.gain.value = wet;
     node.connect(g).connect(hall);
   };
-  const env = (t: number, attack: number, peak: number, decay: number) => {
-    const g = ac.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(peak, t + attack);
-    g.gain.setTargetAtTime(0.0001, t + attack, decay);
-    return g;
-  };
   const noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
   const nd = noiseBuf.getChannelData(0);
   for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
-  const osc = (type: OscillatorType, f: number, t: number, stop: number) => {
+  const noise = (t: number, len: number) => {
+    const n = ac.createBufferSource();
+    n.buffer = noiseBuf;
+    n.loop = true;
+    n.start(t);
+    n.stop(t + len);
+    return n;
+  };
+  const osc = (type: OscillatorType, f: number, t: number, len: number) => {
     const o = ac.createOscillator();
     o.type = type;
     o.frequency.setValueAtTime(f, t);
     o.start(t);
-    o.stop(t + stop);
+    o.stop(t + len);
     return o;
   };
+  const filter = (type: BiquadFilterType, f: number, q = 0.7) => {
+    const b = ac.createBiquadFilter();
+    b.type = type;
+    b.frequency.value = f;
+    b.Q.value = q;
+    return b;
+  };
 
-  // Pitches, D gong mode.
-  const D3 = 146.8, A3 = 220, D4 = 293.7, E4 = 329.6, Fs4 = 370, A4 = 440, B4 = 493.9;
-  const scale = [D4, E4, Fs4, A4, B4];
-  const note = (step: number) => scale[((step % 5) + 5) % 5] * Math.pow(2, Math.floor(step / 5));
+  const D2 = 73.4, A2 = 110, D3 = 146.8, A3 = 220, D4 = 293.7, Fs4 = 370, A4 = 440, B4 = 493.9, D5 = 587.3, E5 = 659.3, Fs5 = 740, A5 = 880;
 
-  /** Tam-tam: inharmonic partials that bloom, then a long shimmering tail. */
-  const gong = (at: number, size: number) => {
-    const t = now + at;
-    [1, 1.47, 1.97, 2.53, 3.11, 3.92, 4.8].forEach((m, i) => {
-      const o = osc("sine", 72 * m, t, 5);
-      o.frequency.exponentialRampToValueAtTime(72 * m * 0.985, t + 3);
-      const g = env(t, 0.02 + i * 0.02, (0.22 * size) / (1 + i * 0.6), 1.2 - i * 0.08);
-      send(o.connect(g), 0.8);
-    });
-    const n = ac.createBufferSource();
-    n.buffer = noiseBuf;
-    const bp = ac.createBiquadFilter();
-    bp.type = "bandpass";
-    bp.frequency.value = 900;
-    bp.Q.value = 0.7;
-    const g = env(t, 0.01, 0.035 * size, 0.3);
-    send(n.connect(bp).connect(g), 0.5);
-    n.start(t);
-    n.stop(t + 2);
-  };
-  /** Dagu: a big barrel drum, a thump that drops in pitch, with a skin slap on top. */
-  const drum = (at: number, gain: number, f = 110) => {
-    const t = now + at;
-    const o = osc("sine", f, t, 0.8);
-    o.frequency.exponentialRampToValueAtTime(f * 0.45, t + 0.25);
-    send(o.connect(env(t, 0.004, gain, 0.12)), 0.35);
-    const n = ac.createBufferSource();
-    n.buffer = noiseBuf;
-    const lp = ac.createBiquadFilter();
-    lp.type = "lowpass";
-    lp.frequency.value = 1400;
-    send(n.connect(lp).connect(env(t, 0.002, gain * 0.35, 0.03)), 0.3);
-    n.start(t);
-    n.stop(t + 0.2);
-  };
-  /** Bo / nao: a bright cymbal crash (big) or a small hand cymbal (small). */
-  const cymbal = (at: number, gain: number, big: boolean) => {
-    const t = now + at;
-    const n = ac.createBufferSource();
-    n.buffer = noiseBuf;
-    const hp = ac.createBiquadFilter();
-    hp.type = "highpass";
-    hp.frequency.value = big ? 3200 : 5200;
-    const peak = ac.createBiquadFilter();
-    peak.type = "peaking";
-    peak.frequency.value = big ? 6500 : 8000;
-    peak.gain.value = 8;
-    send(n.connect(hp).connect(peak).connect(env(t, 0.003, gain, big ? 0.32 : 0.06)), 0.35);
-    n.start(t);
-    n.stop(t + (big ? 2 : 0.4));
-  };
-  /** Guzheng pluck: a bright string, quick attack, a little bend down at the start. */
-  const pluck = (f: number, at: number, gain: number, len = 0.9) => {
-    const t = now + at;
-    const o = osc("triangle", f * 1.01, t, len + 0.5);
-    o.frequency.exponentialRampToValueAtTime(f, t + 0.04);
-    send(o.connect(env(t, 0.003, gain, len / 4)), 0.55);
-    const h = osc("sine", f * 2, t, len);
-    send(h.connect(env(t, 0.002, gain * 0.4, len / 7)), 0.55);
-  };
-  /** Suona: a reedy, nasal horn; slides up into each note and sings with vibrato. */
-  const suona = (f: number, at: number, dur: number, gain: number, slide = 0.94) => {
+  /** A cymbal swelling up out of silence, cut off by the hit: the classic lead-in. */
+  const swell = (at: number, len: number) => {
     const t = now + at;
     const g = ac.createGain();
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(gain, t + 0.04);
-    g.gain.setValueAtTime(gain, t + dur - 0.06);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.12);
-    const vib = osc("sine", 6.2, t, dur + 0.3);
-    const depth = ac.createGain();
-    depth.gain.setValueAtTime(0, t);
-    depth.gain.linearRampToValueAtTime(f * 0.012, t + Math.min(0.25, dur * 0.6));
-    vib.connect(depth);
-    const nasal = ac.createBiquadFilter();
-    nasal.type = "bandpass";
-    nasal.frequency.value = 1700;
-    nasal.Q.value = 1.4;
-    const body = ac.createBiquadFilter();
-    body.type = "lowpass";
-    body.frequency.value = 4200;
-    ["sawtooth", "square"].forEach((type, i) => {
-      const o = osc(type as OscillatorType, f * slide, t, dur + 0.3);
-      o.frequency.exponentialRampToValueAtTime(f, t + 0.07);
-      o.detune.value = i ? 6 : -4;
-      depth.connect(o.frequency);
-      o.connect(i ? nasal : body);
-    });
-    const mix = ac.createGain();
-    mix.gain.value = 0.6;
-    nasal.connect(mix);
-    body.connect(mix);
-    send(mix.connect(g), 0.45);
+    g.gain.exponentialRampToValueAtTime(0.07, t + len);
+    g.gain.linearRampToValueAtTime(0, t + len + 0.02);
+    send(noise(t, len + 0.05).connect(filter("highpass", 3500)).connect(g), 0.6);
   };
-  /** A warm brass pad under the tune. */
-  const pad = (notes: number[], at: number, dur: number, gain: number) =>
-    notes.forEach((f, i) => {
-      const t = now + at;
-      const o = osc("sawtooth", f, t, dur + 1.5);
-      o.detune.value = i % 2 ? 7 : -7;
-      const lp = ac.createBiquadFilter();
-      lp.type = "lowpass";
-      lp.frequency.setValueAtTime(400, t);
-      lp.frequency.exponentialRampToValueAtTime(2400, t + 0.35);
-      send(o.connect(lp).connect(env(t, 0.25, gain, dur / 2.5)), 0.5);
+  /** Taiko: a deep, heavy drum, its pitch sagging, with the thud of the stick. */
+  const taiko = (at: number, gain: number) => {
+    const t = now + at;
+    const o = osc("sine", 68, t, 1.4);
+    o.frequency.exponentialRampToValueAtTime(38, t + 0.5);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.006);
+    g.gain.setTargetAtTime(0.0001, t + 0.02, 0.28);
+    send(o.connect(g), 0.35);
+    const ng = ac.createGain();
+    ng.gain.setValueAtTime(gain * 0.5, t);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+    send(noise(t, 0.15).connect(filter("lowpass", 520)).connect(ng), 0.3);
+  };
+  /** Tam-tam: dark partials that bloom slowly and hang in the hall. */
+  const gong = (at: number, gain: number) => {
+    const t = now + at;
+    [1, 1.52, 2.03, 2.61, 3.27].forEach((m, i) => {
+      const o = osc("sine", 58 * m, t, 9);
+      o.frequency.exponentialRampToValueAtTime(58 * m * 0.99, t + 4);
+      const g = ac.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(gain / (1 + i * 0.8), t + 0.08 + i * 0.05);
+      g.gain.setTargetAtTime(0.0001, t + 0.2, 1.3 - i * 0.15);
+      send(o.connect(g), 0.9);
     });
+  };
+  /** An ensemble chord: each note three detuned saws, low brass and strings swelling in together. */
+  const ensemble = (notes: number[], at: number, len: number, gain: number, bright: number) =>
+    notes.forEach((f) =>
+      [-11, 0, 11].forEach((cents) => {
+        const t = now + at;
+        const o = osc("sawtooth", f, t, len + 2);
+        o.detune.value = cents;
+        const lp = filter("lowpass", 300, 0.5);
+        lp.frequency.setValueAtTime(260, t);
+        lp.frequency.exponentialRampToValueAtTime(bright, t + 0.45);
+        const g = ac.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(gain, t + 0.35);
+        g.gain.setTargetAtTime(0.0001, t + len * 0.55, len / 3);
+        send(o.connect(lp).connect(g), 0.55);
+      }),
+    );
+  /** Erhu: one bowed line, sliding between notes, with a vibrato that blooms on long ones. */
+  const erhu = (phrase: [number, number][], at: number, end: number, gain: number) => {
+    const t = now + at;
+    const o = osc("sawtooth", phrase[0][0], t, end - at + 0.6);
+    const o2 = osc("triangle", phrase[0][0], t, end - at + 0.6);
+    const vib = osc("sine", 5.4, t, end - at + 0.6);
+    const depth = ac.createGain();
+    depth.gain.value = 0;
+    vib.connect(depth);
+    depth.connect(o.frequency);
+    depth.connect(o2.frequency);
+    phrase.forEach(([f, when], i) => {
+      const w = now + when;
+      if (i) {
+        // A slide into the note, as a finger moves along the string.
+        o.frequency.setTargetAtTime(f, w, 0.045);
+        o2.frequency.setTargetAtTime(f, w, 0.045);
+      }
+      depth.gain.setValueAtTime(0, w);
+      depth.gain.setTargetAtTime(f * 0.011, w + 0.18, 0.15);
+    });
+    const body = filter("bandpass", 1150, 0.8);
+    const soft = filter("lowpass", 2800, 0.6);
+    const mix = ac.createGain();
+    mix.gain.value = 0.7;
+    o.connect(body).connect(soft).connect(mix);
+    o2.connect(mix);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.12);
+    g.gain.setValueAtTime(gain, now + end - 0.4);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + end + 0.5);
+    send(mix.connect(g), 0.5);
+  };
+  /** Guzheng, softly: a warm plucked string. */
+  const pluck = (f: number, at: number, gain: number) => {
+    const t = now + at;
+    const o = osc("sine", f, t, 2);
+    const h = osc("triangle", f * 2, t, 1);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.004);
+    g.gain.setTargetAtTime(0.0001, t + 0.01, 0.45);
+    const gh = ac.createGain();
+    gh.gain.setValueAtTime(gain * 0.25, t);
+    gh.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    send(o.connect(g), 0.7);
+    send(h.connect(gh), 0.7);
+  };
 
-  // 1. The opening blow: tam-tam, a big drum and a crash.
-  gong(0, 1);
-  drum(0, 0.6, 95);
-  cymbal(0.01, 0.05, true);
-  // 2. The guzheng sweeps up two and a half octaves.
-  for (let i = 0; i < 13; i++) pluck(note(i - 5), 0.12 + i * 0.038, 0.1 + i * 0.004, 0.7);
-  // 3. Drums and small cymbals step in: dong, dong, dong-dong, dong.
-  [0.72, 1.0, 1.21, 1.31, 1.52].forEach((t, i) => {
-    drum(t, i === 4 ? 0.5 : 0.36, i === 4 ? 100 : 125);
-    cymbal(t + 0.005, 0.018, false);
-  });
-  // 4. A brass chord opens under the suona's tune.
-  pad([D3, A3, D4, Fs4, A4], 0.7, 2.6, 0.03);
-  const tune: [number, number, number][] = [
-    // [step, start, length]: a festive call that climbs and lands on the high tonic.
-    [8, 0.72, 0.22],
-    [9, 0.95, 0.18],
-    [10, 1.14, 0.5],
-    [9, 1.66, 0.16],
-    [8, 1.83, 0.16],
-    [6, 2.0, 0.22],
-    [8, 2.24, 0.24],
-    [10, 2.5, 0.9],
-  ];
-  tune.forEach(([step, at, len], i) => suona(note(step), at, len, 0.11, i === 2 || i === 7 ? 0.89 : 0.95));
-  // 5. The arrival: gong again, a drum roll into it, the crash, the chord a register higher.
-  for (let i = 0; i < 9; i++) drum(2.12 + i * 0.042, 0.12 + i * 0.03, 140);
-  gong(2.5, 1.1);
-  drum(2.5, 0.65, 90);
-  cymbal(2.51, 0.055, true);
-  pad([D3, D4, A4, D4 * 2, Fs4 * 2], 2.5, 2.4, 0.032);
-  // 6. The guzheng shimmers back down through the tail.
-  for (let i = 0; i < 14; i++) pluck(note(14 - i), 2.75 + i * 0.07, 0.08 - i * 0.003, 1.1);
+  // 1. Out of nothing, a cymbal swells up…
+  swell(0, 0.62);
+  // 2. …into the hit: taiko, tam-tam, and a wide chord in open fifths.
+  taiko(0.62, 0.75);
+  gong(0.62, 0.2);
+  ensemble([D2, A2, D3, A3, D4], 0.62, 2.1, 0.022, 1500);
+  taiko(1.05, 0.4);
+  // 3. The erhu sings over it.
+  erhu(
+    [
+      [A4, 0.95],
+      [B4, 1.3],
+      [D5, 1.5],
+      [E5, 2.05],
+      [D5, 2.3],
+      [A5, 2.75],
+    ],
+    0.95,
+    4.1,
+    0.07,
+  );
+  // 4. The lift: a second hit, the chord an octave up into D major.
+  taiko(2.7, 0.7);
+  taiko(2.9, 0.35);
+  gong(2.72, 0.14);
+  ensemble([D3, A3, D4, Fs4, A4, D5, Fs5], 2.72, 2.4, 0.018, 2600);
+  // 5. A soft guzheng falls away through the tail.
+  [A5, Fs5, E5, D5, B4, A4, Fs4].forEach((f, i) => pluck(f, 3.5 + i * 0.16, 0.05 - i * 0.004));
 }
 
 /**

@@ -58,6 +58,7 @@ export function MacauFinale({ tier, phone }: { tier: Tier; phone: boolean }) {
             style={
               {
                 left: `${l.left}%`,
+                marginLeft: -l.size / 2,
                 width: l.size,
                 height: Math.round(l.size * 1.583),
                 filter: l.blur ? `blur(${l.blur}px)` : undefined,
@@ -143,9 +144,9 @@ export function MacauFinale({ tier, phone }: { tier: Tier; phone: boolean }) {
 function sky(phone: boolean) {
   const r = Math.random;
   const depths = [
-    { n: phone ? 4 : 7, size: [50, 72], blur: 2, opacity: 0.6, rise: [6400, 7800] },
-    { n: phone ? 3 : 6, size: [96, 130], blur: 0.6, opacity: 0.9, rise: [5200, 6400] },
-    { n: phone ? 2 : 4, size: [160, 220], blur: 0, opacity: 1, rise: [4300, 5300] },
+    { n: phone ? 4 : 6, size: [70, 100], blur: 2, opacity: 0.6, rise: [6400, 7800] },
+    { n: phone ? 3 : 6, size: [140, 190], blur: 0.6, opacity: 0.9, rise: [5200, 6400] },
+    { n: phone ? 2 : 4, size: [230, 320], blur: 0, opacity: 1, rise: [4300, 5300] },
   ];
   const out: { left: number; size: number; blur: number; opacity: number; rise: number; delay: number; dx: number; sway: number; tilt: number; swayFor: number; swayAt: number }[] = [];
   const scale = phone ? 0.55 : 1;
@@ -153,9 +154,12 @@ function sky(phone: boolean) {
     for (let i = 0; i < d.n; i++) {
       const leftSide = i % 2 === 0;
       // Within the outer quarter of each side; far ones can sit a little further in.
-      // Big ones hang partly off the edge, as if passing by close.
-      const band = phone ? 24 : depth === 0 ? 28 : 20;
-      const left = leftSide ? r() * band - (depth === 2 ? 8 : 0) : 100 - band + r() * band - (depth === 2 ? 4 : 8);
+      // `left` is the lantern's centre. They keep close to the edges; the nearest ones are centred
+      // right on the edge or past it, so they hang half off the screen as they pass by close.
+      const band = depth === 0 ? 16 : depth === 1 ? 11 : 6;
+      const inset = depth === 2 ? -3 : depth === 1 ? 1 : 3;
+      const off = inset + r() * band;
+      const left = leftSide ? off : 100 - off;
       out.push({
         left,
         size: Math.round((d.size[0] + r() * (d.size[1] - d.size[0])) * scale),
