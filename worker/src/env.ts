@@ -10,7 +10,7 @@ export interface Env {
   OWNER_EMAIL: string;
   /** Browser origins allowed to call /admin (the admin app). */
   ADMIN_ORIGINS: string;
-  /** Shared with planary-auth (secret, same value as its ADMIN_API_KEY). Lets staff make password reset links. */
+  /** Shared with planary-auth (secret, same value as its ADMIN_API_KEY). Lets staff make password reset links and ban accounts. */
   AUTH_ADMIN_KEY?: string;
 }
 
@@ -42,4 +42,6 @@ export interface Player {
   muted_until: number | null;
   loss_limit: number | null;
   excluded_until: number | null;
+  /** When staff banned the whole Planary account. Final: the casino status stays "banned". */
+  account_banned_at: number | null;
 }
