@@ -28,7 +28,7 @@ import { badge, presenceOf } from "./social";
 import { zurichDay, zurichDayStart } from "./time";
 
 export type Role = "owner" | "manager" | "support" | "viewer";
-type Permission = "view" | "note" | "moderate" | "restrict" | "chips" | "games" | "economy" | "announce" | "audit" | "staff" | "reset";
+type Permission = "view" | "note" | "moderate" | "restrict" | "chips" | "games" | "economy" | "announce" | "audit" | "staff" | "reset" | "ban";
 
 const ROLES: Record<Role, Permission[]> = {
   viewer: ["view"],
@@ -36,7 +36,8 @@ const ROLES: Record<Role, Permission[]> = {
   manager: ["view", "note", "moderate", "restrict", "chips", "games", "economy", "announce", "audit"],
   // "reset" clears a player's record and hands out progress by hand. Both are
   // irreversible and neither is support work, so the panel's own owner keeps them.
-  owner: ["view", "note", "moderate", "restrict", "chips", "games", "economy", "announce", "audit", "staff", "reset"],
+  // So is "ban": it closes the whole Planary account and deletes its Vault.
+  owner: ["view", "note", "moderate", "restrict", "chips", "games", "economy", "announce", "audit", "staff", "reset", "ban"],
 };
 
 const GAMES = ["blackjack", "roulette", "slots"] as const;
@@ -321,7 +322,7 @@ admin.get("/players/:id", async (c) => {
     lastSeen: p.last_seen || null,
     status: statusOf(p),
     blockedReason: blockedReason(p),
-    account: { status: p.status, until: p.status_until, reason: p.status_reason },
+    account: { status: p.status, until: p.status_until, reason: p.status_reason, bannedEverywhereAt: p.account_banned_at },
     mutedUntil: isMuted(p) ? p.muted_until : null,
     limits: { lossLimit: p.loss_limit, excludedUntil: p.excluded_until, lossToday },
     lifetime: { ...life, net: (life?.won ?? 0) - (life?.wagered ?? 0) },
@@ -397,6 +398,8 @@ admin.post("/players/:id/status", async (c) => {
   const reason = body.status === "active" ? null : text(body.reason, 200) || null;
   if (body.status !== "active" && !reason) return c.json({ error: "Give a reason; the player sees it." }, 400);
   if (await c.env.DB.prepare("SELECT 1 FROM staff WHERE user_id = ?").bind(id).first()) return c.json({ error: "Remove their staff access first." }, 400);
+  const banned = await c.env.DB.prepare("SELECT account_banned_at FROM players WHERE user_id = ?").bind(id).first<{ account_banned_at: number | null }>();
+  if (banned?.account_banned_at) return c.json({ error: "This Planary account is banned everywhere. That can't be changed from here." }, 409);
   const res = await c.env.DB.prepare("UPDATE players SET status = ?, status_until = ?, status_reason = ? WHERE user_id = ?").bind(body.status, until, reason, id).run();
   if (!res.meta.changes) return c.json({ error: "Player not found." }, 404);
   await audit(c.env, staff, `account.${body.status}`, id, { until, reason });
@@ -501,6 +504,40 @@ admin.post("/players/:id/password-reset", async (c) => {
   if (!res.ok || !data.link) return c.json({ error: data.error ?? "The sign-in service didn't make a reset link. Try again." }, res.status === 404 ? 404 : 502);
   await audit(c.env, staff, "password.reset_link", id, { mailed: Boolean(data.mailed) });
   return c.json({ link: data.link, expiresAt: data.expiresAt, mailed: Boolean(data.mailed) });
+});
+
+/**
+ * Bans the whole Planary account at planary-auth: no more sign-ins on any
+ * Planary app, every token stops working within a minute, and the account's
+ * Planary Vault is deleted. The casino side is closed for good too. Banning
+ * again only retries the Vault deletion.
+ */
+admin.post("/players/:id/ban", async (c) => {
+  const staff = c.get("staff");
+  if (!can(staff, "ban")) return c.json(denied(), 403);
+  const id = c.req.param("id");
+  const reason = text((await c.req.json<{ reason?: string }>().catch(() => ({}) as { reason?: string })).reason, 200);
+  if (!reason) return c.json({ error: "Give a reason; it goes in the audit log." }, 400);
+  if (id === staff.user_id) return c.json({ error: "You can't ban yourself." }, 400);
+  if (await c.env.DB.prepare("SELECT 1 FROM staff WHERE user_id = ?").bind(id).first()) return c.json({ error: "Remove their staff access first." }, 400);
+  if (!(await c.env.DB.prepare("SELECT 1 FROM players WHERE user_id = ?").bind(id).first())) return c.json({ error: "Player not found." }, 404);
+  if (!c.env.AUTH_ADMIN_KEY) return c.json({ error: "Bans aren't set up yet: AUTH_ADMIN_KEY is missing on the casino API." }, 503);
+  const res = await c.env.AUTH.fetch(
+    new Request(`https://auth.internal/api/admin/users/${encodeURIComponent(id)}/ban`, {
+      method: "POST",
+      headers: { "X-Admin-Key": c.env.AUTH_ADMIN_KEY },
+    }),
+  );
+  const data = (await res.json().catch(() => ({}))) as { banned?: boolean; bannedAt?: number; vault?: "deleted" | "not_configured" | "failed"; error?: string };
+  if (!res.ok || !data.banned) return c.json({ error: data.error ?? "The sign-in service didn't ban the account. Try again." }, res.status === 404 ? 404 : 502);
+  const bannedAt = data.bannedAt ?? Date.now();
+  await c.env.DB.prepare(
+    "UPDATE players SET status = 'banned', status_until = NULL, status_reason = ?, account_banned_at = COALESCE(account_banned_at, ?) WHERE user_id = ?",
+  )
+    .bind(reason, bannedAt, id)
+    .run();
+  await audit(c.env, staff, "account.ban_everywhere", id, { reason, vault: data.vault ?? "failed" });
+  return c.json({ ok: true, bannedAt, vault: data.vault ?? "failed" });
 });
 
 admin.post("/players/:id/notes", async (c) => {
